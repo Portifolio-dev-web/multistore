@@ -1,0 +1,92 @@
+import { notFound } from "next/navigation";
+import { prisma, type Prisma } from "@repo/db";
+import { getStoreBySlug } from "@/lib/store";
+import { ProductCard } from "@/components/product-card";
+import { ProductFilters, type FilterValues } from "@/components/product-filters";
+
+type Props = { params: { store: string }; searchParams: Record<string, string | undefined> };
+
+const SORTS: Record<string, Prisma.ProductOrderByWithRelationInput> = {
+  recent: { createdAt: "desc" },
+  "price-asc": { priceInCents: "asc" },
+  "price-desc": { priceInCents: "desc" },
+  name: { name: "asc" },
+};
+
+const toCents = (v?: string) => {
+  const n = Number(v?.replace(",", "."));
+  return v && Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : undefined;
+};
+
+export default async function StorePage({ params, searchParams }: Props) {
+  const store = await getStoreBySlug(params.store);
+  if (!store) notFound();
+
+  const filters: FilterValues = {
+    q: searchParams.q?.trim() ?? "",
+    category: searchParams.category ?? "",
+    min: searchParams.min ?? "",
+    max: searchParams.max ?? "",
+    sort: searchParams.sort && SORTS[searchParams.sort] ? searchParams.sort : "recent",
+    inStock: searchParams.stock === "1",
+  };
+
+  const where: Prisma.ProductWhereInput = {
+    storeId: store.id,
+    active: true,
+    ...(filters.q && {
+      OR: [
+        { name: { contains: filters.q, mode: "insensitive" } },
+        { description: { contains: filters.q, mode: "insensitive" } },
+      ],
+    }),
+    ...(filters.category && { category: filters.category }),
+    ...(filters.inStock && { stock: { gt: 0 } }),
+    priceInCents: { gte: toCents(filters.min), lte: toCents(filters.max) },
+  };
+
+  const [products, categoryRows] = await Promise.all([
+    prisma.product.findMany({ where, orderBy: SORTS[filters.sort], take: 60 }),
+    prisma.product.findMany({
+      where: { storeId: store.id, active: true, category: { not: null } },
+      distinct: ["category"],
+      select: { category: true },
+      orderBy: { category: "asc" },
+    }),
+  ]);
+  const categories = categoryRows.map((c) => c.category!).filter(Boolean);
+
+  return (
+    <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <section className="grid gap-8 py-16 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+        <div className="animate-rise">
+          <span className="mb-5 inline-block h-1.5 w-16 rounded-full bg-accent" />
+          <h1 className="font-display text-4xl font-bold leading-[1.02] tracking-tight sm:text-5xl lg:text-6xl">{store.name}</h1>
+        </div>
+        {store.description && <p className="max-w-md text-base text-ink/60 animate-rise [animation-delay:120ms]">{store.description}</p>}
+      </section>
+
+      <div className="grid gap-10 lg:grid-cols-[260px_1fr]">
+        <ProductFilters storeSlug={store.slug} categories={categories} values={filters} />
+        <section>
+          <p className="mb-6 text-sm text-ink/50" data-testid="products-count">
+            {products.length} {products.length === 1 ? "produto" : "produtos"}
+          </p>
+          {products.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-ink/15 p-16 text-center text-ink/50" data-testid="products-empty">
+              Nenhum produto encontrado com esses filtros.
+            </div>
+          ) : (
+            <ul className="grid grid-cols-2 gap-x-5 gap-y-10 md:grid-cols-3" data-testid="products-grid">
+              {products.map((p, i) => (
+                <li key={p.id} className="animate-rise" style={{ animationDelay: `${Math.min(i, 12) * 50}ms` }}>
+                  <ProductCard storeSlug={store.slug} product={p} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

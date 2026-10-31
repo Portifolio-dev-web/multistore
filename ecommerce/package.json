@@ -1,0 +1,21 @@
+{
+  "name": "vitrine-commerce",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "yarn workspace @repo/db db:generate",
+    "db:push": "yarn workspace @repo/db db:push",
+    "db:seed": "yarn workspace @repo/db db:seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.9",
+    "typescript": "^5.5.3"
+  },
+  "packageManager": "yarn@1.22.22"
+}
