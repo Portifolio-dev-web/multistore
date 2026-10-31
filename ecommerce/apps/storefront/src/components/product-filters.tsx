@@ -2,10 +2,10 @@ import Link from "next/link";
 
 export type FilterValues = { q: string; category: string; min: string; max: string; sort: string; inStock: boolean };
 
-type Props = { storeSlug: string; categories: string[]; values: FilterValues };
+type Props = { base: string; categories: string[]; values: FilterValues };
 
 // Formulário GET: os filtros ficam na URL e são aplicados no Server Component
-export function ProductFilters({ storeSlug, categories, values }: Props) {
+export function ProductFilters({ base, categories, values }: Props) {
   return (
     <aside className="lg:sticky lg:top-24 lg:self-start">
       <form method="get" className="space-y-5 rounded-3xl border border-ink/10 bg-white p-5" data-testid="filters-form">
@@ -44,7 +44,7 @@ export function ProductFilters({ storeSlug, categories, values }: Props) {
         </label>
         <div className="flex gap-2 pt-1">
           <button type="submit" className="btn-brand flex-1 py-2.5" data-testid="filter-apply-button">Filtrar</button>
-          <Link href={`/${storeSlug}`} className="btn-ghost" data-testid="filter-clear-link">Limpar</Link>
+          <Link href={base || "/"} className="btn-ghost" data-testid="filter-clear-link">Limpar</Link>
         </div>
       </form>
     </aside>

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@repo/db";
 import { formatBRL } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
+import { getStoreBase } from "@/lib/paths";
 import { AddToCart } from "@/components/add-to-cart";
 import { ProductGallery } from "@/components/product-gallery";
 
@@ -17,7 +18,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
-      <Link href={`/${store.slug}`} className="text-sm text-ink/50 hover:text-ink" data-testid="product-back-link">← Voltar à vitrine</Link>
+      <Link href={getStoreBase(store.slug) || "/"} className="text-sm text-ink/50 hover:text-ink" data-testid="product-back-link">← Voltar à vitrine</Link>
       <div className="mt-8 grid gap-12 lg:grid-cols-2">
         <ProductGallery images={product.images} name={product.name} />
         <div className="animate-rise lg:pt-6">

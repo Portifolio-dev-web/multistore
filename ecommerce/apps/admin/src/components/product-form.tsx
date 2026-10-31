@@ -4,6 +4,7 @@ import { useFormState } from "react-dom";
 import { centsToInput } from "@repo/db/utils";
 import type { FormState } from "@/lib/form";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
+import { ImageUploader } from "./image-uploader";
 
 type ProductValues = {
   name: string;
@@ -56,8 +57,8 @@ export function ProductForm({ action, product, submitLabel }: Props) {
         </div>
       </div>
       <div>
-        <label className="label" htmlFor="images">Imagens (uma URL por linha)</label>
-        <textarea id="images" name="images" rows={3} defaultValue={product?.images.join("\n")} placeholder="https://…" className="field font-mono text-xs" data-testid="product-images-input" />
+        <span className="label">Imagens</span>
+        <ImageUploader initial={product?.images} />
         <FieldError errors={e?.images} testId="product-images-error" />
       </div>
       <label className="flex cursor-pointer items-center gap-2 text-sm">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma, OrderStatus } from "@repo/db";
-import { formatBRL, ORDER_STATUS_LABEL } from "@repo/db/utils";
+import { formatBRL, FULFILLMENT_LABEL, ORDER_STATUS_LABEL } from "@repo/db/utils";
 import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
@@ -45,6 +45,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: { sta
               <th className="th">Itens</th>
               <th className="th">Total</th>
               <th className="th">Status</th>
+              <th className="th">Entrega</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -58,11 +59,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: { sta
                 <td className="td font-mono">{o._count.items}</td>
                 <td className="td font-mono font-semibold">{formatBRL(o.totalInCents)}</td>
                 <td className="td"><StatusBadge status={o.status} /></td>
+                <td className="td font-mono text-xs text-ink/70" data-testid={`order-fulfillment-${o.id}`}>
+                  {o.status === "PAID" ? FULFILLMENT_LABEL[o.fulfillmentStatus] : "—"}
+                </td>
               </tr>
             ))}
             {orders.length === 0 && (
               <tr>
-                <td colSpan={6} className="td py-14 text-center text-ink/50">Nenhum pedido encontrado.</td>
+                <td colSpan={7} className="td py-14 text-center text-ink/50">Nenhum pedido encontrado.</td>
               </tr>
             )}
           </tbody>

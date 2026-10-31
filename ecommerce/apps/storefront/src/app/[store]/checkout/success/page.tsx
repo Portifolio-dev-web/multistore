@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 import { prisma } from "@repo/db";
 import { formatBRL, ORDER_STATUS_LABEL } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
+import { getStoreBase, storeHref } from "@/lib/paths";
 import { getStripe } from "@/lib/stripe";
 import { markOrderPaid } from "@/lib/orders";
 import { ClearCart } from "@/components/clear-cart";
@@ -30,6 +31,7 @@ export default async function CheckoutSuccess({ params, searchParams }: Props) {
     include: { items: true },
   });
   if (!order) notFound();
+  const base = getStoreBase(store.slug);
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-20 text-center sm:px-8">
@@ -55,7 +57,10 @@ export default async function CheckoutSuccess({ params, searchParams }: Props) {
           <span data-testid="success-order-total">{formatBRL(order.totalInCents)}</span>
         </li>
       </ul>
-      <Link href={`/${store.slug}`} className="btn-brand mt-10" data-testid="success-back-to-store">Continuar comprando</Link>
+      <div className="mt-10 flex flex-wrap justify-center gap-3">
+        <Link href={storeHref(base, `/pedido/${order.publicToken}`)} className="btn-brand" data-testid="success-track-order">Acompanhar pedido</Link>
+        <Link href={storeHref(base)} className="btn-ghost" data-testid="success-back-to-store">Continuar comprando</Link>
+      </div>
     </div>
   );
 }

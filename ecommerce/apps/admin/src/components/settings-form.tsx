@@ -7,7 +7,7 @@ import { contrastText } from "@repo/db/utils";
 import { updateStoreSettings } from "@/actions/settings";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
-type Props = { store: Pick<Store, "name" | "slug" | "description" | "logoUrl" | "primaryColor" | "accentColor"> };
+type Props = { store: Pick<Store, "name" | "slug" | "description" | "logoUrl" | "primaryColor" | "accentColor" | "customDomain"> };
 
 export function SettingsForm({ store }: Props) {
   const [state, action] = useFormState(updateStoreSettings, {});
@@ -41,6 +41,11 @@ export function SettingsForm({ store }: Props) {
           <label className="label" htmlFor="logoUrl">URL do logo</label>
           <input id="logoUrl" name="logoUrl" type="url" defaultValue={store.logoUrl ?? ""} placeholder="https://…" className="field font-mono text-xs" data-testid="settings-logo-input" />
           <FieldError errors={e?.logoUrl} />
+        </div>
+        <div>
+          <label className="label" htmlFor="customDomain">Domínio próprio (opcional)</label>
+          <input id="customDomain" name="customDomain" defaultValue={store.customDomain ?? ""} placeholder="www.minhaloja.com.br" className="field font-mono text-sm" data-testid="settings-custom-domain-input" />
+          <FieldError errors={e?.customDomain} testId="settings-custom-domain-error" />
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
           <ColorField name="primaryColor" label="Cor principal" value={primary} onChange={setPrimary} errors={e?.primaryColor} />

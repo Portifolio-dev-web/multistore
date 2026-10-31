@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma, type Prisma } from "@repo/db";
 import { getStoreBySlug } from "@/lib/store";
+import { getStoreBase } from "@/lib/paths";
 import { ProductCard } from "@/components/product-card";
 import { ProductFilters, type FilterValues } from "@/components/product-filters";
 
@@ -55,6 +56,7 @@ export default async function StorePage({ params, searchParams }: Props) {
     }),
   ]);
   const categories = categoryRows.map((c) => c.category!).filter(Boolean);
+  const base = getStoreBase(store.slug);
 
   return (
     <div className="mx-auto max-w-7xl px-5 sm:px-8">
@@ -67,7 +69,7 @@ export default async function StorePage({ params, searchParams }: Props) {
       </section>
 
       <div className="grid gap-10 lg:grid-cols-[260px_1fr]">
-        <ProductFilters storeSlug={store.slug} categories={categories} values={filters} />
+        <ProductFilters base={base} categories={categories} values={filters} />
         <section>
           <p className="mb-6 text-sm text-ink/50" data-testid="products-count">
             {products.length} {products.length === 1 ? "produto" : "produtos"}
@@ -80,7 +82,7 @@ export default async function StorePage({ params, searchParams }: Props) {
             <ul className="grid grid-cols-2 gap-x-5 gap-y-10 md:grid-cols-3" data-testid="products-grid">
               {products.map((p, i) => (
                 <li key={p.id} className="animate-rise" style={{ animationDelay: `${Math.min(i, 12) * 50}ms` }}>
-                  <ProductCard storeSlug={store.slug} product={p} />
+                  <ProductCard base={base} product={p} />
                 </li>
               ))}
             </ul>

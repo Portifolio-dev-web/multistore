@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./utils": "./src/utils.ts"
+    "./utils": "./src/utils.ts",
+    "./urls": "./src/urls.ts"
   },
   "scripts": {
     "db:generate": "prisma generate",

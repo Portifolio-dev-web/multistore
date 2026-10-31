@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { HEX_COLOR, parseBRLToCents, SLUG } from "@repo/db/utils";
+import { FulfillmentStatus } from "@repo/db";
+import { HEX_COLOR, HOSTNAME, parseBRLToCents, SLUG } from "@repo/db/utils";
 
 const optionalText = (max: number) =>
   z
@@ -50,7 +51,32 @@ export const storeSettingsSchema = z.object({
     .pipe(z.string().url("URL inválida").nullable()),
   primaryColor: z.string().regex(HEX_COLOR, "Cor inválida"),
   accentColor: z.string().regex(HEX_COLOR, "Cor inválida"),
+  customDomain: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .optional()
+    .transform((v) => v?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || null)
+    .pipe(z.string().regex(HOSTNAME, "Domínio inválido (ex.: www.minhaloja.com.br)").nullable()),
 });
+
+export const fulfillmentSchema = z
+  .object({
+    fulfillmentStatus: z.nativeEnum(FulfillmentStatus),
+    carrier: optionalText(60),
+    trackingCode: optionalText(80),
+    trackingUrl: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => v || null)
+      .pipe(z.string().url("URL inválida").nullable()),
+    notify: z.boolean(),
+  })
+  .refine((d) => !["SHIPPED", "DELIVERED"].includes(d.fulfillmentStatus) || !!d.trackingCode, {
+    path: ["trackingCode"],
+    message: "Informe o código de rastreio para marcar como enviado",
+  });
 
 export function formToObject(formData: FormData): Record<string, string> {
   const obj: Record<string, string> = {};

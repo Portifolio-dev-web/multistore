@@ -48,5 +48,36 @@ export function slugify(value: string): string {
     .slice(0, 48);
 }
 
+export type FulfillmentStatusKey = "UNFULFILLED" | "PROCESSING" | "SHIPPED" | "DELIVERED";
+
+export const FULFILLMENT_LABEL: Record<FulfillmentStatusKey, string> = {
+  UNFULFILLED: "Não enviado",
+  PROCESSING: "Em preparação",
+  SHIPPED: "Enviado",
+  DELIVERED: "Entregue",
+};
+
+export type ShippingDetails = {
+  name?: string | null;
+  address?: {
+    line1?: string | null;
+    line2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postal_code?: string | null;
+    country?: string | null;
+  } | null;
+};
+
+export function formatAddress(details: unknown): string[] {
+  const d = details as ShippingDetails | null;
+  if (!d?.address) return [];
+  const a = d.address;
+  return [d.name, [a.line1, a.line2].filter(Boolean).join(", "), [a.city, a.state].filter(Boolean).join(" - "), a.postal_code]
+    .filter((l): l is string => !!l);
+}
+
+export const HOSTNAME = /^(?=.{1,253}$)(?:(?!-)[a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$/;
+
 export const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 export const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

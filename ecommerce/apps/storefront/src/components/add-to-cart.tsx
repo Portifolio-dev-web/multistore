@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCart, type CartItem } from "@/lib/cart-store";
+import { useStoreContext } from "./store-context";
 
 type Props = { storeSlug: string; item: Omit<CartItem, "quantity"> };
 
 export function AddToCart({ storeSlug, item }: Props) {
+  const { href } = useStoreContext();
   const addItem = useCart((s) => s.addItem);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -31,7 +33,7 @@ export function AddToCart({ storeSlug, item }: Props) {
       </div>
       {added && (
         <p className="text-sm text-ink/60" data-testid="add-to-cart-confirmation">
-          Adicionado! <Link href={`/${storeSlug}/cart`} className="font-semibold underline underline-offset-4">Ver carrinho</Link>
+          Adicionado! <Link href={href("/cart")} className="font-semibold underline underline-offset-4">Ver carrinho</Link>
         </p>
       )}
     </div>

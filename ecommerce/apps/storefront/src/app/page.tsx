@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@repo/db";
+import { storeUrl } from "@repo/db/urls";
 
 export default async function StoresIndex() {
   const stores = await prisma.store.findMany({
     orderBy: { createdAt: "asc" },
-    select: { slug: true, name: true, description: true, primaryColor: true, accentColor: true, _count: { select: { products: { where: { active: true } } } } },
+    select: { slug: true, customDomain: true, name: true, description: true, primaryColor: true, accentColor: true, _count: { select: { products: { where: { active: true } } } } },
   });
 
   return (
@@ -14,7 +15,7 @@ export default async function StoresIndex() {
       <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-testid="stores-list">
         {stores.map((s, i) => (
           <li key={s.slug} className="animate-rise" style={{ animationDelay: `${i * 70}ms` }}>
-            <Link href={`/${s.slug}`} data-testid={`store-link-${s.slug}`} className="group block overflow-hidden rounded-3xl border border-ink/10 bg-white transition-transform duration-300 hover:-translate-y-1">
+            <Link href={storeUrl(s)} data-testid={`store-link-${s.slug}`} className="group block overflow-hidden rounded-3xl border border-ink/10 bg-white transition-transform duration-300 hover:-translate-y-1">
               <div className="flex h-28 items-end gap-2 p-4" style={{ background: s.primaryColor }}>
                 <span className="h-4 w-4 rounded-full" style={{ background: s.accentColor }} />
               </div>

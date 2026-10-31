@@ -6,8 +6,10 @@ import { formatBRL } from "@repo/db/utils";
 import { useCart, useHydrated, useStoreCart, type CartItem } from "@/lib/cart-store";
 import { createCheckoutSession } from "@/actions/checkout";
 import { ProductImage } from "./product-image";
+import { useStoreContext } from "./store-context";
 
 export function CartView({ storeSlug }: { storeSlug: string }) {
+  const { href } = useStoreContext();
   const items = useStoreCart(storeSlug);
   const hydrated = useHydrated();
   const [pending, startTransition] = useTransition();
@@ -19,7 +21,7 @@ export function CartView({ storeSlug }: { storeSlug: string }) {
     return (
       <div className="mt-10 rounded-3xl border border-dashed border-ink/15 p-16 text-center" data-testid="cart-empty">
         <p className="text-ink/50">Seu carrinho está vazio.</p>
-        <Link href={`/${storeSlug}`} className="btn-brand mt-6" data-testid="cart-continue-shopping">Explorar produtos</Link>
+        <Link href={href()} className="btn-brand mt-6" data-testid="cart-continue-shopping">Explorar produtos</Link>
       </div>
     );
   }

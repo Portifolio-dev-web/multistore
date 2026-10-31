@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { prisma } from "@repo/db";
-import { getStripe, requireEnv } from "@/lib/stripe";
+import { storeUrl } from "@repo/db/urls";
+import { getStripe } from "@/lib/stripe";
 
 const checkoutSchema = z.object({
   storeSlug: z.string().min(1),
@@ -55,13 +56,15 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
     },
   });
 
-  const baseUrl = requireEnv("STOREFRONT_URL").replace(/\/$/, "");
+  const baseUrl = storeUrl(store);
 
   try {
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       client_reference_id: order.id,
       metadata: { orderId: order.id, storeId: store.id },
+      shipping_address_collection: { allowed_countries: ["BR"] },
+      phone_number_collection: { enabled: true },
       line_items: lines.map((l) => ({
         quantity: l.quantity,
         price_data: {
@@ -73,8 +76,8 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
           },
         },
       })),
-      success_url: `${baseUrl}/${store.slug}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/${store.slug}/checkout/cancel?order=${order.id}`,
+      success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/checkout/cancel?order=${order.id}`,
     });
 
     await prisma.order.update({ where: { id: order.id }, data: { stripeSessionId: session.id } });
