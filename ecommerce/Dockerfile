@@ -8,6 +8,7 @@ ARG APP=storefront
 COPY package.json turbo.json tsconfig.base.json yarn.lock* ./
 COPY packages ./packages
 COPY apps ./apps
+COPY scripts ./scripts
 RUN yarn install --network-timeout 600000
 RUN yarn workspace @repo/db db:generate
 ENV NEXT_TELEMETRY_DISABLED=1
