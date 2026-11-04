@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@repo/db";
+import { calculateOrderPricing } from "@repo/db/pricing";
 import { storeUrl } from "@repo/db/urls";
 import { getStripe } from "@/lib/stripe";
 
@@ -30,15 +31,11 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
   });
   const byId = new Map(products.map((p) => [p.id, p]));
 
-  const lines = [];
-  for (const item of items) {
-    const product = byId.get(item.productId);
-    if (!product) return { error: "Um dos produtos não está mais disponível." };
-    if (product.stock < item.quantity) return { error: `Estoque insuficiente para "${product.name}".` };
-    lines.push({ product, quantity: item.quantity });
-  }
+  const pricing = calculateOrderPricing(products, items);
+  if ("error" in pricing) return { error: pricing.error };
 
-  const totalInCents = lines.reduce((sum, l) => sum + l.product.priceInCents * l.quantity, 0);
+  const lines = pricing.lines.map((l) => ({ product: byId.get(l.productId)!, quantity: l.quantity }));
+  const totalInCents = pricing.totalInCents;
 
   const order = await prisma.order.create({
     data: {

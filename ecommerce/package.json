@@ -9,6 +9,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
     "db:generate": "yarn workspace @repo/db db:generate",
     "db:migrate": "yarn workspace @repo/db db:migrate",
     "db:deploy": "yarn workspace @repo/db db:deploy",

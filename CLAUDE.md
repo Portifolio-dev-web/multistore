@@ -25,6 +25,7 @@ yarn db:generate                                # gera o Prisma Client
 yarn db:migrate && yarn db:seed                 # cria/aplica migrations + loja-demo
 yarn dev                                        # storefront :3000 e admin :3001
 yarn typecheck                                  # tsc em todos os workspaces
+yarn test                                       # Vitest (packages/db, apps/admin) via Turbo
 yarn build                                      # next build das duas apps
 docker compose up --build                       # stack completa em containers
 ```
@@ -32,7 +33,7 @@ docker compose up --build                       # stack completa em containers
 - `DATABASE_URL` usa o host `postgres` dentro do Docker e `localhost` fora dele.
 - E-mails de desenvolvimento aparecem no Mailpit: http://localhost:8025
 - Lojista de teste: `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env`. Loja de teste: `loja-demo`.
-- Ainda não há testes automatizados nem lint ativo (`eslint.ignoreDuringBuilds: true`). Isso muda nas tarefas F0.3 a F0.5.
+- Lint ainda não está ativo (`eslint.ignoreDuringBuilds: true`). Isso muda na tarefa F0.5.
 - O desenvolvedor usa **Windows**: scripts do `package.json` precisam ser multiplataforma
   (nada de `cp`, `rm -rf` ou `export VAR=`; use scripts Node ou pacotes como `rimraf` e `cross-env`).
 
@@ -40,7 +41,7 @@ docker compose up --build                       # stack completa em containers
 
 Antes de dizer que uma tarefa terminou:
 
-1. `yarn typecheck` e `yarn build` passam (e `yarn test`, depois que a F0.3 existir).
+1. `yarn typecheck`, `yarn test` e `yarn build` passam.
 2. Mudou o schema: migration criada e `prisma/seed.ts` atualizado para os dados novos.
 3. Nova variável de ambiente: adicionada em `.env.example`, em `turbo.json` (`globalPassThroughEnv`,
    senão ela não chega às apps), no `docker-compose.yml` e na tabela do `ecommerce/README.md`.

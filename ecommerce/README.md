@@ -70,6 +70,12 @@ Banco já existente de antes da F0.2 (criado com `prisma db push`)? Alinhe o his
 yarn workspace @repo/db prisma migrate resolve --applied 20261104111225_init
 ```
 
+## Testes
+
+```bash
+yarn test       # Vitest via Turbo: pricing e utils (@repo/db), schemas Zod (admin)
+```
+
 ## Arquitetura
 
 - **Multi-loja**: cada loja tem um `slug`; a vitrine fica em `/{slug}` e o carrinho (Zustand + localStorage) fica separado por loja. Cada lojista (`User`) pertence a uma `Store`, e todas as queries e Server Actions do admin são filtradas pelo `storeId` da sessão.

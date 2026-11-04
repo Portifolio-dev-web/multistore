@@ -65,7 +65,7 @@ Deixa o projeto seguro para receber mudanças grandes. Faça antes de qualquer f
   - Scripts na raiz: `db:migrate` (dev) e `db:deploy` (produção). Atualizar README e CLAUDE.md.
   - Aceite: banco vazio sobe só com `migrate deploy` + seed; `db push` não aparece mais em nenhum fluxo.
 
-- [ ] **F0.3 Testes unitários (Vitest)**
+- [x] **F0.3 Testes unitários (Vitest)**
   - Vitest no monorepo, com `yarn test` via Turbo.
   - Extrair o cálculo do pedido de `checkout.ts` para funções puras em `packages/db/src/pricing.ts`
     (export `@repo/db/pricing`): subtotal, e depois desconto e frete. Esse módulo será a base das
