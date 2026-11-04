@@ -165,6 +165,18 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     sem conta ativa, com mensagem clara.
   - Taxa da plataforma configurável por env (`PLATFORM_FEE_PERCENT`), depois por plano (F6.3).
   - Aceite: duas lojas de teste recebem em contas diferentes; o webhook identifica a loja e o pedido corretos.
+  - Decisão: **Stripe Connect** (2026-11-04) — ver tabela "Decisões".
+  - Progresso: **Etapa 1/3 concluída** (2026-11-04) — `Store.stripeAccountId`/`stripeDetailsSubmitted`/
+    `stripeChargesEnabled` no schema; `PLATFORM_FEE_PERCENT` e `ADMIN_URL` (novo, precisa pros links
+    de retorno do onboarding) em `.env.example`/`turbo.json`/`docker-compose.yml`/README; página
+    `/payments` no admin com "Conectar conta" (cria a Express account + Account Link, manda pro
+    onboarding hospedado pelo Stripe) e status (atualiza sozinho ao revisitar a página, consultando
+    a API). Testado visualmente no navegador. **Ainda não criei** a interface `PaymentProvider` nem
+    a criptografia AES-256-GCM — essa última só entra quando algum provedor realmente tiver um
+    segredo pra guardar (Connect Express não tem; só o `stripeAccountId`, que não é sigiloso).
+  - Falta: Etapa 2 (ligar `checkout.ts`/webhook à conta conectada de cada loja, bloquear checkout
+    sem `stripeChargesEnabled`) e Etapa 3 (validar duas lojas de teste recebendo em contas
+    diferentes).
 
 - [ ] **F1.5 Pix, boleto e parcelamento** · Depende de F1.4
   - Ativar Pix e boleto no provedor escolhido (no Stripe, conta brasileira aceita Pix no Checkout;
@@ -474,3 +486,4 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-04 | F0.4 | Banco de teste do E2E é um schema Postgres separado (`?schema=e2e_test`) no mesmo Postgres de dev, não um container/banco novo | `prisma migrate reset --force` já dropa/recria e roda o seed nativamente; evita um serviço Docker extra só para isso |
 | 2026-11-04 | F1.1 | Teste de concorrência do número de pedido entra em `e2e/` (via Prisma direto, sem navegador), não em `packages/db` como teste unitário | Precisa de um Postgres real pro lock de linha da transação fazer sentido; `yarn test` (Vitest) não tem banco disponível no job de CI |
 | 2026-11-04 | F1.3 | Removido também o `phone_number_collection` do Stripe (não só o `shipping_address_collection` pedido) | O telefone já é coletado no checkout próprio; pedir de novo na página do Stripe seria redundante |
+| 2026-11-04 | F1.4 | Stripe Connect (contas Express), não Mercado Pago | Escolha do usuário; mantém o código Stripe/webhook atual, só adiciona a conta conectada por loja |

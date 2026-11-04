@@ -48,9 +48,11 @@ Cartão de teste: `4242 4242 4242 4242`, qualquer validade futura e qualquer CVC
 | Variável                | App         | Descrição |
 |-------------------------|-------------|-----------|
 | `DATABASE_URL`          | todas       | Conexão PostgreSQL |
-| `STRIPE_SECRET_KEY`     | storefront  | Chave secreta do Stripe |
+| `STRIPE_SECRET_KEY`     | storefront/admin | Chave secreta do Stripe (também usada pro onboarding de contas Connect) |
 | `STRIPE_WEBHOOK_SECRET` | storefront  | Segredo de assinatura do webhook |
+| `PLATFORM_FEE_PERCENT`  | storefront/admin | Taxa da plataforma sobre cada venda (Stripe Connect), em %. `0` desativa |
 | `STOREFRONT_URL`        | storefront/admin | URL pública da vitrine (URLs de retorno do Stripe e link "Ver vitrine") |
+| `ADMIN_URL`             | admin       | URL pública do painel (links de retorno do onboarding Stripe Connect) |
 | `AUTH_SECRET`           | admin       | Segredo do JWT da sessão (mín. 32 caracteres) |
 | `COOKIE_SECURE`         | admin       | `false` para http://localhost; `true` em produção (https) |
 | `ALLOW_REGISTRATION`    | admin       | `false` desativa o cadastro de novos lojistas |

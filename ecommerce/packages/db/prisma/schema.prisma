@@ -19,6 +19,9 @@ model Store {
   currency     String    @default("brl")
   customDomain String?   @unique
   nextOrderNumber Int    @default(1001)
+  stripeAccountId        String?  @unique
+  stripeDetailsSubmitted Boolean  @default(false)
+  stripeChargesEnabled   Boolean  @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   products     Product[]
