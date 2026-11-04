@@ -1,0 +1,14 @@
+{
+  "name": "e2e",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.2",
+    "@repo/db": "*",
+    "stripe": "^16.2.0"
+  }
+}

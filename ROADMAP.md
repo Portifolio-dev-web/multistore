@@ -74,7 +74,7 @@ Deixa o projeto seguro para receber mudanças grandes. Faça antes de qualquer f
     e o módulo de pricing.
   - Aceite: `yarn test` roda e passa; pricing com cobertura dos casos de borda (quantidade 0, estoque insuficiente).
 
-- [ ] **F0.4 Testes ponta a ponta (Playwright)** · Depende de F0.2
+- [x] **F0.4 Testes ponta a ponta (Playwright)** · Depende de F0.2
   - Pasta `ecommerce/e2e/` usando os `data-testid` já existentes.
   - Fluxos: vitrine (listar, filtrar, abrir produto, adicionar ao carrinho, alterar quantidade);
     admin (login, criar produto, ver na vitrine, mudar cor da loja e ver refletido);
@@ -452,4 +452,4 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 
 | Data | Tarefa | Decisão | Motivo |
 |------|--------|---------|--------|
-|      |        |         |        |
+| 2026-11-04 | F0.4 | Banco de teste do E2E é um schema Postgres separado (`?schema=e2e_test`) no mesmo Postgres de dev, não um container/banco novo | `prisma migrate reset --force` já dropa/recria e roda o seed nativamente; evita um serviço Docker extra só para isso |

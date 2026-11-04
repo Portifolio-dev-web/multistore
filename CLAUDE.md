@@ -30,6 +30,13 @@ yarn build                                      # next build das duas apps
 docker compose up --build                       # stack completa em containers
 ```
 
+Testes E2E (Playwright, precisa do Postgres rodando):
+
+```bash
+npx playwright install chromium   # uma vez por máquina
+yarn e2e                          # sobe storefront :3100 e admin :3101 num schema de teste isolado
+```
+
 - `DATABASE_URL` usa o host `postgres` dentro do Docker e `localhost` fora dele.
 - E-mails de desenvolvimento aparecem no Mailpit: http://localhost:8025
 - Lojista de teste: `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env`. Loja de teste: `loja-demo`.

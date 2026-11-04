@@ -76,6 +76,17 @@ yarn workspace @repo/db prisma migrate resolve --applied 20261104111225_init
 yarn test       # Vitest via Turbo: pricing e utils (@repo/db), schemas Zod (admin)
 ```
 
+### E2E (Playwright)
+
+Precisa do Postgres rodando (`docker compose up -d postgres mailpit`). Usa um schema (`e2e_test`) separado
+do schema de desenvolvimento no mesmo Postgres — `yarn e2e` recria esse schema do zero (migrations + seed)
+antes da suíte, e sobe o storefront em `:3100` e o admin em `:3101` (portas diferentes das de dev).
+
+```bash
+npx playwright install chromium   # uma vez por máquina
+yarn e2e
+```
+
 ## Arquitetura
 
 - **Multi-loja**: cada loja tem um `slug`; a vitrine fica em `/{slug}` e o carrinho (Zustand + localStorage) fica separado por loja. Cada lojista (`User`) pertence a uma `Store`, e todas as queries e Server Actions do admin são filtradas pelo `storeId` da sessão.
