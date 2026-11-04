@@ -82,7 +82,7 @@ Deixa o projeto seguro para receber mudanças grandes. Faça antes de qualquer f
   - Banco de teste separado, recriado com migrations + seed antes da suíte.
   - Aceite: `yarn e2e` passa localmente com o Docker de dependências rodando.
 
-- [ ] **F0.5 Integração contínua (GitHub Actions)** · Depende de F0.3
+- [x] **F0.5 Integração contínua (GitHub Actions)** · Depende de F0.3
   - Workflow em PRs e na `main`: install, `db:generate`, typecheck, lint, test, build.
   - Job separado de E2E com serviço Postgres.
   - Ativar ESLint (`next lint`) e remover `eslint.ignoreDuringBuilds`, corrigindo os avisos.

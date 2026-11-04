@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+defaults:
+  run:
+    working-directory: ecommerce
+
+env:
+  # Só precisa estar presente (Prisma valida no `generate`); nenhum dos passos deste job conecta nela.
+  DATABASE_URL: postgresql://vitrine:vitrine_dev_password@localhost:5432/vitrine?schema=public
+
+jobs:
+  build:
+    name: Typecheck, lint, test e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: ecommerce/yarn.lock
+
+      - run: yarn install --frozen-lockfile
+      - run: yarn db:generate
+      - run: yarn typecheck
+      - run: yarn lint
+      - run: yarn test
+      - run: yarn build
+
+  e2e:
+    name: Testes E2E (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vitrine
+          POSTGRES_PASSWORD: vitrine_dev_password
+          POSTGRES_DB: vitrine
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vitrine -d vitrine"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: ecommerce/yarn.lock
+
+      - run: yarn install --frozen-lockfile
+      - run: yarn db:generate
+      - run: npx playwright install --with-deps chromium
+      - run: yarn e2e

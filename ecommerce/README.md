@@ -87,6 +87,11 @@ npx playwright install chromium   # uma vez por máquina
 yarn e2e
 ```
 
+### CI
+
+`.github/workflows/ci.yml` (na raiz do repositório) roda em PRs e na `main`: um job com
+`typecheck` + `lint` + `test` + `build`, e outro job separado de E2E com um serviço Postgres.
+
 ## Arquitetura
 
 - **Multi-loja**: cada loja tem um `slug`; a vitrine fica em `/{slug}` e o carrinho (Zustand + localStorage) fica separado por loja. Cada lojista (`User`) pertence a uma `Store`, e todas as queries e Server Actions do admin são filtradas pelo `storeId` da sessão.
