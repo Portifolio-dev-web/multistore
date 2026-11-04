@@ -90,6 +90,8 @@ model Order {
   stockReleasedAt         DateTime?
   customerEmail         String?
   customerName          String?
+  customerPhone         String?
+  customerDocument      String?
   totalInCents          Int
   currency              String      @default("brl")
   stripeSessionId       String?     @unique

@@ -26,7 +26,7 @@ yarn db:migrate && yarn db:seed                 # cria/aplica migrations + loja-
 yarn dev                                        # storefront :3000 e admin :3001
 yarn typecheck                                  # tsc em todos os workspaces
 yarn lint                                       # next lint (admin e storefront)
-yarn test                                       # Vitest (packages/db, apps/admin) via Turbo
+yarn test                                       # Vitest (packages/db, admin, storefront) via Turbo
 yarn build                                      # next build das duas apps
 docker compose up --build                       # stack completa em containers
 ```

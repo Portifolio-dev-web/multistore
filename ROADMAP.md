@@ -134,6 +134,13 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - Remover `shipping_address_collection` do Stripe e passar `customer_email`.
   - Layout enxuto (sem menu e sem rodapé), como checkouts de loja. Mobile primeiro.
   - Aceite: não dá para chegar ao pagamento sem dados válidos; dados aparecem no pedido no admin.
+  - Progresso: **Etapa 1/3 concluída** (2026-11-04) — `Order.customerPhone`/`customerDocument` no
+    schema, `formatAddress` aceitando o formato novo (estruturado) e o antigo (Stripe), validadores
+    de CPF/CNPJ e CEP em `@repo/db/utils`, schemas Zod das 3 etapas em
+    `apps/storefront/src/lib/validation.ts`, Vitest ligado no `storefront` (antes só tinha no admin
+    e no `@repo/db`). Faltam: Etapa 2 (a página `/checkout` em si — exige reestruturar as rotas da
+    vitrine em route groups pra isolar o layout sem header/footer) e Etapa 3 (ligar ao
+    `createCheckoutSession`, trocar o botão do carrinho, remover `shipping_address_collection`).
 
 - [ ] **F1.4 Recebimento por loja** **(grande)** · **Decisão**
   - Hoje todo pagamento cai numa única conta Stripe. Cada loja precisa da própria conta de recebimento.

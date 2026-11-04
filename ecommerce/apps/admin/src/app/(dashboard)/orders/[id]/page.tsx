@@ -23,6 +23,8 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     { label: "Pago em", value: order.paidAt ? dateFmt.format(order.paidAt) : "—" },
     { label: "Cliente", value: order.customerName ?? "—" },
     { label: "E-mail", value: order.customerEmail ?? "—" },
+    { label: "Telefone", value: order.customerPhone ?? "—" },
+    { label: "CPF/CNPJ", value: order.customerDocument ?? "—" },
     { label: "Endereço de entrega", value: address.length ? address.join(" · ") : "—" },
     { label: "Sessão Stripe", value: order.stripeSessionId ?? "—", mono: true },
     { label: "Payment Intent", value: order.stripePaymentIntentId ?? "—", mono: true },

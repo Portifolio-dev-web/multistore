@@ -73,7 +73,7 @@ yarn workspace @repo/db prisma migrate resolve --applied 20261104111225_init
 ## Testes
 
 ```bash
-yarn test       # Vitest via Turbo: pricing e utils (@repo/db), schemas Zod (admin)
+yarn test       # Vitest via Turbo: pricing e utils (@repo/db), schemas Zod (admin e storefront)
 ```
 
 ### E2E (Playwright)

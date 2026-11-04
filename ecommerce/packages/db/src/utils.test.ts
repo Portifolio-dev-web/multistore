@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { centsToInput, contrastText, formatBRL, parseBRLToCents, slugify } from "./utils";
+import {
+  centsToInput,
+  contrastText,
+  formatAddress,
+  formatBRL,
+  isValidCpfOrCnpj,
+  parseBRLToCents,
+  slugify,
+} from "./utils";
 
 describe("parseBRLToCents", () => {
   it("converte formato brasileiro com vírgula e milhar", () => {
@@ -65,5 +73,74 @@ describe("contrastText", () => {
 
   it("retorna branco para hex inválido", () => {
     expect(contrastText("not-a-color")).toBe("#ffffff");
+  });
+});
+
+describe("isValidCpfOrCnpj", () => {
+  it("aceita CPF válido com máscara", () => {
+    expect(isValidCpfOrCnpj("529.982.247-25")).toBe(true);
+  });
+
+  it("aceita CPF válido sem máscara", () => {
+    expect(isValidCpfOrCnpj("52998224725")).toBe(true);
+  });
+
+  it("recusa CPF com todos os dígitos iguais", () => {
+    expect(isValidCpfOrCnpj("111.111.111-11")).toBe(false);
+  });
+
+  it("recusa CPF com dígito verificador errado", () => {
+    expect(isValidCpfOrCnpj("529.982.247-26")).toBe(false);
+  });
+
+  it("aceita CNPJ válido com máscara", () => {
+    expect(isValidCpfOrCnpj("11.222.333/0001-81")).toBe(true);
+  });
+
+  it("aceita CNPJ válido sem máscara", () => {
+    expect(isValidCpfOrCnpj("11222333000181")).toBe(true);
+  });
+
+  it("recusa CNPJ com dígito verificador errado", () => {
+    expect(isValidCpfOrCnpj("11.222.333/0001-82")).toBe(false);
+  });
+
+  it("recusa quantidade de dígitos que não é CPF nem CNPJ", () => {
+    expect(isValidCpfOrCnpj("123")).toBe(false);
+  });
+});
+
+describe("formatAddress", () => {
+  it("formata o endereço estruturado novo (checkout próprio)", () => {
+    const result = formatAddress({
+      name: "Maria Lojista",
+      zip: "01311-000",
+      street: "Av. Paulista",
+      number: "1000",
+      complement: "ap. 101",
+      district: "Bela Vista",
+      city: "São Paulo",
+      state: "SP",
+    });
+    expect(result).toEqual([
+      "Maria Lojista",
+      "Av. Paulista, 1000",
+      "ap. 101",
+      "Bela Vista",
+      "São Paulo - SP",
+      "01311-000",
+    ]);
+  });
+
+  it("formata o endereço antigo do Stripe (shipping_details)", () => {
+    const result = formatAddress({
+      name: "Cliente Teste",
+      address: { line1: "Rua A, 123", city: "São Paulo", state: "SP", postal_code: "01311-000" },
+    });
+    expect(result).toEqual(["Cliente Teste", "Rua A, 123", "São Paulo - SP", "01311-000"]);
+  });
+
+  it("retorna lista vazia quando não há endereço", () => {
+    expect(formatAddress(null)).toEqual([]);
   });
 });
