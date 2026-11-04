@@ -24,7 +24,7 @@ cp .env.example .env        # preencha STRIPE_SECRET_KEY e AUTH_SECRET (openssl 
 docker compose up --build
 ```
 
-O serviço `migrate` aplica o schema (`prisma db push`) e roda o seed (loja `loja-demo` + lojista definido em `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Depois sobem:
+O serviço `migrate` aplica as migrations (`prisma migrate deploy`) e roda o seed (loja `loja-demo` + lojista definido em `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Depois sobem:
 
 | Serviço    | URL                              |
 |------------|----------------------------------|
@@ -60,8 +60,14 @@ Cartão de teste: `4242 4242 4242 4242`, qualquer validade futura e qualquer CVC
 ```bash
 yarn install
 docker compose up -d postgres          # ou um Postgres local; use host "localhost" no DATABASE_URL
-yarn db:push && yarn db:seed
+yarn db:migrate && yarn db:seed        # cria/atualiza as migrations e popula a loja-demo
 yarn dev                               # turbo roda storefront (3000) e admin (3001)
+```
+
+Banco já existente de antes da F0.2 (criado com `prisma db push`)? Alinhe o histórico de migrations uma única vez antes do primeiro `db:migrate`/`db:deploy`:
+
+```bash
+yarn workspace @repo/db prisma migrate resolve --applied 20261104111225_init
 ```
 
 ## Arquitetura
@@ -83,5 +89,6 @@ DATABASE_URL=... STRIPE_WEBHOOK_SECRET=whsec_... WEBHOOK_URL=http://localhost:30
 
 ## Produção
 
-- Troque `prisma db push` por migrations versionadas: `yarn workspace @repo/db db:migrate`, depois `prisma migrate deploy` no serviço `migrate`.
+- O schema é aplicado só por migrations: `yarn db:deploy` (`prisma migrate deploy`). Nunca use `db push` em produção.
+- Nova alteração de schema em dev: `yarn db:migrate` (cria e aplica a migration), commitar a pasta `packages/db/prisma/migrations/`.
 - As imagens dos produtos são URLs. Para upload, conecte um storage (S3, R2 etc.).

@@ -57,7 +57,7 @@ Deixa o projeto seguro para receber mudanças grandes. Faça antes de qualquer f
   - Aceite: a raiz tem só `ecommerce/`, `CLAUDE.md`, `ROADMAP.md`, `README.md` e `.gitignore`;
     `yarn build` dentro de `ecommerce/` continua passando.
 
-- [ ] **F0.2 Migrations versionadas do Prisma**
+- [x] **F0.2 Migrations versionadas do Prisma**
   - Criar a migration inicial a partir do schema atual (`prisma migrate dev --name init`).
   - Documentar como marcar a migration como aplicada em bancos que já existem
     (`prisma migrate resolve --applied <nome>`).

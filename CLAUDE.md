@@ -22,7 +22,7 @@ Rode sempre de dentro de `ecommerce/`:
 yarn install
 docker compose up -d postgres storage mailpit   # dependências (Postgres 5432, S3 9000, Mailpit 8025)
 yarn db:generate                                # gera o Prisma Client
-yarn db:push && yarn db:seed                    # schema + loja-demo (trocar por migrations na F0.2)
+yarn db:migrate && yarn db:seed                 # cria/aplica migrations + loja-demo
 yarn dev                                        # storefront :3000 e admin :3001
 yarn typecheck                                  # tsc em todos os workspaces
 yarn build                                      # next build das duas apps
@@ -120,7 +120,9 @@ S3-compatível (`lib/storage.ts`; RustFS em dev, S3/R2 em produção).
 
 - O webhook precisa do corpo cru (`req.text()`) para validar a assinatura. Não faça parse antes.
 - O limite de tentativas de login é em memória (some ao reiniciar e não funciona com várias instâncias).
-- `prisma db push` não é seguro em produção; depois da F0.2 use só migrations.
+- Schema só muda por migrations (`yarn db:migrate` em dev, `yarn db:deploy` em produção); nunca
+  `prisma db push`. Banco criado antes da F0.2: alinhar uma vez com
+  `yarn workspace @repo/db prisma migrate resolve --applied 20261104111225_init`.
 - Hoje o checkout só confere o estoque, sem reservar. A F1.2 corrige isso.
 - Hoje todas as lojas recebem na mesma conta Stripe (`STRIPE_SECRET_KEY` global). A F1.4 corrige isso.
 

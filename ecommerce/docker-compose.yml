@@ -32,7 +32,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # Aplica o schema Prisma e popula dados de exemplo (roda uma vez e sai)
+  # Aplica as migrations e popula dados de exemplo (roda uma vez e sai)
   migrate:
     build:
       context: .
@@ -40,7 +40,7 @@ services:
       target: builder
       args:
         APP: storefront
-    command: sh -c "yarn workspace @repo/db db:push && yarn workspace @repo/db db:seed && node scripts/storage-init.mjs"
+    command: sh -c "yarn workspace @repo/db db:deploy && yarn workspace @repo/db db:seed && node scripts/storage-init.mjs"
     environment:
       <<: *db-env
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
