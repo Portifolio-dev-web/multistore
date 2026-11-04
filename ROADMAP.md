@@ -138,9 +138,18 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     schema, `formatAddress` aceitando o formato novo (estruturado) e o antigo (Stripe), validadores
     de CPF/CNPJ e CEP em `@repo/db/utils`, schemas Zod das 3 etapas em
     `apps/storefront/src/lib/validation.ts`, Vitest ligado no `storefront` (antes só tinha no admin
-    e no `@repo/db`). Faltam: Etapa 2 (a página `/checkout` em si — exige reestruturar as rotas da
-    vitrine em route groups pra isolar o layout sem header/footer) e Etapa 3 (ligar ao
-    `createCheckoutSession`, trocar o botão do carrinho, remover `shipping_address_collection`).
+    e no `@repo/db`).
+  - Progresso: **Etapa 2/3 concluída** (2026-11-04) — rotas da vitrine reorganizadas em route groups
+    (`[store]/(shop)/...` com header/rodapé; `[store]/checkout/...` com layout enxuto, só o nome da
+    loja); página `/{slug}/checkout` nova com os 3 passos (identificação, endereço com
+    preenchimento automático por CEP via ViaCEP, resumo), mobile primeiro. Testada manualmente num
+    navegador real (Playwright ad-hoc, não faz parte da suíte): header/rodapé ausentes no checkout e
+    presentes no resto da loja, ViaCEP preenchendo os campos, resumo batendo com o carrinho.
+    **Ainda não está ligada ao carrinho** (o botão "Finalizar compra" continua chamando
+    `createCheckoutSession` direto) nem ao pedido no banco — isso é a Etapa 3.
+  - Falta: Etapa 3 — trocar o botão do carrinho pra levar ao `/checkout`, `createCheckoutSession`
+    passar a receber identificação+endereço e gravar no `Order`, remover
+    `shipping_address_collection` do Stripe.
 
 - [ ] **F1.4 Recebimento por loja** **(grande)** · **Decisão**
   - Hoje todo pagamento cai numa única conta Stripe. Cada loja precisa da própria conta de recebimento.
