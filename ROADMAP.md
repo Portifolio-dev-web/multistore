@@ -174,9 +174,19 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     a API). Testado visualmente no navegador. **Ainda não criei** a interface `PaymentProvider` nem
     a criptografia AES-256-GCM — essa última só entra quando algum provedor realmente tiver um
     segredo pra guardar (Connect Express não tem; só o `stripeAccountId`, que não é sigiloso).
-  - Falta: Etapa 2 (ligar `checkout.ts`/webhook à conta conectada de cada loja, bloquear checkout
-    sem `stripeChargesEnabled`) e Etapa 3 (validar duas lojas de teste recebendo em contas
-    diferentes).
+  - Progresso: **Etapa 2/3 concluída** (2026-11-04) — `storefront/src/lib/payments/` com a interface
+    `PaymentProvider` e a implementação Stripe. Decisão de design: em vez de criar a sessão direto na
+    conta conectada (o que exigiria um webhook/segredo separado pra eventos de conta conectada), uso
+    **cobrança por destino** — a sessão continua sendo criada com a chave da própria plataforma
+    (mesmo webhook, mesmo `STRIPE_WEBHOOK_SECRET` de sempre) e `payment_intent_data.transfer_data.destination`
+    + `application_fee_amount` fazem o Stripe repassar o valor pra loja. `checkout.ts` bloqueia antes
+    de qualquer coisa se `!store.stripeChargesEnabled`, com a mensagem "Esta loja ainda não está
+    pronta para receber pagamentos." Testado no navegador: bloqueio funciona pra loja sem conta;
+    simulei uma conta ativa (`stripeAccountId` fictício direto no banco) e confirmei que o fluxo
+    passa do bloqueio e chega a tentar a API do Stripe de verdade (falha só porque a conta é
+    fictícia — esperado); pedido fica `FAILED` e o estoque é devolvido do mesmo jeito que antes.
+  - Falta: Etapa 3 — validar com contas de teste reais do Stripe (não dá pra simular só no banco)
+    que duas lojas recebem em contas diferentes.
 
 - [ ] **F1.5 Pix, boleto e parcelamento** · Depende de F1.4
   - Ativar Pix e boleto no provedor escolhido (no Stripe, conta brasileira aceita Pix no Checkout;
@@ -487,3 +497,4 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-04 | F1.1 | Teste de concorrência do número de pedido entra em `e2e/` (via Prisma direto, sem navegador), não em `packages/db` como teste unitário | Precisa de um Postgres real pro lock de linha da transação fazer sentido; `yarn test` (Vitest) não tem banco disponível no job de CI |
 | 2026-11-04 | F1.3 | Removido também o `phone_number_collection` do Stripe (não só o `shipping_address_collection` pedido) | O telefone já é coletado no checkout próprio; pedir de novo na página do Stripe seria redundante |
 | 2026-11-04 | F1.4 | Stripe Connect (contas Express), não Mercado Pago | Escolha do usuário; mantém o código Stripe/webhook atual, só adiciona a conta conectada por loja |
+| 2026-11-04 | F1.4 | Cobrança por destino (`transfer_data.destination`), não sessão criada direto na conta conectada | Mantém o webhook e o `STRIPE_WEBHOOK_SECRET` atuais sem mudança; cobrança direta na conta exigiria um segredo e endpoint separados só pra eventos de conta conectada |

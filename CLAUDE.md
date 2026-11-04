@@ -78,13 +78,26 @@ validados com os schemas de `storefront/src/lib/validation.ts`. Só o passo fina
 Action. `storefront/src/actions/checkout.ts` valida tudo de novo no servidor (nunca confia só no
 formulário), recalcula preço no banco e **reserva o estoque na criação do pedido** (`@repo/db`
 `reserveStock`, dentro da mesma transação que cria o `Order` como `PENDING`, já com
-`customerEmail`/`customerName`/`customerPhone`/`customerDocument`/`shippingAddress`), depois abre
-uma Stripe Checkout Session (expira em 30 min, `customer_email` pré-preenchido, sem
-`shipping_address_collection`) com `metadata.orderId`. O webhook (`app/api/webhooks/stripe/route.ts`) chama `markOrderPaid`
+`customerEmail`/`customerName`/`customerPhone`/`customerDocument`/`shippingAddress`). Antes disso,
+bloqueia se a loja não tiver `Store.stripeChargesEnabled` (conta Stripe Connect ainda não ativa —
+ver "Pagamentos por loja" abaixo). A sessão em si é aberta por `storefront/src/lib/payments/stripe.ts`
+(implementa a interface `PaymentProvider` — pensada pra caber um segundo gateway sem reescrever o
+checkout): expira em 30 min, `customer_email` pré-preenchido, sem `shipping_address_collection`,
+com `metadata.orderId`. O webhook (`app/api/webhooks/stripe/route.ts`) usa
+`stripeProvider.parseWebhook(req)` e chama `markOrderPaid`
 (`lib/orders.ts`), que muda o status de forma idempotente e envia a confirmação — o estoque já foi
 baixado na reserva, não no pagamento. Se o pedido expira, falha ou é cancelado, `setOrderStatus`
 devolve o estoque (`releaseStock`, idempotente via `Order.stockReleasedAt`). A página
 `/checkout/success` chama `markOrderPaid` de novo como fallback.
+
+**Pagamentos por loja (Stripe Connect).** Cada loja tem sua própria conta Express
+(`Store.stripeAccountId`). No admin, `/payments` cria a conta e manda o lojista pro onboarding
+hospedado pelo Stripe (`actions/payments.ts`); a própria página atualiza
+`stripeDetailsSubmitted`/`stripeChargesEnabled` consultando a API a cada visita. O dinheiro usa
+**cobrança por destino**: a sessão de pagamento é criada com a chave da própria plataforma (não
+muda o webhook nem precisa de um segredo por loja), e `payment_intent_data.transfer_data.destination`
++ `application_fee_amount` (calculado a partir de `PLATFORM_FEE_PERCENT`) fazem o Stripe repassar o
+valor pra loja automaticamente, descontando a taxa da plataforma.
 
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.

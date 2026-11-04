@@ -1,22 +1,15 @@
-import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe, requireEnv } from "@/lib/stripe";
+import { stripeProvider } from "@/lib/payments/stripe";
 import { markOrderPaid, setOrderStatus } from "@/lib/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const signature = headers().get("stripe-signature");
-  if (!signature) return NextResponse.json({ error: "Assinatura ausente" }, { status: 400 });
-
-  // Corpo cru (texto) é obrigatório para validar a assinatura
-  const payload = await req.text();
-
   let event: Stripe.Event;
   try {
-    event = getStripe().webhooks.constructEvent(payload, signature, requireEnv("STRIPE_WEBHOOK_SECRET"));
+    event = await stripeProvider.parseWebhook(req);
   } catch (err) {
     console.error("[webhook] assinatura inválida", err);
     return NextResponse.json({ error: "Assinatura inválida" }, { status: 400 });

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { nextOrderNumber, OutOfStockError, prisma, releaseStock, reserveStock, type Prisma } from "@repo/db";
 import { calculateOrderPricing } from "@repo/db/pricing";
 import { storeUrl } from "@repo/db/urls";
-import { getStripe } from "@/lib/stripe";
+import { stripeProvider } from "@/lib/payments/stripe";
 import { customerDetailsSchema } from "@/lib/validation";
 
 const checkoutSchema = z
@@ -41,6 +41,7 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
 
   const store = await prisma.store.findUnique({ where: { slug: storeSlug } });
   if (!store) return { error: "Loja não encontrada." };
+  if (!store.stripeChargesEnabled) return { error: "Esta loja ainda não está pronta para receber pagamentos." };
 
   // Preços e estoque SEMPRE vêm do banco, nunca do cliente
   const products = await prisma.product.findMany({
@@ -104,38 +105,29 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
 
   const baseUrl = storeUrl(store);
 
-  try {
-    const session = await getStripe().checkout.sessions.create({
-      mode: "payment",
-      client_reference_id: order.id,
-      metadata: { orderId: order.id, storeId: store.id },
-      customer_email: email,
-      // Reserva de estoque é curta: a sessão expira (e devolve o estoque) em 30 minutos
-      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
-      line_items: lines.map((l) => ({
-        quantity: l.quantity,
-        price_data: {
-          currency: store.currency,
-          unit_amount: l.product.priceInCents,
-          product_data: {
-            name: l.product.name,
-            images: l.product.images.filter((u) => u.startsWith("https://")).slice(0, 1),
-          },
-        },
-      })),
-      success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/checkout/cancel?order=${order.id}`,
-    });
+  const payment = await stripeProvider.createPayment({
+    orderId: order.id,
+    store: { id: store.id, currency: store.currency, stripeAccountId: store.stripeAccountId },
+    customerEmail: email,
+    totalInCents,
+    lines: lines.map((l) => ({
+      name: l.product.name,
+      quantity: l.quantity,
+      unitPriceInCents: l.product.priceInCents,
+      images: l.product.images.filter((u) => u.startsWith("https://")),
+    })),
+    successUrl: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${baseUrl}/checkout/cancel?order=${order.id}`,
+  });
 
-    await prisma.order.update({ where: { id: order.id }, data: { stripeSessionId: session.id } });
-    if (!session.url) return { error: "Não foi possível iniciar o pagamento." };
-    return { url: session.url };
-  } catch (err) {
-    console.error("[checkout] Stripe error", err);
+  if ("error" in payment) {
     await prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { id: order.id }, data: { status: "FAILED" } });
       await releaseStock(tx, order.id);
     });
-    return { error: "Falha ao conectar com o Stripe. Tente novamente." };
+    return payment;
   }
+
+  await prisma.order.update({ where: { id: order.id }, data: { stripeSessionId: payment.sessionId } });
+  return { url: payment.url };
 }
