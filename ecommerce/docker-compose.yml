@@ -86,6 +86,7 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-env
+      PORT: 3001
       AUTH_SECRET: ${AUTH_SECRET}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}

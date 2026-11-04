@@ -88,11 +88,16 @@ Deixa o projeto seguro para receber mudanças grandes. Faça antes de qualquer f
   - Ativar ESLint (`next lint`) e remover `eslint.ignoreDuringBuilds`, corrigindo os avisos.
   - Aceite: PR mostra os checks verdes; um erro de tipo faz o check falhar.
 
-- [ ] **F0.6 Imagem Docker de produção**
+- [x] **F0.6 Imagem Docker de produção**
   - `output: "standalone"` nas duas apps; o estágio `runner` copia só `.next/standalone`,
     `.next/static`, `public` e os engines do Prisma.
   - Usuário não-root no container; `HEALTHCHECK` simples.
   - Aceite: `docker compose up --build` funciona e a imagem fica bem menor que a atual (anotar antes/depois).
+  - Resultado: `admin` 852MB → 180MB, `storefront` 854MB → 179MB (~79% menores). Validado com
+    `docker run` isolado (Postgres do compose + env fictício): healthcheck `healthy`, `whoami` = `nextjs`,
+    `/api/health` responde 200. `docker compose up --build` completo não testado nesta máquina porque
+    o serviço `storage` (porta 9000) colide com um container de outro projeto local — não é um problema
+    do Dockerfile.
 
 ---
 

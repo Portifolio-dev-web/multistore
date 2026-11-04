@@ -5,6 +5,8 @@ const PUBLIC_PATHS = ["/login", "/register"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  if (pathname === "/api/health") return NextResponse.next();
+
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
 
