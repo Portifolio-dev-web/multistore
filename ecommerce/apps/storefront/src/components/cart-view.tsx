@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import Link from "next/link";
 import { formatBRL } from "@repo/db/utils";
 import { useCart, useHydrated, useStoreCart, type CartItem } from "@/lib/cart-store";
-import { createCheckoutSession } from "@/actions/checkout";
 import { ProductImage } from "./product-image";
 import { useStoreContext } from "./store-context";
 
@@ -12,8 +10,6 @@ export function CartView({ storeSlug }: { storeSlug: string }) {
   const { href } = useStoreContext();
   const items = useStoreCart(storeSlug);
   const hydrated = useHydrated();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
 
   if (!hydrated) return <div className="mt-10 h-40 animate-pulse rounded-3xl bg-ink/5" />;
 
@@ -27,18 +23,6 @@ export function CartView({ storeSlug }: { storeSlug: string }) {
   }
 
   const subtotal = items.reduce((s, i) => s + i.priceInCents * i.quantity, 0);
-
-  const checkout = () => {
-    setError(null);
-    startTransition(async () => {
-      const result = await createCheckoutSession({
-        storeSlug,
-        items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-      });
-      if ("error" in result) setError(result.error);
-      else window.location.href = result.url;
-    });
-  };
 
   return (
     <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_340px]">
@@ -54,16 +38,13 @@ export function CartView({ storeSlug }: { storeSlug: string }) {
           <span className="font-display text-3xl font-bold" data-testid="cart-subtotal">{formatBRL(subtotal)}</span>
         </div>
         <p className="mt-2 text-xs opacity-70">Frete e impostos calculados no checkout.</p>
-        <button
-          type="button"
-          onClick={checkout}
-          disabled={pending}
-          className="mt-6 w-full rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5 disabled:opacity-50"
+        <Link
+          href={href("/checkout")}
+          className="mt-6 block w-full rounded-full bg-accent px-6 py-3.5 text-center text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5"
           data-testid="cart-checkout-button"
         >
-          {pending ? "Redirecionando…" : "Finalizar compra"}
-        </button>
-        {error && <p className="mt-3 rounded-xl bg-white/90 p-3 text-sm text-red-700" data-testid="cart-checkout-error">{error}</p>}
+          Finalizar compra
+        </Link>
       </aside>
     </div>
   );

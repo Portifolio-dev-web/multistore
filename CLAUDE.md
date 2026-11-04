@@ -71,10 +71,16 @@ O `apps/storefront/src/middleware.ts` resolve o host, reescreve para `/{slug}/..
 assinatura; toda página e toda Server Action chama `requireSession()` (`lib/session.ts`), que revalida
 no banco e devolve o `storeId` a ser usado.
 
-**Checkout e pagamento.** `storefront/src/actions/checkout.ts` valida o carrinho, recalcula preço no
-banco e **reserva o estoque na criação do pedido** (`@repo/db` `reserveStock`, dentro da mesma
-transação que cria o `Order` como `PENDING`), depois abre uma Stripe Checkout Session (expira em 30
-min) com `metadata.orderId`. O webhook (`app/api/webhooks/stripe/route.ts`) chama `markOrderPaid`
+**Checkout e pagamento.** A vitrine tem um checkout próprio em `/{slug}/checkout` (fora do grupo de
+rotas `(shop)`, layout enxuto sem menu nem rodapé): 3 passos client-side — identificação (e-mail,
+nome, telefone, CPF/CNPJ), endereço (CEP com preenchimento automático via ViaCEP) e resumo —
+validados com os schemas de `storefront/src/lib/validation.ts`. Só o passo final chama a Server
+Action. `storefront/src/actions/checkout.ts` valida tudo de novo no servidor (nunca confia só no
+formulário), recalcula preço no banco e **reserva o estoque na criação do pedido** (`@repo/db`
+`reserveStock`, dentro da mesma transação que cria o `Order` como `PENDING`, já com
+`customerEmail`/`customerName`/`customerPhone`/`customerDocument`/`shippingAddress`), depois abre
+uma Stripe Checkout Session (expira em 30 min, `customer_email` pré-preenchido, sem
+`shipping_address_collection`) com `metadata.orderId`. O webhook (`app/api/webhooks/stripe/route.ts`) chama `markOrderPaid`
 (`lib/orders.ts`), que muda o status de forma idempotente e envia a confirmação — o estoque já foi
 baixado na reserva, não no pagamento. Se o pedido expira, falha ou é cancelado, `setOrderStatus`
 devolve o estoque (`releaseStock`, idempotente via `Order.stockReleasedAt`). A página

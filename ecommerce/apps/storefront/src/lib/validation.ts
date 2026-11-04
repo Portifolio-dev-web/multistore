@@ -26,7 +26,7 @@ export const addressSchema = z.object({
     .string()
     .trim()
     .max(60)
-    .optional()
+    .nullish()
     .transform((v) => v || null),
   district: z.string().trim().min(2, "Informe o bairro").max(80),
   city: z.string().trim().min(2, "Informe a cidade").max(80),

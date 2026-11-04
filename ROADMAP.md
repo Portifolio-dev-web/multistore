@@ -124,7 +124,7 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - Aceite: teste com dois pedidos disputando a última unidade, em que só um passa;
     pedido expirado devolve o estoque uma única vez mesmo com webhook repetido.
 
-- [ ] **F1.3 Checkout próprio: identificação e entrega** **(grande)**
+- [x] **F1.3 Checkout próprio: identificação e entrega** **(grande)**
   - Nova página `/checkout` na vitrine, antes do pagamento, em etapas: (1) e-mail, nome, telefone,
     CPF/CNPJ com validação de dígitos; (2) CEP com preenchimento automático (ViaCEP) e endereço
     completo; (3) resumo e botão "Ir para o pagamento".
@@ -134,22 +134,20 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - Remover `shipping_address_collection` do Stripe e passar `customer_email`.
   - Layout enxuto (sem menu e sem rodapé), como checkouts de loja. Mobile primeiro.
   - Aceite: não dá para chegar ao pagamento sem dados válidos; dados aparecem no pedido no admin.
-  - Progresso: **Etapa 1/3 concluída** (2026-11-04) — `Order.customerPhone`/`customerDocument` no
-    schema, `formatAddress` aceitando o formato novo (estruturado) e o antigo (Stripe), validadores
-    de CPF/CNPJ e CEP em `@repo/db/utils`, schemas Zod das 3 etapas em
-    `apps/storefront/src/lib/validation.ts`, Vitest ligado no `storefront` (antes só tinha no admin
-    e no `@repo/db`).
-  - Progresso: **Etapa 2/3 concluída** (2026-11-04) — rotas da vitrine reorganizadas em route groups
-    (`[store]/(shop)/...` com header/rodapé; `[store]/checkout/...` com layout enxuto, só o nome da
-    loja); página `/{slug}/checkout` nova com os 3 passos (identificação, endereço com
-    preenchimento automático por CEP via ViaCEP, resumo), mobile primeiro. Testada manualmente num
-    navegador real (Playwright ad-hoc, não faz parte da suíte): header/rodapé ausentes no checkout e
-    presentes no resto da loja, ViaCEP preenchendo os campos, resumo batendo com o carrinho.
-    **Ainda não está ligada ao carrinho** (o botão "Finalizar compra" continua chamando
-    `createCheckoutSession` direto) nem ao pedido no banco — isso é a Etapa 3.
-  - Falta: Etapa 3 — trocar o botão do carrinho pra levar ao `/checkout`, `createCheckoutSession`
-    passar a receber identificação+endereço e gravar no `Order`, remover
-    `shipping_address_collection` do Stripe.
+  - Feito em 3 etapas (2026-11-04): (1) `Order.customerPhone`/`customerDocument` no schema,
+    `formatAddress` aceitando o formato novo (estruturado) e o antigo (Stripe), validadores de
+    CPF/CNPJ e CEP em `@repo/db/utils`, schemas Zod em `apps/storefront/src/lib/validation.ts`,
+    Vitest ligado no `storefront`; (2) rotas da vitrine reorganizadas em route groups
+    (`[store]/(shop)/...` com header/rodapé, `[store]/checkout/...` enxuto) e a página
+    `/{slug}/checkout` com os 3 passos, mobile primeiro, ViaCEP preenchendo o endereço; (3) o botão
+    "Finalizar compra" do carrinho virou link pro `/checkout`, e `createCheckoutSession` passou a
+    receber identificação+endereço, gravar no `Order` e remover o `shipping_address_collection` do
+    Stripe (ganhou `customer_email` no lugar).
+  - Validado num navegador de verdade (fluxo completo carrinho → checkout → envio): achei e corrigi
+    um bug nessa validação — o campo `complement` saía como `null` do formulário mas o schema só
+    aceitava `undefined` nos campos opcionais, rejeitando todo envio com "Dados inválidos"
+    (`.optional()` → `.nullish()` em `addressSchema`). Depois do fix, o pedido saiu com todos os
+    campos certos (telefone, CPF/CNPJ, endereço) e apareceu certinho no admin.
 
 - [ ] **F1.4 Recebimento por loja** **(grande)** · **Decisão**
   - Hoje todo pagamento cai numa única conta Stripe. Cada loja precisa da própria conta de recebimento.
@@ -475,3 +473,4 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 |------|--------|---------|--------|
 | 2026-11-04 | F0.4 | Banco de teste do E2E é um schema Postgres separado (`?schema=e2e_test`) no mesmo Postgres de dev, não um container/banco novo | `prisma migrate reset --force` já dropa/recria e roda o seed nativamente; evita um serviço Docker extra só para isso |
 | 2026-11-04 | F1.1 | Teste de concorrência do número de pedido entra em `e2e/` (via Prisma direto, sem navegador), não em `packages/db` como teste unitário | Precisa de um Postgres real pro lock de linha da transação fazer sentido; `yarn test` (Vitest) não tem banco disponível no job de CI |
+| 2026-11-04 | F1.3 | Removido também o `phone_number_collection` do Stripe (não só o `shipping_address_collection` pedido) | O telefone já é coletado no checkout próprio; pedir de novo na página do Stripe seria redundante |

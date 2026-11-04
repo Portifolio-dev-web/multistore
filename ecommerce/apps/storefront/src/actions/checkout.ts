@@ -1,26 +1,43 @@
 "use server";
 
 import { z } from "zod";
-import { nextOrderNumber, OutOfStockError, prisma, releaseStock, reserveStock } from "@repo/db";
+import { nextOrderNumber, OutOfStockError, prisma, releaseStock, reserveStock, type Prisma } from "@repo/db";
 import { calculateOrderPricing } from "@repo/db/pricing";
 import { storeUrl } from "@repo/db/urls";
 import { getStripe } from "@/lib/stripe";
+import { customerDetailsSchema } from "@/lib/validation";
 
-const checkoutSchema = z.object({
-  storeSlug: z.string().min(1),
-  items: z
-    .array(z.object({ productId: z.string().min(1), quantity: z.number().int().min(1).max(99) }))
-    .min(1, "Carrinho vazio")
-    .max(50),
-});
+const checkoutSchema = z
+  .object({
+    storeSlug: z.string().min(1),
+    items: z
+      .array(z.object({ productId: z.string().min(1), quantity: z.number().int().min(1).max(99) }))
+      .min(1, "Carrinho vazio")
+      .max(50),
+  })
+  .merge(customerDetailsSchema);
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 export type CheckoutResult = { url: string } | { error: string };
 
 export async function createCheckoutSession(input: CheckoutInput): Promise<CheckoutResult> {
   const parsed = checkoutSchema.safeParse(input);
-  if (!parsed.success) return { error: "Carrinho inválido." };
-  const { storeSlug, items } = parsed.data;
+  if (!parsed.success) return { error: "Dados inválidos. Confira as informações e tente de novo." };
+  const {
+    storeSlug,
+    items,
+    email,
+    name,
+    phone,
+    document,
+    zip,
+    street,
+    number: addressNumber,
+    complement,
+    district,
+    city,
+    state,
+  } = parsed.data;
 
   const store = await prisma.store.findUnique({ where: { slug: storeSlug } });
   if (!store) return { error: "Loja não encontrada." };
@@ -40,17 +57,32 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
   let order;
   try {
     order = await prisma.$transaction(async (tx) => {
-      const number = await nextOrderNumber(tx, store.id);
+      const orderNumber = await nextOrderNumber(tx, store.id);
       await reserveStock(
         tx,
         lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
       );
+      const shippingAddress: Prisma.InputJsonValue = {
+        name,
+        zip,
+        street,
+        number: addressNumber,
+        complement,
+        district,
+        city,
+        state,
+      };
       return tx.order.create({
         data: {
           storeId: store.id,
-          number,
+          number: orderNumber,
           totalInCents,
           currency: store.currency,
+          customerEmail: email,
+          customerName: name,
+          customerPhone: phone,
+          customerDocument: document,
+          shippingAddress,
           items: {
             create: lines.map((l) => ({
               productId: l.product.id,
@@ -77,8 +109,7 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
       mode: "payment",
       client_reference_id: order.id,
       metadata: { orderId: order.id, storeId: store.id },
-      shipping_address_collection: { allowed_countries: ["BR"] },
-      phone_number_collection: { enabled: true },
+      customer_email: email,
       // Reserva de estoque é curta: a sessão expira (e devolve o estoque) em 30 minutos
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       line_items: lines.map((l) => ({

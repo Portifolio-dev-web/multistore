@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import type { z } from "zod";
 import { formatBRL } from "@repo/db/utils";
 import { useHydrated, useStoreCart, type CartItem } from "@/lib/cart-store";
-import { addressSchema, identificationSchema } from "@/lib/validation";
+import { addressSchema, customerDetailsSchema, identificationSchema } from "@/lib/validation";
 import { createCheckoutSession } from "@/actions/checkout";
 
 type Step = 1 | 2 | 3;
@@ -94,11 +94,18 @@ export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
   }
 
   function submit() {
+    // Revalida tudo junto antes de mandar pro servidor (os passos 1 e 2 já validaram em separado)
+    const details = customerDetailsSchema.safeParse({ ...identification, ...address });
+    if (!details.success) {
+      setSubmitError("Alguns dados ficaram inválidos. Volte e confira as etapas anteriores.");
+      return;
+    }
     setSubmitError(null);
     startTransition(async () => {
       const result = await createCheckoutSession({
         storeSlug,
         items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        ...details.data,
       });
       if ("error" in result) setSubmitError(result.error);
       else window.location.href = result.url;
