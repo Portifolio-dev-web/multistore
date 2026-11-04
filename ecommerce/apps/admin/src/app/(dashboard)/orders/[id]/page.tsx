@@ -31,7 +31,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
   return (
     <>
       <Link href="/orders" className="font-mono text-xs text-ink/50 hover:text-ink" data-testid="back-to-orders-link">← pedidos</Link>
-      <PageHeader title={`Pedido #${order.id.slice(-8).toUpperCase()}`} action={<StatusBadge status={order.status} testId="order-detail-status" />} />
+      <PageHeader title={`Pedido #${order.number}`} action={<StatusBadge status={order.status} testId="order-detail-status" />} />
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <section className="card overflow-hidden">
           <table className="w-full">

@@ -34,7 +34,7 @@ export default async function OrderTrackingPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-14 sm:px-8">
-      <p className="label">Pedido #{order.id.slice(-8).toUpperCase()}</p>
+      <p className="label">Pedido #{order.number}</p>
       <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl" data-testid="tracking-title">
         {order.status === "PAID" ? FULFILLMENT_LABEL[order.fulfillmentStatus] : ORDER_STATUS_LABEL[order.status]}
       </h1>

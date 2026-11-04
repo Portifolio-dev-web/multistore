@@ -46,7 +46,7 @@ export default async function OverviewPage() {
             {recent.map((o) => (
               <li key={o.id}>
                 <Link href={`/orders/${o.id}`} className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-bone/60" data-testid={`overview-order-${o.id}`}>
-                  <span className="font-mono text-sm">#{o.id.slice(-8).toUpperCase()}</span>
+                  <span className="font-mono text-sm">#{o.number}</span>
                   <StatusBadge status={o.status} />
                   <span className="text-sm font-semibold">{formatBRL(o.totalInCents)}</span>
                 </Link>

@@ -3,8 +3,6 @@ import { orderTrackingUrl } from "@repo/db/urls";
 import { sendMail } from "./transport";
 import { orderConfirmationEmail, shippingUpdateEmail } from "./templates";
 
-export const orderCode = (id: string) => id.slice(-8).toUpperCase();
-
 async function loadOrder(orderId: string) {
   return prisma.order.findUnique({ where: { id: orderId }, include: { items: true, store: true } });
 }
@@ -23,7 +21,7 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
   try {
     const mail = orderConfirmationEmail({
       store: order.store,
-      code: orderCode(order.id),
+      code: String(order.number),
       customerName: order.customerName,
       items: order.items,
       totalInCents: order.totalInCents,
@@ -44,7 +42,7 @@ export async function sendShippingUpdate(orderId: string): Promise<boolean> {
   try {
     const mail = shippingUpdateEmail({
       store: order.store,
-      code: orderCode(order.id),
+      code: String(order.number),
       carrier: order.carrier,
       trackingCode: order.trackingCode,
       trackingUrl: order.trackingUrl,

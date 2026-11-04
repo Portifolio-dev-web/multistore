@@ -39,7 +39,7 @@ export default async function CheckoutSuccess({ params, searchParams }: Props) {
       <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent text-2xl text-ink">✓</span>
       <h1 className="mt-6 font-display text-4xl font-bold tracking-tight sm:text-5xl">Obrigado pela compra!</h1>
       <p className="mt-3 text-ink/60">
-        Pedido <span className="font-mono text-ink" data-testid="success-order-id">#{order.id.slice(-8).toUpperCase()}</span> ·{" "}
+        Pedido <span className="font-mono text-ink" data-testid="success-order-id">#{order.number}</span> ·{" "}
         <span className="font-semibold text-ink" data-testid="success-order-status">{ORDER_STATUS_LABEL[order.status]}</span>
       </p>
       {order.status !== "PAID" && (

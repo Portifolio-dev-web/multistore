@@ -52,7 +52,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: { sta
             {orders.map((o) => (
               <tr key={o.id} className="transition-colors hover:bg-bone/60">
                 <td className="td">
-                  <Link href={`/orders/${o.id}`} className="font-mono hover:underline" data-testid={`order-row-${o.id}`}>#{o.id.slice(-8).toUpperCase()}</Link>
+                  <Link href={`/orders/${o.id}`} className="font-mono hover:underline" data-testid={`order-row-${o.id}`}>#{o.number}</Link>
                 </td>
                 <td className="td text-ink/60">{dateFmt.format(o.createdAt)}</td>
                 <td className="td">{o.customerEmail ?? <span className="text-ink/40">—</span>}</td>

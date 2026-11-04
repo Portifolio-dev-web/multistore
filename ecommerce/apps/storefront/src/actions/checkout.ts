@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { prisma } from "@repo/db";
+import { nextOrderNumber, prisma } from "@repo/db";
 import { calculateOrderPricing } from "@repo/db/pricing";
 import { storeUrl } from "@repo/db/urls";
 import { getStripe } from "@/lib/stripe";
@@ -37,20 +37,24 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
   const lines = pricing.lines.map((l) => ({ product: byId.get(l.productId)!, quantity: l.quantity }));
   const totalInCents = pricing.totalInCents;
 
-  const order = await prisma.order.create({
-    data: {
-      storeId: store.id,
-      totalInCents,
-      currency: store.currency,
-      items: {
-        create: lines.map((l) => ({
-          productId: l.product.id,
-          productName: l.product.name,
-          unitPriceInCents: l.product.priceInCents,
-          quantity: l.quantity,
-        })),
+  const order = await prisma.$transaction(async (tx) => {
+    const number = await nextOrderNumber(tx, store.id);
+    return tx.order.create({
+      data: {
+        storeId: store.id,
+        number,
+        totalInCents,
+        currency: store.currency,
+        items: {
+          create: lines.map((l) => ({
+            productId: l.product.id,
+            productName: l.product.name,
+            unitPriceInCents: l.product.priceInCents,
+            quantity: l.quantity,
+          })),
+        },
       },
-    },
+    });
   });
 
   const baseUrl = storeUrl(store);

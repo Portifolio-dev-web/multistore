@@ -18,6 +18,7 @@ model Store {
   accentColor  String    @default("#f59e0b")
   currency     String    @default("brl")
   customDomain String?   @unique
+  nextOrderNumber Int    @default(1001)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   products     Product[]
@@ -76,6 +77,7 @@ model Order {
   publicToken             String            @unique @default(dbgenerated("gen_random_uuid()::text"))
   storeId                 String
   store                   Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  number                  Int
   status                  OrderStatus       @default(PENDING)
   fulfillmentStatus       FulfillmentStatus @default(UNFULFILLED)
   carrier                 String?
@@ -96,6 +98,7 @@ model Order {
   updatedAt             DateTime    @updatedAt
   items                 OrderItem[]
 
+  @@unique([storeId, number])
   @@index([storeId, status])
   @@index([storeId, createdAt])
 }

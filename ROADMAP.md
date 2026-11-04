@@ -105,7 +105,7 @@ Deixa o projeto seguro para receber mudanças grandes. Faça antes de qualquer f
 
 O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado.
 
-- [ ] **F1.1 Número de pedido sequencial por loja**
+- [x] **F1.1 Número de pedido sequencial por loja**
   - `Order.number Int` com `@@unique([storeId, number])`; contador em `Store.nextOrderNumber`
     (começa em 1001), incrementado de forma atômica dentro da transação que cria o pedido.
   - Migration com backfill dos pedidos existentes por ordem de criação.
@@ -458,3 +458,4 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | Data | Tarefa | Decisão | Motivo |
 |------|--------|---------|--------|
 | 2026-11-04 | F0.4 | Banco de teste do E2E é um schema Postgres separado (`?schema=e2e_test`) no mesmo Postgres de dev, não um container/banco novo | `prisma migrate reset --force` já dropa/recria e roda o seed nativamente; evita um serviço Docker extra só para isso |
+| 2026-11-04 | F1.1 | Teste de concorrência do número de pedido entra em `e2e/` (via Prisma direto, sem navegador), não em `packages/db` como teste unitário | Precisa de um Postgres real pro lock de linha da transação fazer sentido; `yarn test` (Vitest) não tem banco disponível no job de CI |
