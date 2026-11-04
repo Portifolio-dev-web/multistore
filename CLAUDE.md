@@ -71,11 +71,14 @@ O `apps/storefront/src/middleware.ts` resolve o host, reescreve para `/{slug}/..
 assinatura; toda página e toda Server Action chama `requireSession()` (`lib/session.ts`), que revalida
 no banco e devolve o `storeId` a ser usado.
 
-**Checkout e pagamento.** `storefront/src/actions/checkout.ts` valida o carrinho, recalcula preço e
-estoque no banco, cria o `Order` como `PENDING` e abre uma Stripe Checkout Session com
-`metadata.orderId`. O webhook (`app/api/webhooks/stripe/route.ts`) chama `markOrderPaid`
-(`lib/orders.ts`), que muda o status de forma idempotente, baixa o estoque uma vez e envia a
-confirmação. A página `/checkout/success` chama `markOrderPaid` de novo como fallback.
+**Checkout e pagamento.** `storefront/src/actions/checkout.ts` valida o carrinho, recalcula preço no
+banco e **reserva o estoque na criação do pedido** (`@repo/db` `reserveStock`, dentro da mesma
+transação que cria o `Order` como `PENDING`), depois abre uma Stripe Checkout Session (expira em 30
+min) com `metadata.orderId`. O webhook (`app/api/webhooks/stripe/route.ts`) chama `markOrderPaid`
+(`lib/orders.ts`), que muda o status de forma idempotente e envia a confirmação — o estoque já foi
+baixado na reserva, não no pagamento. Se o pedido expira, falha ou é cancelado, `setOrderStatus`
+devolve o estoque (`releaseStock`, idempotente via `Order.stockReleasedAt`). A página
+`/checkout/success` chama `markOrderPaid` de novo como fallback.
 
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.
@@ -131,7 +134,6 @@ S3-compatível (`lib/storage.ts`; RustFS em dev, S3/R2 em produção).
 - Schema só muda por migrations (`yarn db:migrate` em dev, `yarn db:deploy` em produção); nunca
   `prisma db push`. Banco criado antes da F0.2: alinhar uma vez com
   `yarn workspace @repo/db prisma migrate resolve --applied 20261104111225_init`.
-- Hoje o checkout só confere o estoque, sem reservar. A F1.2 corrige isso.
 - Hoje todas as lojas recebem na mesma conta Stripe (`STRIPE_SECRET_KEY` global). A F1.4 corrige isso.
 
 ## Como trabalhar

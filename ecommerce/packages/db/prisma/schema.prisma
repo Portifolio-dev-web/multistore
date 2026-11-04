@@ -87,6 +87,7 @@ model Order {
   deliveredAt             DateTime?
   shippingAddress         Json?
   confirmationEmailSentAt DateTime?
+  stockReleasedAt         DateTime?
   customerEmail         String?
   customerName          String?
   totalInCents          Int

@@ -2,11 +2,13 @@
 // banco (sem passar pelo Stripe real) e envia o evento assinado pro endpoint do storefront.
 import { expect, test } from "@playwright/test";
 import Stripe from "stripe";
-import { nextOrderNumber, prisma } from "@repo/db";
+import { nextOrderNumber, prisma, reserveStock } from "@repo/db";
 import { STORE_SLUG, STRIPE_WEBHOOK_SECRET } from "./env";
 
 test.describe("webhook do Stripe", () => {
-  test("marca o pedido como pago, baixa o estoque e é idempotente a reenvios", async ({ request }) => {
+  test("marca o pedido como pago e é idempotente a reenvios (estoque já reservado na criação)", async ({
+    request,
+  }) => {
     const store = await prisma.store.findUniqueOrThrow({ where: { slug: STORE_SLUG } });
     const product = await prisma.product.findFirstOrThrow({
       where: { storeId: store.id, stock: { gt: 1 } },
@@ -15,6 +17,7 @@ test.describe("webhook do Stripe", () => {
 
     const order = await prisma.$transaction(async (tx) => {
       const number = await nextOrderNumber(tx, store.id);
+      await reserveStock(tx, [{ productId: product.id, quantity: 1 }]);
       return tx.order.create({
         data: {
           storeId: store.id,

@@ -112,7 +112,7 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - Trocar `id.slice(-8)` por `#{number}` em admin, e-mails, página de sucesso e acompanhamento.
   - Aceite: dois checkouts simultâneos nunca geram o mesmo número (teste unitário com transações concorrentes).
 
-- [ ] **F1.2 Reserva de estoque**
+- [x] **F1.2 Reserva de estoque**
   - Ao criar o pedido, baixar o estoque com `updateMany({ where: { id, stock: { gte: qty } } })` dentro
     da transação; se alguma linha não atualizar, desfazer tudo e avisar qual produto acabou.
   - Isolar isso em `reserveStock(tx, lines)` e `releaseStock(tx, orderId)`, para a F2.2 trocar

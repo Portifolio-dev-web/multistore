@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { nextOrderNumber, prisma } from "@repo/db";
+import { nextOrderNumber, OutOfStockError, prisma, releaseStock, reserveStock } from "@repo/db";
 import { calculateOrderPricing } from "@repo/db/pricing";
 import { storeUrl } from "@repo/db/urls";
 import { getStripe } from "@/lib/stripe";
@@ -37,25 +37,38 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
   const lines = pricing.lines.map((l) => ({ product: byId.get(l.productId)!, quantity: l.quantity }));
   const totalInCents = pricing.totalInCents;
 
-  const order = await prisma.$transaction(async (tx) => {
-    const number = await nextOrderNumber(tx, store.id);
-    return tx.order.create({
-      data: {
-        storeId: store.id,
-        number,
-        totalInCents,
-        currency: store.currency,
-        items: {
-          create: lines.map((l) => ({
-            productId: l.product.id,
-            productName: l.product.name,
-            unitPriceInCents: l.product.priceInCents,
-            quantity: l.quantity,
-          })),
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      const number = await nextOrderNumber(tx, store.id);
+      await reserveStock(
+        tx,
+        lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
+      );
+      return tx.order.create({
+        data: {
+          storeId: store.id,
+          number,
+          totalInCents,
+          currency: store.currency,
+          items: {
+            create: lines.map((l) => ({
+              productId: l.product.id,
+              productName: l.product.name,
+              unitPriceInCents: l.product.priceInCents,
+              quantity: l.quantity,
+            })),
+          },
         },
-      },
+      });
     });
-  });
+  } catch (err) {
+    if (err instanceof OutOfStockError) {
+      const product = byId.get(err.productId);
+      return { error: `Estoque insuficiente para "${product?.name ?? "um dos produtos"}".` };
+    }
+    throw err;
+  }
 
   const baseUrl = storeUrl(store);
 
@@ -66,6 +79,8 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
       metadata: { orderId: order.id, storeId: store.id },
       shipping_address_collection: { allowed_countries: ["BR"] },
       phone_number_collection: { enabled: true },
+      // Reserva de estoque é curta: a sessão expira (e devolve o estoque) em 30 minutos
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       line_items: lines.map((l) => ({
         quantity: l.quantity,
         price_data: {
@@ -86,7 +101,10 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
     return { url: session.url };
   } catch (err) {
     console.error("[checkout] Stripe error", err);
-    await prisma.order.update({ where: { id: order.id }, data: { status: "FAILED" } });
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { id: order.id }, data: { status: "FAILED" } });
+      await releaseStock(tx, order.id);
+    });
     return { error: "Falha ao conectar com o Stripe. Tente novamente." };
   }
 }
