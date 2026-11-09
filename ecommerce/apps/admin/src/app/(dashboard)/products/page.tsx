@@ -10,6 +10,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { q
   const products = await prisma.product.findMany({
     where: { storeId, ...(q && { name: { contains: q, mode: "insensitive" } }) },
     orderBy: { createdAt: "desc" },
+    include: { categories: { select: { name: true } } },
   });
 
   return (
@@ -47,7 +48,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { q
                     {p.name}
                   </Link>
                 </td>
-                <td className="td text-ink/60">{p.category ?? "—"}</td>
+                <td className="td text-ink/60">{p.categories.map((c) => c.name).join(", ") || "—"}</td>
                 <td className="td font-mono">{formatBRL(p.priceInCents)}</td>
                 <td className={`td font-mono ${p.stock === 0 ? "text-red-700" : ""}`}>{p.stock}</td>
                 <td className="td">

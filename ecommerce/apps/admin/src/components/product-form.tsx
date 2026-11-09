@@ -10,7 +10,7 @@ type ProductValues = {
   name: string;
   slug: string;
   description: string;
-  category: string | null;
+  categoryIds: string[];
   priceInCents: number;
   compareAtPriceInCents: number | null;
   promoStartsAt: Date | null;
@@ -27,10 +27,11 @@ function toDateInput(value: Date | null | undefined): string {
 type Props = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   product?: ProductValues;
+  categories: { id: string; label: string }[];
   submitLabel: string;
 };
 
-export function ProductForm({ action, product, submitLabel }: Props) {
+export function ProductForm({ action, product, categories, submitLabel }: Props) {
   const [state, formAction] = useFormState(action, {});
   const e = state.fieldErrors;
 
@@ -59,7 +60,7 @@ export function ProductForm({ action, product, submitLabel }: Props) {
         <textarea id="description" name="description" rows={5} defaultValue={product?.description} className="field" data-testid="product-description-input" />
         <FieldError errors={e?.description} />
       </div>
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="priceInCents">Preço (R$)</label>
           <input id="priceInCents" name="priceInCents" inputMode="decimal" placeholder="129,90" defaultValue={product ? centsToInput(product.priceInCents) : ""} required className="field font-mono" data-testid="product-price-input" />
@@ -70,11 +71,26 @@ export function ProductForm({ action, product, submitLabel }: Props) {
           <input id="stock" name="stock" type="number" min={0} defaultValue={product?.stock ?? 0} required className="field font-mono" data-testid="product-stock-input" />
           <FieldError errors={e?.stock} />
         </div>
-        <div>
-          <label className="label" htmlFor="category">Categoria</label>
-          <input id="category" name="category" defaultValue={product?.category ?? ""} className="field" data-testid="product-category-input" />
-          <FieldError errors={e?.category} />
+      </div>
+      <div>
+        <span className="label">Categorias</span>
+        <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-lg border border-line p-3">
+          {categories.length === 0 && <p className="text-sm text-ink/50">Nenhuma categoria ainda — crie em &quot;Categorias&quot;.</p>}
+          {categories.map((c) => (
+            <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="categoryIds"
+                value={c.id}
+                defaultChecked={product?.categoryIds.includes(c.id)}
+                className="h-4 w-4 accent-ink"
+                data-testid={`product-category-checkbox-${c.id}`}
+              />
+              {c.label}
+            </label>
+          ))}
         </div>
+        <FieldError errors={e?.categoryIds} testId="product-category-error" />
       </div>
       <div className="grid gap-5 sm:grid-cols-3">
         <div>

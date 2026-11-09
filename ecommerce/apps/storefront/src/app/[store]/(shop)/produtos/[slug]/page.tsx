@@ -13,7 +13,10 @@ export default async function ProductPage({ params }: Props) {
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 
-  const product = await prisma.product.findFirst({ where: { slug: params.slug, storeId: store.id, active: true } });
+  const product = await prisma.product.findFirst({
+    where: { slug: params.slug, storeId: store.id, active: true },
+    include: { categories: { select: { name: true, slug: true } } },
+  });
   if (!product) {
     // Slug antigo (produto renomeado)? Redireciona pro endereço atual.
     const redirect = await prisma.slugRedirect.findUnique({
@@ -34,7 +37,15 @@ export default async function ProductPage({ params }: Props) {
       <div className="mt-8 grid gap-12 lg:grid-cols-2">
         <ProductGallery images={product.images} name={product.name} />
         <div className="animate-rise lg:pt-6">
-          {product.category && <p className="label">{product.category}</p>}
+          {product.categories.length > 0 && (
+            <p className="label space-x-2">
+              {product.categories.map((c) => (
+                <Link key={c.slug} href={storeHref(getStoreBase(store.slug), `/categorias/${c.slug}`)} className="hover:underline" data-testid={`product-category-link-${c.slug}`}>
+                  {c.name}
+                </Link>
+              ))}
+            </p>
+          )}
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl" data-testid="product-name">{product.name}</h1>
           <div className="mt-5 flex items-center gap-3">
             {onPromo && (

@@ -25,6 +25,7 @@ model Store {
   orders       Order[]
   users        User[]
   slugRedirects SlugRedirect[]
+  categories   Category[]
 }
 
 model User {
@@ -46,7 +47,6 @@ model Product {
   name         String
   slug         String
   description  String      @default("")
-  category     String?
   priceInCents Int
   compareAtPriceInCents Int?
   promoStartsAt DateTime?
@@ -58,10 +58,30 @@ model Product {
   updatedAt    DateTime    @updatedAt
   orderItems   OrderItem[]
   redirects    SlugRedirect[]
+  categories   Category[]
 
   @@unique([storeId, slug])
   @@index([storeId, active])
-  @@index([storeId, category])
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  storeId     String
+  store       Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String     @default("")
+  imageUrl    String?
+  position    Int        @default(0)
+  parentId    String?
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryTree")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([storeId, slug])
+  @@index([storeId, parentId])
 }
 
 model SlugRedirect {

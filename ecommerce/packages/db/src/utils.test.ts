@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   centsToInput,
   contrastText,
+  categoryAncestors,
+  categoryDescendantIds,
   formatAddress,
   formatBRL,
   isPromoActive,
@@ -151,6 +153,39 @@ describe("isPromoActive", () => {
 describe("promoDiscountPercent", () => {
   it("calcula o percentual de desconto arredondado", () => {
     expect(promoDiscountPercent(10000, 8000)).toBe(20);
+  });
+});
+
+describe("categoryDescendantIds", () => {
+  const tree = [
+    { id: "roupas", parentId: null },
+    { id: "camisetas", parentId: "roupas" },
+    { id: "basicas", parentId: "camisetas" },
+    { id: "calcados", parentId: null },
+  ];
+
+  it("inclui a própria categoria e todos os descendentes, em qualquer profundidade", () => {
+    expect(categoryDescendantIds(tree, "roupas").sort()).toEqual(["basicas", "camisetas", "roupas"]);
+  });
+
+  it("categoria sem filhos retorna só ela mesma", () => {
+    expect(categoryDescendantIds(tree, "calcados")).toEqual(["calcados"]);
+  });
+});
+
+describe("categoryAncestors", () => {
+  const tree = [
+    { id: "roupas", name: "Roupas", parentId: null },
+    { id: "camisetas", name: "Camisetas", parentId: "roupas" },
+    { id: "basicas", name: "Básicas", parentId: "camisetas" },
+  ];
+
+  it("retorna a cadeia da raiz até a categoria, inclusive", () => {
+    expect(categoryAncestors(tree, "basicas").map((c) => c.name)).toEqual(["Roupas", "Camisetas", "Básicas"]);
+  });
+
+  it("categoria raiz retorna só ela mesma", () => {
+    expect(categoryAncestors(tree, "roupas").map((c) => c.name)).toEqual(["Roupas"]);
   });
 });
 

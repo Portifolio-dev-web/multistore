@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma, type Prisma } from "@repo/db";
-import { isPromoActive } from "@repo/db/utils";
+import { categoryAncestors, categoryDescendantIds, isPromoActive } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase } from "@/lib/paths";
 import { ProductCard } from "@/components/product-card";
@@ -34,6 +34,9 @@ export default async function StorePage({ params, searchParams }: Props) {
     onPromo: searchParams.promo === "1",
   };
 
+  const allCategories = await prisma.category.findMany({ where: { storeId: store.id }, orderBy: { name: "asc" } });
+  const selectedCategory = filters.category ? allCategories.find((c) => c.slug === filters.category) : undefined;
+
   const where: Prisma.ProductWhereInput = {
     storeId: store.id,
     active: true,
@@ -43,24 +46,24 @@ export default async function StorePage({ params, searchParams }: Props) {
         { description: { contains: filters.q, mode: "insensitive" } },
       ],
     }),
-    ...(filters.category && { category: filters.category }),
+    ...(selectedCategory && { categories: { some: { id: { in: categoryDescendantIds(allCategories, selectedCategory.id) } } } }),
     ...(filters.inStock && { stock: { gt: 0 } }),
     priceInCents: { gte: toCents(filters.min), lte: toCents(filters.max) },
   };
 
-  const [productsFetched, categoryRows] = await Promise.all([
-    prisma.product.findMany({ where, orderBy: SORTS[filters.sort], take: 60 }),
-    prisma.product.findMany({
-      where: { storeId: store.id, active: true, category: { not: null } },
-      distinct: ["category"],
-      select: { category: true },
-      orderBy: { category: "asc" },
-    }),
-  ]);
+  const productsFetched = await prisma.product.findMany({
+    where,
+    orderBy: SORTS[filters.sort],
+    take: 60,
+    include: { categories: { select: { name: true } } },
+  });
   // ponytail: comparar priceInCents/compareAtPriceInCents exige SQL cru (duas colunas da mesma linha);
   // como a listagem já é um `take: 60` sem paginação de verdade, filtra em JS aqui mesmo.
   const products = filters.onPromo ? productsFetched.filter((p) => isPromoActive(p)) : productsFetched;
-  const categories = categoryRows.map((c) => c.category!).filter(Boolean);
+  const categoryOptions = allCategories.map((c) => ({
+    slug: c.slug,
+    label: "— ".repeat(categoryAncestors(allCategories, c.id).length - 1) + c.name,
+  }));
   const base = getStoreBase(store.slug);
 
   return (
@@ -74,7 +77,7 @@ export default async function StorePage({ params, searchParams }: Props) {
       </section>
 
       <div className="grid gap-10 lg:grid-cols-[260px_1fr]">
-        <ProductFilters base={base} categories={categories} values={filters} />
+        <ProductFilters base={base} categories={categoryOptions} values={filters} />
         <section>
           <p className="mb-6 text-sm text-ink/50" data-testid="products-count">
             {products.length} {products.length === 1 ? "produto" : "produtos"}

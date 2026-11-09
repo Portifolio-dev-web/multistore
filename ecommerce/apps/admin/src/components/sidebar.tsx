@@ -7,6 +7,7 @@ import { logout } from "@/actions/auth";
 const NAV = [
   { href: "/", label: "Visão geral", id: "overview" },
   { href: "/products", label: "Produtos", id: "products" },
+  { href: "/categories", label: "Categorias", id: "categories" },
   { href: "/orders", label: "Pedidos", id: "orders" },
   { href: "/settings", label: "Aparência", id: "settings" },
 ];

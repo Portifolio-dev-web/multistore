@@ -249,12 +249,22 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     opcional. Admin: campos de preço "de" e datas no formulário de produto. Vitrine: selo "-X%" e
     preço riscado no card e na página do produto; filtro "Em promoção" na busca.
 
-- [ ] **F2.4 Categorias em árvore**
+- [x] **F2.4 Categorias em árvore**
   - Model `Category` (`name`, `slug`, `parentId`, `position`, `description`, `imageUrl`) e relação
     muitos-para-muitos com `Product`. Migration converte as categorias de texto atuais.
   - Admin: CRUD com subcategorias e ordenação.
   - Vitrine: rota `/categorias/[...slug]`, filtro que inclui subcategorias, breadcrumb.
   - Aceite: produto em "Roupas > Camisetas" aparece em ambas as páginas.
+  - Resultado: `Category` auto-relacionada (`parentId`) + `Product.categories` (m2m implícita do
+    Prisma); migration `20261109220000_categories` faz backfill de uma `Category` raiz por valor
+    distinto do antigo `Product.category` (texto) e remove a coluna. `categoryDescendantIds`/
+    `categoryAncestors` em `@repo/db/utils` (com testes) calculam subárvore e breadcrumb em memória —
+    lista de categorias por loja é pequena, não compensa CTE recursiva no banco (mesma lógica do
+    filtro "Em promoção" da F2.3). Admin: aba "Categorias" (lista indentada por profundidade, CRUD,
+    `position` como campo numérico — sem arrastar-e-soltar); formulário de produto trocou o campo de
+    texto livre por checkboxes de categoria. Vitrine: rota `/categorias/[...slug]` resolve pelo
+    último segmento da URL (slug é único por loja) com breadcrumb e subcategorias; filtro de
+    categoria da home passou a usar slug + inclusão de subárvore.
 
 - [ ] **F2.5 Paginação e busca**
   - Vitrine: paginação na URL (`?page=`), 24 por página; total de resultados.
@@ -490,3 +500,6 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-04 | F1.1 | Teste de concorrência do número de pedido entra em `e2e/` (via Prisma direto, sem navegador), não em `packages/db` como teste unitário | Precisa de um Postgres real pro lock de linha da transação fazer sentido; `yarn test` (Vitest) não tem banco disponível no job de CI |
 | 2026-11-04 | F1.3 | Removido também o `phone_number_collection` do Stripe (não só o `shipping_address_collection` pedido) | O telefone já é coletado no checkout próprio; pedir de novo na página do Stripe seria redundante |
 | 2026-11-09 | F2.3 | Filtro "Em promoção" compara em JS (depois do `findMany`), não via SQL cru | Comparar `compareAtPriceInCents` com `priceInCents` da mesma linha exige SQL bruto no Prisma; a listagem já busca só `take: 60` sem paginação de verdade, então filtrar depois não piora nada hoje — revisar quando a F2.5 trouxer paginação real |
+| 2026-11-09 | F2.4 | `Product.categories` é muitos-para-muitos (m2m implícita do Prisma), não um `categoryId` único | Roadmap pedia m2m; um produto pode estar em mais de uma categoria (ex.: "Promoções" e "Roupas" ao mesmo tempo) |
+| 2026-11-09 | F2.4 | Subárvore de categoria (descendentes) e breadcrumb calculados em memória em JS, não com CTE recursiva no Postgres | Lista de categorias por loja é pequena; evita escrever/manter SQL recursivo pra um caso que não tem problema de escala hoje |
+| 2026-11-09 | F2.4 | "Posição" da categoria é um campo numérico no formulário, não arrastar-e-soltar | Atende ao aceite (ordenação) sem precisar de uma lib de drag-and-drop |

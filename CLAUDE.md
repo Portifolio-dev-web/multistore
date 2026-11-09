@@ -89,6 +89,13 @@ de e-mail) grava um `OrderEvent` dentro da mesma transação/guarda de idempotê
 mudança — sem mecanismo novo de idempotência. A timeline aparece no admin (com campo de nota
 interna, tipo `NOTE`) e na página pública de acompanhamento (sem as notas).
 
+**Categorias.** `Category` é auto-relacionada (`parentId`/`children`) e liga a `Product` por
+muitos-para-muitos (m2m implícita do Prisma — sem model de junção explícito). Subárvore (produto
+"Roupas > Camisetas" aparece na página de "Roupas") e breadcrumb são calculados em memória com
+`categoryDescendantIds`/`categoryAncestors` (`@repo/db/utils`), não com SQL recursivo — a lista de
+categorias de uma loja é pequena. A vitrine resolve `/categorias/[...slug]` pelo último segmento da
+URL (slug é único por loja), sem validar se os segmentos anteriores batem com a árvore de verdade.
+
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.
 - `@repo/db/utils`: funções puras (formatação BRL, labels de status, regex). Pode ir para Client Components.

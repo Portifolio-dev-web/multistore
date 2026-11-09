@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  categorySchema,
   fulfillmentSchema,
   loginSchema,
   productSchema,
@@ -47,12 +48,17 @@ describe("productSchema", () => {
   const base = {
     name: "Camiseta",
     description: "",
-    category: undefined,
     priceInCents: "49,90",
     stock: 10,
     images: "",
     active: true,
   };
+
+  it("categoryIds vazio vira lista vazia", () => {
+    const result = productSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.categoryIds).toEqual([]);
+  });
 
   it("converte o preço em texto (BRL) para centavos", () => {
     const result = productSchema.safeParse(base);
@@ -79,6 +85,26 @@ describe("productSchema", () => {
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.images).toHaveLength(2);
+  });
+});
+
+describe("categorySchema", () => {
+  const base = { name: "Roupas", description: "", position: "0" };
+
+  it("aceita categoria raiz sem pai", () => {
+    const result = categorySchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.parentId).toBeNull();
+  });
+
+  it("recusa nome muito curto", () => {
+    expect(categorySchema.safeParse({ ...base, name: "A" }).success).toBe(false);
+  });
+
+  it("converte posição em texto pra número", () => {
+    const result = categorySchema.safeParse({ ...base, position: "3" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.position).toBe(3);
   });
 });
 

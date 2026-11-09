@@ -27,7 +27,7 @@ export const productSchema = z.object({
   name: z.string().trim().min(2, "Nome muito curto").max(120),
   slug: optionalText(80),
   description: z.string().trim().max(5000).default(""),
-  category: optionalText(60),
+  categoryIds: z.array(z.string()).default([]),
   priceInCents: z
     .string()
     .transform(parseBRLToCents)
@@ -54,6 +54,20 @@ export const productSchema = z.object({
     .transform((v) => v.split(/\s*[\n,]\s*/).map((s) => s.trim()).filter(Boolean))
     .pipe(z.array(z.string().url("URL de imagem inválida")).max(10, "Máximo de 10 imagens")),
   active: z.boolean(),
+});
+
+export const categorySchema = z.object({
+  name: z.string().trim().min(2, "Nome muito curto").max(80),
+  slug: optionalText(80),
+  description: z.string().trim().max(1000).default(""),
+  imageUrl: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || null)
+    .pipe(z.string().url("URL inválida").nullable()),
+  position: z.coerce.number({ invalid_type_error: "Posição inválida" }).int().min(0).max(100_000).default(0),
+  parentId: optionalText(40),
 });
 
 export const storeSettingsSchema = z.object({

@@ -57,6 +57,37 @@ export function promoDiscountPercent(compareAtPriceInCents: number, priceInCents
   return Math.round(((compareAtPriceInCents - priceInCents) / compareAtPriceInCents) * 100);
 }
 
+export type CategoryNode = { id: string; parentId: string | null };
+
+/**
+ * ids da categoria + todas as subcategorias (recursivo). Calculado em memória porque a lista
+ * de categorias de uma loja é pequena — não compensa uma CTE recursiva no banco.
+ */
+export function categoryDescendantIds<T extends CategoryNode>(categories: T[], rootId: string): string[] {
+  const childrenOf = new Map<string, string[]>();
+  for (const c of categories) {
+    if (!c.parentId) continue;
+    childrenOf.set(c.parentId, [...(childrenOf.get(c.parentId) ?? []), c.id]);
+  }
+  const result = [rootId];
+  for (let i = 0; i < result.length; i++) {
+    for (const childId of childrenOf.get(result[i]) ?? []) result.push(childId);
+  }
+  return result;
+}
+
+/** Cadeia da raiz até a categoria (inclusive), pra breadcrumb ou indentação por profundidade */
+export function categoryAncestors<T extends CategoryNode>(categories: T[], leafId: string): T[] {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const chain: T[] = [];
+  let current = byId.get(leafId);
+  while (current) {
+    chain.unshift(current);
+    current = current.parentId ? byId.get(current.parentId) : undefined;
+  }
+  return chain;
+}
+
 export function slugify(value: string): string {
   return value
     .normalize("NFD")

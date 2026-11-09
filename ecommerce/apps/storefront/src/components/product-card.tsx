@@ -7,8 +7,8 @@ type Props = {
   base: string;
   product: Pick<
     Product,
-    "id" | "slug" | "name" | "category" | "priceInCents" | "compareAtPriceInCents" | "promoStartsAt" | "promoEndsAt" | "images" | "stock"
-  >;
+    "id" | "slug" | "name" | "priceInCents" | "compareAtPriceInCents" | "promoStartsAt" | "promoEndsAt" | "images" | "stock"
+  > & { categories: { name: string }[] };
 };
 
 export function ProductCard({ base, product }: Props) {
@@ -43,7 +43,7 @@ export function ProductCard({ base, product }: Props) {
       </div>
       <div className="mt-3 flex items-start justify-between gap-3">
         <div>
-          {product.category && <p className="text-[11px] uppercase tracking-[0.14em] text-ink/40">{product.category}</p>}
+          {product.categories[0] && <p className="text-[11px] uppercase tracking-[0.14em] text-ink/40">{product.categories[0].name}</p>}
           <h3 className="font-medium leading-snug">{product.name}</h3>
         </div>
         <span className="shrink-0 text-right">

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export type FilterValues = { q: string; category: string; min: string; max: string; sort: string; inStock: boolean; onPromo: boolean };
 
-type Props = { base: string; categories: string[]; values: FilterValues };
+type Props = { base: string; categories: { slug: string; label: string }[]; values: FilterValues };
 
 // Formulário GET: os filtros ficam na URL e são aplicados no Server Component
 export function ProductFilters({ base, categories, values }: Props) {
@@ -18,7 +18,7 @@ export function ProductFilters({ base, categories, values }: Props) {
           <select id="category" name="category" defaultValue={values.category} className="field" data-testid="filter-category-select">
             <option value="">Todas</option>
             {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c.slug} value={c.slug}>{c.label}</option>
             ))}
           </select>
         </div>
