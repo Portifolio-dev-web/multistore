@@ -214,12 +214,18 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
 
 ## Fase 2: Catálogo no nível da Nuvemshop
 
-- [ ] **F2.1 URLs amigáveis de produto**
+- [x] **F2.1 URLs amigáveis de produto**
   - `Product.slug` com `@@unique([storeId, slug])`, gerado por `slugify(name)` com sufixo em caso de
     colisão; editável no admin.
   - Rota nova `/produtos/[slug]`; `/products/[id]` redireciona com 301.
   - Model `SlugRedirect` para que um slug antigo redirecione depois de renomeado.
   - Aceite: todos os links usam o slug; URL antiga continua funcionando.
+  - Migration com backfill por `ROW_NUMBER()` (slugifica o nome dos produtos existentes em SQL puro,
+    sem suporte a acento — fica meio feio pros 6 produtos do seed já cadastrados, ex. "Óleo..." virou
+    "leo-...", mas produtos novos usam o `slugify()` de verdade em JS, com acentuação tratada
+    corretamente; não vale a pena `unaccent` do Postgres só pelo backfill de dado de demonstração).
+  - Testado num navegador real: card da vitrine linka pro slug, `/products/[id]` antigo redireciona,
+    e renomear o slug pelo admin cria o `SlugRedirect` e o endereço antigo continua resolvendo.
 
 - [ ] **F2.2 Variações (tamanho, cor etc.)** **(grande)** · Depende de F1.2
   - Models: `ProductOption` (`name`, `values[]`, `position`) e `ProductVariant` (`sku`, combinação

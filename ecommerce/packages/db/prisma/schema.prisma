@@ -24,6 +24,7 @@ model Store {
   products     Product[]
   orders       Order[]
   users        User[]
+  slugRedirects SlugRedirect[]
 }
 
 model User {
@@ -43,6 +44,7 @@ model Product {
   storeId      String
   store        Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name         String
+  slug         String
   description  String      @default("")
   category     String?
   priceInCents Int
@@ -52,9 +54,23 @@ model Product {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   orderItems   OrderItem[]
+  redirects    SlugRedirect[]
 
+  @@unique([storeId, slug])
   @@index([storeId, active])
   @@index([storeId, category])
+}
+
+model SlugRedirect {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  fromSlug  String
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([storeId, fromSlug])
 }
 
 enum OrderStatus {

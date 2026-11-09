@@ -25,6 +25,7 @@ export const registerSchema = z.object({
 
 export const productSchema = z.object({
   name: z.string().trim().min(2, "Nome muito curto").max(120),
+  slug: optionalText(80),
   description: z.string().trim().max(5000).default(""),
   category: optionalText(60),
   priceInCents: z

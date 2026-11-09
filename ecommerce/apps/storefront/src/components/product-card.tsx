@@ -3,12 +3,12 @@ import type { Product } from "@repo/db";
 import { formatBRL } from "@repo/db/utils";
 import { ProductImage } from "./product-image";
 
-type Props = { base: string; product: Pick<Product, "id" | "name" | "category" | "priceInCents" | "images" | "stock"> };
+type Props = { base: string; product: Pick<Product, "id" | "slug" | "name" | "category" | "priceInCents" | "images" | "stock"> };
 
 export function ProductCard({ base, product }: Props) {
   const soldOut = product.stock <= 0;
   return (
-    <Link href={`${base}/products/${product.id}`} className="group block" data-testid={`product-card-${product.id}`}>
+    <Link href={`${base}/produtos/${product.slug}`} className="group block" data-testid={`product-card-${product.id}`}>
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-ink/5">
         <ProductImage
           src={product.images[0]}

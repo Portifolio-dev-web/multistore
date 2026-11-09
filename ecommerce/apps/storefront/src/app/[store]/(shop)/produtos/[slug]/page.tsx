@@ -1,20 +1,30 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { prisma } from "@repo/db";
 import { formatBRL } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
-import { getStoreBase } from "@/lib/paths";
+import { getStoreBase, storeHref } from "@/lib/paths";
 import { AddToCart } from "@/components/add-to-cart";
 import { ProductGallery } from "@/components/product-gallery";
 
-type Props = { params: { store: string; productId: string } };
+type Props = { params: { store: string; slug: string } };
 
 export default async function ProductPage({ params }: Props) {
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 
-  const product = await prisma.product.findFirst({ where: { id: params.productId, storeId: store.id, active: true } });
-  if (!product) notFound();
+  const product = await prisma.product.findFirst({ where: { slug: params.slug, storeId: store.id, active: true } });
+  if (!product) {
+    // Slug antigo (produto renomeado)? Redireciona pro endereço atual.
+    const redirect = await prisma.slugRedirect.findUnique({
+      where: { storeId_fromSlug: { storeId: store.id, fromSlug: params.slug } },
+      include: { product: true },
+    });
+    if (redirect?.product.active) {
+      permanentRedirect(storeHref(getStoreBase(store.slug), `/produtos/${redirect.product.slug}`));
+    }
+    notFound();
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">

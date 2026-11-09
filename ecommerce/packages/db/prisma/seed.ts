@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { slugify } from "../src/utils";
 
 const prisma = new PrismaClient();
 
@@ -33,7 +34,7 @@ async function main() {
         { name: "Câmera Vintage Decorativa", category: "Decoração", priceInCents: 45900, stock: 3, images: [IMG.camera], description: "Peça decorativa inspirada nas câmeras dos anos 70." },
         { name: "Garrafa Térmica Fosca", category: "Utilidades", priceInCents: 15900, stock: 0, images: [IMG.cup], description: "Mantém a temperatura por até 12 horas." },
         { name: "Vela Aromática Cedro", category: "Decoração", priceInCents: 6990, stock: 14, images: [], description: "Cera vegetal com notas de cedro e âmbar." },
-      ].map((p) => ({ ...p, storeId: store.id })),
+      ].map((p) => ({ ...p, slug: slugify(p.name), storeId: store.id })),
     });
   }
 

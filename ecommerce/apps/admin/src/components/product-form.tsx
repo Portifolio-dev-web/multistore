@@ -8,6 +8,7 @@ import { ImageUploader } from "./image-uploader";
 
 type ProductValues = {
   name: string;
+  slug: string;
   description: string;
   category: string | null;
   priceInCents: number;
@@ -33,6 +34,18 @@ export function ProductForm({ action, product, submitLabel }: Props) {
         <label className="label" htmlFor="name">Nome</label>
         <input id="name" name="name" defaultValue={product?.name} required className="field" data-testid="product-name-input" />
         <FieldError errors={e?.name} testId="product-name-error" />
+      </div>
+      <div>
+        <label className="label" htmlFor="slug">Endereço (slug)</label>
+        <input
+          id="slug"
+          name="slug"
+          defaultValue={product?.slug}
+          placeholder="gerado a partir do nome se deixar em branco"
+          className="field font-mono text-sm"
+          data-testid="product-slug-input"
+        />
+        <FieldError errors={e?.slug} />
       </div>
       <div>
         <label className="label" htmlFor="description">Descrição</label>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@repo/db";
+import { slugify } from "@repo/db/utils";
 import { requireSession } from "@/lib/session";
 import { formToObject, productSchema } from "@/lib/validation";
 import type { FormState } from "@/lib/form";
@@ -11,12 +12,27 @@ function parseProduct(formData: FormData) {
   return productSchema.safeParse({ ...formToObject(formData), active: formData.get("active") === "on" });
 }
 
+/** slugify(name ou o texto digitado) + sufixo numérico se já existir outro produto com o mesmo slug */
+async function resolveUniqueSlug(storeId: string, base: string, excludeProductId?: string): Promise<string> {
+  let slug = base || "produto";
+  for (let n = 2; await prisma.product.findFirst({ where: { storeId, slug, id: { not: excludeProductId } } }); n++) {
+    slug = `${base}-${n}`;
+  }
+  return slug;
+}
+
 export async function createProduct(_prev: FormState, formData: FormData): Promise<FormState> {
   const { storeId } = await requireSession();
   const parsed = parseProduct(formData);
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+  const { slug: rawSlug, ...data } = parsed.data;
 
-  await prisma.product.create({ data: { ...parsed.data, storeId } });
+  const slug = await resolveUniqueSlug(storeId, slugify(rawSlug || data.name));
+
+  await prisma.$transaction(async (tx) => {
+    await tx.product.create({ data: { ...data, slug, storeId } });
+    await tx.slugRedirect.deleteMany({ where: { storeId, fromSlug: slug } });
+  });
   revalidatePath("/products");
   redirect("/products");
 }
@@ -25,10 +41,25 @@ export async function updateProduct(productId: string, _prev: FormState, formDat
   const { storeId } = await requireSession();
   const parsed = parseProduct(formData);
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+  const { slug: rawSlug, ...data } = parsed.data;
 
   // Escopo por loja: um lojista nunca altera produto de outra loja
-  const { count } = await prisma.product.updateMany({ where: { id: productId, storeId }, data: parsed.data });
-  if (count === 0) return { error: "Produto não encontrado." };
+  const existing = await prisma.product.findFirst({ where: { id: productId, storeId }, select: { slug: true } });
+  if (!existing) return { error: "Produto não encontrado." };
+
+  const slug = await resolveUniqueSlug(storeId, slugify(rawSlug || data.name), productId);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.product.updateMany({ where: { id: productId, storeId }, data: { ...data, slug } });
+    await tx.slugRedirect.deleteMany({ where: { storeId, fromSlug: slug } });
+    if (existing.slug !== slug) {
+      await tx.slugRedirect.upsert({
+        where: { storeId_fromSlug: { storeId, fromSlug: existing.slug } },
+        create: { storeId, fromSlug: existing.slug, productId },
+        update: { productId },
+      });
+    }
+  });
 
   revalidatePath("/products");
   revalidatePath(`/products/${productId}`);

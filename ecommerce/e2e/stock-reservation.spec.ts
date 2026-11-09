@@ -25,7 +25,7 @@ test.describe("reserva de estoque", () => {
   test("duas reservas concorrentes pela última unidade: só uma passa", async () => {
     const store = await prisma.store.findUniqueOrThrow({ where: { slug: STORE_SLUG } });
     const product = await prisma.product.create({
-      data: { storeId: store.id, name: "Produto com 1 unidade", priceInCents: 1000, stock: 1 },
+      data: { storeId: store.id, name: "Produto com 1 unidade", slug: `produto-1un-${Date.now()}`, priceInCents: 1000, stock: 1 },
     });
 
     const reserve = () => prisma.$transaction((tx) => reserveStock(tx, [{ productId: product.id, quantity: 1 }]));
@@ -45,7 +45,7 @@ test.describe("reserva de estoque", () => {
   test("liberar o estoque de um pedido é idempotente mesmo chamado mais de uma vez", async () => {
     const store = await prisma.store.findUniqueOrThrow({ where: { slug: STORE_SLUG } });
     const product = await prisma.product.create({
-      data: { storeId: store.id, name: "Produto pra liberar", priceInCents: 2000, stock: 5 },
+      data: { storeId: store.id, name: "Produto pra liberar", slug: `produto-liberar-${Date.now()}`, priceInCents: 2000, stock: 5 },
     });
 
     const order = await createPendingOrder(store.id, product.id, product.priceInCents);
