@@ -199,12 +199,16 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - E-mail ao cliente em cada caso.
   - Aceite: reembolso feito pelo admin ou pelo painel do gateway deixa o pedido igual nos dois casos.
 
-- [ ] **F1.8 Linha do tempo do pedido**
+- [x] **F1.8 Linha do tempo do pedido**
   - Model `OrderEvent` (`orderId`, `type`, `message`, `createdAt`, `actor`: sistema/lojista/cliente).
   - Registrar: criado, pago, falhou, expirou, enviado, entregue, cancelado, reembolsado, e-mail enviado.
   - Admin: linha do tempo no detalhe do pedido, com campo para nota interna.
   - Página de acompanhamento: versão pública (sem notas internas).
   - Aceite: cada mudança de status gera exatamente um evento, mesmo com webhook repetido.
+  - Nota: `CANCELED`/`REFUNDED` existem no enum mas sem código que os emita ainda (não existe esse
+    status hoje — é F1.7); cada evento é criado dentro da mesma transação/guarda de idempotência
+    que já protegia a mudança de status (`count > 0`), sem mecanismo novo. Testado com checkout real
+    (gera CREATED+FAILED), nota interna pelo admin e página pública (sem a nota) num navegador.
 
 ---
 

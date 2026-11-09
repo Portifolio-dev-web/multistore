@@ -72,7 +72,7 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
         city,
         state,
       };
-      return tx.order.create({
+      const created = await tx.order.create({
         data: {
           storeId: store.id,
           number: orderNumber,
@@ -93,6 +93,10 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
           },
         },
       });
+      await tx.orderEvent.create({
+        data: { orderId: created.id, type: "CREATED", actor: "CUSTOMER", message: "Pedido criado" },
+      });
+      return created;
     });
   } catch (err) {
     if (err instanceof OutOfStockError) {
@@ -135,6 +139,9 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
     await prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { id: order.id }, data: { status: "FAILED" } });
       await releaseStock(tx, order.id);
+      await tx.orderEvent.create({
+        data: { orderId: order.id, type: "FAILED", actor: "SYSTEM", message: "Falha ao abrir o pagamento" },
+      });
     });
     return { error: "Falha ao conectar com o Stripe. Tente novamente." };
   }

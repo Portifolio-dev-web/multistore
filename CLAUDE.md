@@ -84,7 +84,10 @@ uma Stripe Checkout Session (expira em 30 min, `customer_email` pré-preenchido,
 (`lib/orders.ts`), que muda o status de forma idempotente e envia a confirmação — o estoque já foi
 baixado na reserva, não no pagamento. Se o pedido expira, falha ou é cancelado, `setOrderStatus`
 devolve o estoque (`releaseStock`, idempotente via `Order.stockReleasedAt`). A página
-`/checkout/success` chama `markOrderPaid` de novo como fallback.
+`/checkout/success` chama `markOrderPaid` de novo como fallback. Cada mudança de status (e o envio
+de e-mail) grava um `OrderEvent` dentro da mesma transação/guarda de idempotência que já protegia a
+mudança — sem mecanismo novo de idempotência. A timeline aparece no admin (com campo de nota
+interna, tipo `NOTE`) e na página pública de acompanhamento (sem as notas).
 
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.

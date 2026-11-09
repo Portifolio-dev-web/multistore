@@ -29,7 +29,13 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
       orderUrl: orderTrackingUrl(order.store, order.publicToken),
     });
     const sent = await sendMail({ ...mail, to: order.customerEmail, fromName: order.store.name });
-    if (!sent) await prisma.order.update({ where: { id: orderId }, data: { confirmationEmailSentAt: null } });
+    if (sent) {
+      await prisma.orderEvent.create({
+        data: { orderId, type: "EMAIL_SENT", actor: "SYSTEM", message: "E-mail de confirmação enviado" },
+      });
+    } else {
+      await prisma.order.update({ where: { id: orderId }, data: { confirmationEmailSentAt: null } });
+    }
   } catch (err) {
     console.error("[mail] falha na confirmação do pedido", orderId, err);
     await prisma.order.update({ where: { id: orderId }, data: { confirmationEmailSentAt: null } });
@@ -48,7 +54,13 @@ export async function sendShippingUpdate(orderId: string): Promise<boolean> {
       trackingUrl: order.trackingUrl,
       orderUrl: orderTrackingUrl(order.store, order.publicToken),
     });
-    return await sendMail({ ...mail, to: order.customerEmail, fromName: order.store.name });
+    const sent = await sendMail({ ...mail, to: order.customerEmail, fromName: order.store.name });
+    if (sent) {
+      await prisma.orderEvent.create({
+        data: { orderId, type: "EMAIL_SENT", actor: "SYSTEM", message: "E-mail de rastreio enviado" },
+      });
+    }
+    return sent;
   } catch (err) {
     console.error("[mail] falha no aviso de envio", orderId, err);
     return false;

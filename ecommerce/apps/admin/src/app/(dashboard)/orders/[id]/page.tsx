@@ -4,8 +4,9 @@ import { prisma } from "@repo/db";
 import { formatAddress, formatBRL } from "@repo/db/utils";
 import { orderTrackingUrl } from "@repo/db/urls";
 import { requireSession } from "@/lib/session";
-import { updateFulfillment } from "@/actions/orders";
+import { addOrderNote, updateFulfillment } from "@/actions/orders";
 import { FulfillmentForm } from "@/components/fulfillment-form";
+import { OrderTimeline } from "@/components/order-timeline";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -13,7 +14,10 @@ const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle:
 
 export default async function OrderDetailPage({ params }: { params: { id: string } }) {
   const { storeId } = await requireSession();
-  const order = await prisma.order.findFirst({ where: { id: params.id, storeId }, include: { items: true, store: true } });
+  const order = await prisma.order.findFirst({
+    where: { id: params.id, storeId },
+    include: { items: true, store: true, events: { orderBy: { createdAt: "asc" } } },
+  });
   if (!order) notFound();
   const address = formatAddress(order.shippingAddress);
   const trackingPage = orderTrackingUrl(order.store, order.publicToken);
@@ -66,6 +70,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </section>
         <section className="space-y-6">
         <FulfillmentForm action={updateFulfillment.bind(null, order.id)} order={order} />
+        <OrderTimeline events={order.events} addNoteAction={addOrderNote.bind(null, order.id)} />
         <section className="card divide-y divide-line">
           <div className="px-5 py-3.5">
             <p className="label mb-0.5">Página do cliente</p>

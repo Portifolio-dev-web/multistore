@@ -72,6 +72,25 @@ enum FulfillmentStatus {
   DELIVERED
 }
 
+enum OrderEventType {
+  CREATED
+  PAID
+  FAILED
+  EXPIRED
+  SHIPPED
+  DELIVERED
+  CANCELED
+  REFUNDED
+  EMAIL_SENT
+  NOTE
+}
+
+enum OrderEventActor {
+  SYSTEM
+  MERCHANT
+  CUSTOMER
+}
+
 model Order {
   id                      String            @id @default(cuid())
   publicToken             String            @unique @default(dbgenerated("gen_random_uuid()::text"))
@@ -100,6 +119,7 @@ model Order {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   items                 OrderItem[]
+  events                OrderEvent[]
 
   @@unique([storeId, number])
   @@index([storeId, status])
@@ -117,4 +137,16 @@ model OrderItem {
   quantity         Int
 
   @@index([orderId])
+}
+
+model OrderEvent {
+  id        String           @id @default(cuid())
+  orderId   String
+  order     Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type      OrderEventType
+  actor     OrderEventActor
+  message   String
+  createdAt DateTime         @default(now())
+
+  @@index([orderId, createdAt])
 }

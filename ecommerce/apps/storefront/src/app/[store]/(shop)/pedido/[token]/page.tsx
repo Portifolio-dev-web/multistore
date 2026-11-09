@@ -27,7 +27,10 @@ export default async function OrderTrackingPage({ params }: Props) {
   const store = await getStoreBySlug(params.store);
   if (!store || !UUID.test(params.token)) notFound();
 
-  const order = await prisma.order.findFirst({ where: { publicToken: params.token, storeId: store.id }, include: { items: true } });
+  const order = await prisma.order.findFirst({
+    where: { publicToken: params.token, storeId: store.id },
+    include: { items: true, events: { where: { type: { not: "NOTE" } }, orderBy: { createdAt: "asc" } } },
+  });
   if (!order) notFound();
 
   const address = formatAddress(order.shippingAddress);
@@ -86,6 +89,20 @@ export default async function OrderTrackingPage({ params }: Props) {
           </div>
         )}
       </div>
+
+      {order.events.length > 0 && (
+        <div className="mt-10 rounded-3xl border border-ink/10 bg-white p-5 text-sm" data-testid="tracking-history">
+          <p className="label mb-3">Histórico</p>
+          <ul className="space-y-2">
+            {order.events.map((e) => (
+              <li key={e.id} className="flex justify-between gap-3 text-ink/70">
+                <span>{e.message}</span>
+                <span className="shrink-0 font-mono text-xs text-ink/40">{dateFmt.format(e.createdAt)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <Link href={storeHref(getStoreBase(store.slug))} className="btn-ghost mt-10" data-testid="tracking-back-to-store">Voltar à loja</Link>
     </div>

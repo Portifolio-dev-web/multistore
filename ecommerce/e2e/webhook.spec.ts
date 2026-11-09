@@ -69,5 +69,9 @@ test.describe("webhook do Stripe", () => {
     expect(updatedOrder.status).toBe("PAID");
     expect(updatedOrder.customerEmail).toBe("cliente@teste.com");
     expect(updatedProduct.stock).toBe(stockBefore - 1);
+
+    // F1.8: mesmo com o webhook repetido, só um evento PAID na linha do tempo
+    const paidEvents = await prisma.orderEvent.findMany({ where: { orderId: order.id, type: "PAID" } });
+    expect(paidEvents).toHaveLength(1);
   });
 });
