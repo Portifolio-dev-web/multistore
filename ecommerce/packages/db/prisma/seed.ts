@@ -28,7 +28,7 @@ async function main() {
   if ((await prisma.product.count({ where: { storeId: store.id } })) === 0) {
     await prisma.product.createMany({
       data: [
-        { name: "Óleo Botânico 100ml", category: "Bem-estar", priceInCents: 8990, stock: 25, images: [IMG.bottle], description: "Óleo vegetal prensado a frio, ideal para pele e cabelos." },
+        { name: "Óleo Botânico 100ml", category: "Bem-estar", priceInCents: 8990, compareAtPriceInCents: 11990, stock: 25, images: [IMG.bottle], description: "Óleo vegetal prensado a frio, ideal para pele e cabelos." },
         { name: "Kit Potes Âmbar", category: "Bem-estar", priceInCents: 12900, stock: 8, images: [IMG.bottle], description: "Trio de potes de vidro âmbar com tampa." },
         { name: "Copo Shake 500ml", category: "Utilidades", priceInCents: 3990, stock: 60, images: [IMG.cup], description: "Copo com tampa e canudo, livre de BPA." },
         { name: "Câmera Vintage Decorativa", category: "Decoração", priceInCents: 45900, stock: 3, images: [IMG.camera], description: "Peça decorativa inspirada nas câmeras dos anos 70." },

@@ -1,12 +1,19 @@
 import Link from "next/link";
 import type { Product } from "@repo/db";
-import { formatBRL } from "@repo/db/utils";
+import { formatBRL, isPromoActive, promoDiscountPercent } from "@repo/db/utils";
 import { ProductImage } from "./product-image";
 
-type Props = { base: string; product: Pick<Product, "id" | "slug" | "name" | "category" | "priceInCents" | "images" | "stock"> };
+type Props = {
+  base: string;
+  product: Pick<
+    Product,
+    "id" | "slug" | "name" | "category" | "priceInCents" | "compareAtPriceInCents" | "promoStartsAt" | "promoEndsAt" | "images" | "stock"
+  >;
+};
 
 export function ProductCard({ base, product }: Props) {
   const soldOut = product.stock <= 0;
+  const onPromo = isPromoActive(product);
   return (
     <Link href={`${base}/produtos/${product.slug}`} className="group block" data-testid={`product-card-${product.id}`}>
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-ink/5">
@@ -25,13 +32,28 @@ export function ProductCard({ base, product }: Props) {
             Últimas {product.stock}
           </span>
         )}
+        {onPromo && (
+          <span
+            className="absolute right-3 top-3 rounded-full bg-brand px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-paper"
+            data-testid={`product-promo-badge-${product.id}`}
+          >
+            -{promoDiscountPercent(product.compareAtPriceInCents!, product.priceInCents)}%
+          </span>
+        )}
       </div>
       <div className="mt-3 flex items-start justify-between gap-3">
         <div>
           {product.category && <p className="text-[11px] uppercase tracking-[0.14em] text-ink/40">{product.category}</p>}
           <h3 className="font-medium leading-snug">{product.name}</h3>
         </div>
-        <span className="shrink-0 font-display font-semibold">{formatBRL(product.priceInCents)}</span>
+        <span className="shrink-0 text-right">
+          {onPromo && (
+            <span className="block text-xs text-ink/40 line-through" data-testid={`product-compare-price-${product.id}`}>
+              {formatBRL(product.compareAtPriceInCents!)}
+            </span>
+          )}
+          <span className="font-display font-semibold">{formatBRL(product.priceInCents)}</span>
+        </span>
       </div>
     </Link>
   );

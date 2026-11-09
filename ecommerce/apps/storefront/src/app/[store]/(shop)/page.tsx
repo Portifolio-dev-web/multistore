@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma, type Prisma } from "@repo/db";
+import { isPromoActive } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase } from "@/lib/paths";
 import { ProductCard } from "@/components/product-card";
@@ -30,6 +31,7 @@ export default async function StorePage({ params, searchParams }: Props) {
     max: searchParams.max ?? "",
     sort: searchParams.sort && SORTS[searchParams.sort] ? searchParams.sort : "recent",
     inStock: searchParams.stock === "1",
+    onPromo: searchParams.promo === "1",
   };
 
   const where: Prisma.ProductWhereInput = {
@@ -46,7 +48,7 @@ export default async function StorePage({ params, searchParams }: Props) {
     priceInCents: { gte: toCents(filters.min), lte: toCents(filters.max) },
   };
 
-  const [products, categoryRows] = await Promise.all([
+  const [productsFetched, categoryRows] = await Promise.all([
     prisma.product.findMany({ where, orderBy: SORTS[filters.sort], take: 60 }),
     prisma.product.findMany({
       where: { storeId: store.id, active: true, category: { not: null } },
@@ -55,6 +57,9 @@ export default async function StorePage({ params, searchParams }: Props) {
       orderBy: { category: "asc" },
     }),
   ]);
+  // ponytail: comparar priceInCents/compareAtPriceInCents exige SQL cru (duas colunas da mesma linha);
+  // como a listagem já é um `take: 60` sem paginação de verdade, filtra em JS aqui mesmo.
+  const products = filters.onPromo ? productsFetched.filter((p) => isPromoActive(p)) : productsFetched;
   const categories = categoryRows.map((c) => c.category!).filter(Boolean);
   const base = getStoreBase(store.slug);
 

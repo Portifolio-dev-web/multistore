@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { prisma } from "@repo/db";
-import { formatBRL } from "@repo/db/utils";
+import { formatBRL, isPromoActive, promoDiscountPercent } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
 import { AddToCart } from "@/components/add-to-cart";
@@ -26,6 +26,8 @@ export default async function ProductPage({ params }: Props) {
     notFound();
   }
 
+  const onPromo = isPromoActive(product);
+
   return (
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
       <Link href={getStoreBase(store.slug) || "/"} className="text-sm text-ink/50 hover:text-ink" data-testid="product-back-link">← Voltar à vitrine</Link>
@@ -34,7 +36,19 @@ export default async function ProductPage({ params }: Props) {
         <div className="animate-rise lg:pt-6">
           {product.category && <p className="label">{product.category}</p>}
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl" data-testid="product-name">{product.name}</h1>
-          <p className="mt-5 font-display text-3xl font-semibold" data-testid="product-price">{formatBRL(product.priceInCents)}</p>
+          <div className="mt-5 flex items-center gap-3">
+            {onPromo && (
+              <span className="text-lg text-ink/40 line-through" data-testid="product-compare-price">
+                {formatBRL(product.compareAtPriceInCents!)}
+              </span>
+            )}
+            <p className="font-display text-3xl font-semibold" data-testid="product-price">{formatBRL(product.priceInCents)}</p>
+            {onPromo && (
+              <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold uppercase tracking-wider text-paper" data-testid="product-promo-badge">
+                -{promoDiscountPercent(product.compareAtPriceInCents!, product.priceInCents)}%
+              </span>
+            )}
+          </div>
           <p className="mt-2 text-sm text-ink/50" data-testid="product-stock">
             {product.stock > 0 ? `${product.stock} em estoque` : "Esgotado"}
           </p>

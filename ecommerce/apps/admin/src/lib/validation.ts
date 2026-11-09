@@ -32,6 +32,22 @@ export const productSchema = z.object({
     .string()
     .transform(parseBRLToCents)
     .pipe(z.number({ invalid_type_error: "Preço inválido" }).int().min(50, "Preço mínimo: R$ 0,50").max(99_999_999)),
+  compareAtPriceInCents: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? parseBRLToCents(v) : null))
+    .pipe(z.number({ invalid_type_error: "Preço \"de\" inválido" }).int().min(50).max(99_999_999).nullable()),
+  promoStartsAt: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? new Date(v) : null)),
+  promoEndsAt: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? new Date(v) : null)),
   stock: z.coerce.number({ invalid_type_error: "Estoque inválido" }).int().min(0, "Estoque não pode ser negativo").max(1_000_000),
   images: z
     .string()

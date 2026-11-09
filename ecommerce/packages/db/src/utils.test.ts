@@ -4,8 +4,10 @@ import {
   contrastText,
   formatAddress,
   formatBRL,
+  isPromoActive,
   isValidCpfOrCnpj,
   parseBRLToCents,
+  promoDiscountPercent,
   slugify,
 } from "./utils";
 
@@ -107,6 +109,48 @@ describe("isValidCpfOrCnpj", () => {
 
   it("recusa quantidade de dígitos que não é CPF nem CNPJ", () => {
     expect(isValidCpfOrCnpj("123")).toBe(false);
+  });
+});
+
+describe("isPromoActive", () => {
+  const base = { priceInCents: 1000, compareAtPriceInCents: null, promoStartsAt: null, promoEndsAt: null };
+
+  it("falso quando não há preço 'de'", () => {
+    expect(isPromoActive(base)).toBe(false);
+  });
+
+  it("falso quando preço 'de' não é maior que o preço de venda", () => {
+    expect(isPromoActive({ ...base, compareAtPriceInCents: 1000 })).toBe(false);
+  });
+
+  it("verdadeiro quando preço 'de' é maior, sem janela de datas", () => {
+    expect(isPromoActive({ ...base, compareAtPriceInCents: 2000 })).toBe(true);
+  });
+
+  it("falso antes do início da promoção", () => {
+    const now = new Date("2026-01-10");
+    expect(isPromoActive({ ...base, compareAtPriceInCents: 2000, promoStartsAt: new Date("2026-01-15") }, now)).toBe(false);
+  });
+
+  it("falso depois do fim da promoção", () => {
+    const now = new Date("2026-01-20");
+    expect(isPromoActive({ ...base, compareAtPriceInCents: 2000, promoEndsAt: new Date("2026-01-15") }, now)).toBe(false);
+  });
+
+  it("verdadeiro dentro da janela de datas", () => {
+    const now = new Date("2026-01-12");
+    expect(
+      isPromoActive(
+        { ...base, compareAtPriceInCents: 2000, promoStartsAt: new Date("2026-01-10"), promoEndsAt: new Date("2026-01-15") },
+        now,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("promoDiscountPercent", () => {
+  it("calcula o percentual de desconto arredondado", () => {
+    expect(promoDiscountPercent(10000, 8000)).toBe(20);
   });
 });
 

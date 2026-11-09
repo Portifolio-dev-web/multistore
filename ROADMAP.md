@@ -239,10 +239,15 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - Vitrine: seletor por botões, combinações esgotadas desabilitadas, preço e foto mudam com a escolha.
   - Aceite: produto com 2 cores × 3 tamanhos vende e baixa estoque da combinação certa.
 
-- [ ] **F2.3 Preço promocional ("de/por")**
+- [x] **F2.3 Preço promocional ("de/por")**
   - `compareAtPriceInCents` no produto/variante; selo "-20%" no card; filtro "Em promoção".
   - Opcional: início e fim da promoção.
   - Aceite: preço riscado aparece só quando é maior que o preço de venda.
+  - Resultado: `Product.compareAtPriceInCents/promoStartsAt/promoEndsAt` (nullable, migration
+    `20261109210000_promo_price`). `isPromoActive`/`promoDiscountPercent` em `@repo/db/utils`
+    (com testes) decidem quando mostrar o selo/preço riscado — cobre o aceite e a janela de datas
+    opcional. Admin: campos de preço "de" e datas no formulário de produto. Vitrine: selo "-X%" e
+    preço riscado no card e na página do produto; filtro "Em promoção" na busca.
 
 - [ ] **F2.4 Categorias em árvore**
   - Model `Category` (`name`, `slug`, `parentId`, `position`, `description`, `imageUrl`) e relação
@@ -484,3 +489,4 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-04 | F0.4 | Banco de teste do E2E é um schema Postgres separado (`?schema=e2e_test`) no mesmo Postgres de dev, não um container/banco novo | `prisma migrate reset --force` já dropa/recria e roda o seed nativamente; evita um serviço Docker extra só para isso |
 | 2026-11-04 | F1.1 | Teste de concorrência do número de pedido entra em `e2e/` (via Prisma direto, sem navegador), não em `packages/db` como teste unitário | Precisa de um Postgres real pro lock de linha da transação fazer sentido; `yarn test` (Vitest) não tem banco disponível no job de CI |
 | 2026-11-04 | F1.3 | Removido também o `phone_number_collection` do Stripe (não só o `shipping_address_collection` pedido) | O telefone já é coletado no checkout próprio; pedir de novo na página do Stripe seria redundante |
+| 2026-11-09 | F2.3 | Filtro "Em promoção" compara em JS (depois do `findMany`), não via SQL cru | Comparar `compareAtPriceInCents` com `priceInCents` da mesma linha exige SQL bruto no Prisma; a listagem já busca só `take: 60` sem paginação de verdade, então filtrar depois não piora nada hoje — revisar quando a F2.5 trouxer paginação real |

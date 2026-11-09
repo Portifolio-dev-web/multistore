@@ -38,6 +38,25 @@ export function contrastText(hex: string): string {
   return luminance > 0.6 ? "#111111" : "#ffffff";
 }
 
+export type PromoProduct = {
+  priceInCents: number;
+  compareAtPriceInCents: number | null;
+  promoStartsAt: Date | null;
+  promoEndsAt: Date | null;
+};
+
+/** "Aceite: preço riscado aparece só quando é maior que o preço de venda" — e dentro da janela, se houver */
+export function isPromoActive(product: PromoProduct, now: Date = new Date()): boolean {
+  if (product.compareAtPriceInCents == null || product.compareAtPriceInCents <= product.priceInCents) return false;
+  if (product.promoStartsAt && now < product.promoStartsAt) return false;
+  if (product.promoEndsAt && now > product.promoEndsAt) return false;
+  return true;
+}
+
+export function promoDiscountPercent(compareAtPriceInCents: number, priceInCents: number): number {
+  return Math.round(((compareAtPriceInCents - priceInCents) / compareAtPriceInCents) * 100);
+}
+
 export function slugify(value: string): string {
   return value
     .normalize("NFD")

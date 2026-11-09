@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export type FilterValues = { q: string; category: string; min: string; max: string; sort: string; inStock: boolean };
+export type FilterValues = { q: string; category: string; min: string; max: string; sort: string; inStock: boolean; onPromo: boolean };
 
 type Props = { base: string; categories: string[]; values: FilterValues };
 
@@ -41,6 +41,10 @@ export function ProductFilters({ base, categories, values }: Props) {
         <label className="flex cursor-pointer items-center gap-2 text-sm">
           <input type="checkbox" name="stock" value="1" defaultChecked={values.inStock} className="h-4 w-4 accent-[var(--brand)]" data-testid="filter-in-stock-checkbox" />
           Somente em estoque
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <input type="checkbox" name="promo" value="1" defaultChecked={values.onPromo} className="h-4 w-4 accent-[var(--brand)]" data-testid="filter-promo-checkbox" />
+          Em promoção
         </label>
         <div className="flex gap-2 pt-1">
           <button type="submit" className="btn-brand flex-1 py-2.5" data-testid="filter-apply-button">Filtrar</button>

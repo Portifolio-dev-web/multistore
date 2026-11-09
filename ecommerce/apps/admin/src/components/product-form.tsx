@@ -12,10 +12,17 @@ type ProductValues = {
   description: string;
   category: string | null;
   priceInCents: number;
+  compareAtPriceInCents: number | null;
+  promoStartsAt: Date | null;
+  promoEndsAt: Date | null;
   stock: number;
   images: string[];
   active: boolean;
 };
+
+function toDateInput(value: Date | null | undefined): string {
+  return value ? value.toISOString().slice(0, 10) : "";
+}
 
 type Props = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
@@ -67,6 +74,45 @@ export function ProductForm({ action, product, submitLabel }: Props) {
           <label className="label" htmlFor="category">Categoria</label>
           <input id="category" name="category" defaultValue={product?.category ?? ""} className="field" data-testid="product-category-input" />
           <FieldError errors={e?.category} />
+        </div>
+      </div>
+      <div className="grid gap-5 sm:grid-cols-3">
+        <div>
+          <label className="label" htmlFor="compareAtPriceInCents">Preço &quot;de&quot; (promocional)</label>
+          <input
+            id="compareAtPriceInCents"
+            name="compareAtPriceInCents"
+            inputMode="decimal"
+            placeholder="opcional"
+            defaultValue={product?.compareAtPriceInCents ? centsToInput(product.compareAtPriceInCents) : ""}
+            className="field font-mono"
+            data-testid="product-compare-price-input"
+          />
+          <FieldError errors={e?.compareAtPriceInCents} testId="product-compare-price-error" />
+        </div>
+        <div>
+          <label className="label" htmlFor="promoStartsAt">Início da promoção</label>
+          <input
+            id="promoStartsAt"
+            name="promoStartsAt"
+            type="date"
+            defaultValue={toDateInput(product?.promoStartsAt)}
+            className="field"
+            data-testid="product-promo-starts-input"
+          />
+          <FieldError errors={e?.promoStartsAt} />
+        </div>
+        <div>
+          <label className="label" htmlFor="promoEndsAt">Fim da promoção</label>
+          <input
+            id="promoEndsAt"
+            name="promoEndsAt"
+            type="date"
+            defaultValue={toDateInput(product?.promoEndsAt)}
+            className="field"
+            data-testid="product-promo-ends-input"
+          />
+          <FieldError errors={e?.promoEndsAt} />
         </div>
       </div>
       <div>
