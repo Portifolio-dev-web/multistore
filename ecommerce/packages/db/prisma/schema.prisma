@@ -19,11 +19,21 @@ model Store {
   currency     String    @default("brl")
   customDomain String?   @unique
   nextOrderNumber Int    @default(1001)
+  // Frete (F1.6)
+  originZip                String?
+  freeShippingMinInCents   Int?
+  pickupEnabled            Boolean  @default(false)
+  pickupAddress            String?
+  motoboyEnabled           Boolean  @default(false)
+  motoboyPricePerKmInCents Int?
+  motoboyMinPriceInCents   Int?
+  motoboyMaxDistanceKm     Int?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   products     Product[]
   orders       Order[]
   users        User[]
+  shippingRates ShippingRate[]
 }
 
 model User {
@@ -49,6 +59,12 @@ model Product {
   images       String[]
   stock        Int         @default(0)
   active       Boolean     @default(true)
+  // Dimensões pra cálculo de frete (F1.6) — obrigatórias na prática pra calcular,
+  // mas opcionais no banco pra não quebrar produtos já cadastrados
+  weightGrams  Int?
+  heightCm     Int?
+  widthCm      Int?
+  lengthCm     Int?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   orderItems   OrderItem[]
@@ -137,6 +153,28 @@ model OrderItem {
   quantity         Int
 
   @@index([orderId])
+}
+
+enum ShippingRateType {
+  STATE
+  ZIP_RANGE
+}
+
+model ShippingRate {
+  id           String           @id @default(cuid())
+  storeId      String
+  store        Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  type         ShippingRateType
+  label        String
+  state        String?
+  zipFrom      String?
+  zipTo        String?
+  priceInCents Int
+  minDays      Int
+  maxDays      Int
+  createdAt    DateTime         @default(now())
+
+  @@index([storeId])
 }
 
 model OrderEvent {

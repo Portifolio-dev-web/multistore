@@ -184,12 +184,25 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     - integração de transportadora: **Decisão** entre Melhor Envio, Frenet ou Correios direto
       (token por loja, criptografado);
     - frete fixo por faixa de CEP ou por estado (sem integração);
-    - retirada na loja (grátis, com endereço).
+    - retirada na loja (grátis, com endereço);
+    - motoboy: preço por km configurável pela loja, sem integração (pedido do usuário,
+      fora do escopo original da tarefa) — distância calculada entre o CEP de origem e o de
+      destino via geocodificação pública (BrasilAPI), com piso mínimo e raio máximo opcionais.
   - Frete grátis acima de um valor (`freeShippingMinInCents`), configurável por loja.
   - Vitrine: caixa "Calcular frete" na página do produto e no carrinho; escolha da opção no checkout.
   - O servidor recalcula a cotação ao criar o pagamento; frete entra como linha no pagamento.
     `Order` guarda `shippingMethod`, `shippingInCents`, prazo, e o total inclui o frete.
   - Aceite: mudar o CEP muda o valor; adulterar o frete no navegador não muda o valor cobrado.
+  - Progresso: **Etapa 1/3 concluída** (2026-11-09) — `Product.weightGrams/heightCm/widthCm/lengthCm`
+    (opcionais no banco), config de frete em `Store` (`originZip`, `freeShippingMinInCents`,
+    `pickupEnabled`/`pickupAddress`, `motoboyEnabled`/`motoboyPricePerKmInCents`/
+    `motoboyMinPriceInCents`/`motoboyMaxDistanceKm`), model `ShippingRate` (frete fixo por
+    estado/faixa de CEP). `storefront/src/lib/shipping/`: `ShippingProvider` com retirada, frete
+    fixo e motoboy — todos sem OAuth, só a geocodificação pública do motoboy depende de rede.
+    Agregador já aplica o desconto de frete grátis. Sem UI ainda, sem ligação com o checkout.
+  - Falta: Etapa 2 (Melhor Envio — aqui sim entra a criptografia AES-256-GCM, porque o token OAuth
+    deles é um segredo de verdade, diferente da conta Stripe Connect da F1.4) e Etapa 3 (caixa de
+    frete na vitrine, passo no checkout, `Order` ganha os campos de frete, admin gerencia as regras).
 
 - [ ] **F1.7 Cancelar e reembolsar pelo painel** · Depende de F1.2 e F1.4
   - Novo status `REFUNDED` (e `PARTIALLY_REFUNDED`, se o provedor permitir).
@@ -478,3 +491,5 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-04 | F0.4 | Banco de teste do E2E é um schema Postgres separado (`?schema=e2e_test`) no mesmo Postgres de dev, não um container/banco novo | `prisma migrate reset --force` já dropa/recria e roda o seed nativamente; evita um serviço Docker extra só para isso |
 | 2026-11-04 | F1.1 | Teste de concorrência do número de pedido entra em `e2e/` (via Prisma direto, sem navegador), não em `packages/db` como teste unitário | Precisa de um Postgres real pro lock de linha da transação fazer sentido; `yarn test` (Vitest) não tem banco disponível no job de CI |
 | 2026-11-04 | F1.3 | Removido também o `phone_number_collection` do Stripe (não só o `shipping_address_collection` pedido) | O telefone já é coletado no checkout próprio; pedir de novo na página do Stripe seria redundante |
+| 2026-11-09 | F1.6 | Melhor Envio (não Frenet nem Correios direto) | Escolha do usuário; agregador sem exigir contrato de transportadora próprio do lojista — se encaixa melhor no público de lojista pequeno da plataforma |
+| 2026-11-09 | F1.6 | Adicionado motoboy (preço por km configurável) como 4ª opção de frete, fora do escopo original da tarefa | Pedido do usuário; distância calculada por geocodificação pública (BrasilAPI), sem integração paga, mesma categoria de complexidade do frete fixo/retirada |
