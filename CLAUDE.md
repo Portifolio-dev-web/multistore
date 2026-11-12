@@ -77,7 +77,8 @@ nome, telefone, CPF/CNPJ), endereço (CEP com preenchimento automático via ViaC
 validados com os schemas de `storefront/src/lib/validation.ts`. Só o passo final chama a Server
 Action. `storefront/src/actions/checkout.ts` valida tudo de novo no servidor (nunca confia só no
 formulário), recalcula preço no banco e **reserva o estoque na criação do pedido** (`@repo/db`
-`reserveStock`, dentro da mesma transação que cria o `Order` como `PENDING`, já com
+`reserveStock`, por `variantId` — estoque mora em `ProductVariant`, nunca em `Product` —, dentro da
+mesma transação que cria o `Order` como `PENDING`, já com
 `customerEmail`/`customerName`/`customerPhone`/`customerDocument`/`shippingAddress`), depois abre
 uma Stripe Checkout Session (expira em 30 min, `customer_email` pré-preenchido, sem
 `shipping_address_collection`) com `metadata.orderId`. O webhook (`app/api/webhooks/stripe/route.ts`) chama `markOrderPaid`

@@ -10,7 +10,10 @@ import { DeleteButton } from "@/components/delete-button";
 
 export default async function EditProductPage({ params }: { params: { id: string } }) {
   const { storeId } = await requireSession();
-  const product = await prisma.product.findFirst({ where: { id: params.id, storeId }, include: { categories: true } });
+  const product = await prisma.product.findFirst({
+    where: { id: params.id, storeId },
+    include: { categories: true, variants: { orderBy: { position: "asc" }, take: 1 } },
+  });
   if (!product) notFound();
 
   const categoryRows = await prisma.category.findMany({ where: { storeId }, orderBy: { name: "asc" } });
@@ -29,7 +32,7 @@ export default async function EditProductPage({ params }: { params: { id: string
       />
       <ProductForm
         action={updateProduct.bind(null, product.id)}
-        product={{ ...product, categoryIds: product.categories.map((c) => c.id) }}
+        product={{ ...product, categoryIds: product.categories.map((c) => c.id), stock: product.variants[0]?.stock ?? 0 }}
         categories={categories}
         submitLabel="Salvar alterações"
       />

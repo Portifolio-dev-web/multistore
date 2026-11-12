@@ -4,31 +4,37 @@ import { expect, test } from "@playwright/test";
 import { nextOrderNumber, OutOfStockError, prisma, releaseStock, reserveStock } from "@repo/db";
 import { STORE_SLUG } from "./env";
 
-async function createPendingOrder(storeId: string, productId: string, priceInCents: number) {
+async function createPendingOrder(storeId: string, productId: string, variantId: string, priceInCents: number) {
   return prisma.$transaction(async (tx) => {
     const number = await nextOrderNumber(tx, storeId);
-    await reserveStock(tx, [{ productId, quantity: 1 }]);
+    await reserveStock(tx, [{ variantId, quantity: 1 }]);
     return tx.order.create({
       data: {
         storeId,
         number,
         totalInCents: priceInCents,
         items: {
-          create: [{ productId, productName: "teste-reserva", unitPriceInCents: priceInCents, quantity: 1 }],
+          create: [{ productId, variantId, productName: "teste-reserva", unitPriceInCents: priceInCents, quantity: 1 }],
         },
       },
     });
   });
 }
 
+async function createProductWithStock(storeId: string, name: string, priceInCents: number, stock: number) {
+  const product = await prisma.product.create({
+    data: { storeId, name, slug: `${name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`, priceInCents, variants: { create: { stock } } },
+    include: { variants: true },
+  });
+  return { product, variant: product.variants[0] };
+}
+
 test.describe("reserva de estoque", () => {
   test("duas reservas concorrentes pela última unidade: só uma passa", async () => {
     const store = await prisma.store.findUniqueOrThrow({ where: { slug: STORE_SLUG } });
-    const product = await prisma.product.create({
-      data: { storeId: store.id, name: "Produto com 1 unidade", slug: `produto-1un-${Date.now()}`, priceInCents: 1000, stock: 1 },
-    });
+    const { variant } = await createProductWithStock(store.id, "Produto com 1 unidade", 1000, 1);
 
-    const reserve = () => prisma.$transaction((tx) => reserveStock(tx, [{ productId: product.id, quantity: 1 }]));
+    const reserve = () => prisma.$transaction((tx) => reserveStock(tx, [{ variantId: variant.id, quantity: 1 }]));
 
     const results = await Promise.allSettled([reserve(), reserve()]);
     const fulfilled = results.filter((r) => r.status === "fulfilled");
@@ -38,18 +44,16 @@ test.describe("reserva de estoque", () => {
     expect(rejected).toHaveLength(1);
     expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(OutOfStockError);
 
-    const updated = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    const updated = await prisma.productVariant.findUniqueOrThrow({ where: { id: variant.id } });
     expect(updated.stock).toBe(0);
   });
 
   test("liberar o estoque de um pedido é idempotente mesmo chamado mais de uma vez", async () => {
     const store = await prisma.store.findUniqueOrThrow({ where: { slug: STORE_SLUG } });
-    const product = await prisma.product.create({
-      data: { storeId: store.id, name: "Produto pra liberar", slug: `produto-liberar-${Date.now()}`, priceInCents: 2000, stock: 5 },
-    });
+    const { product, variant } = await createProductWithStock(store.id, "Produto pra liberar", 2000, 5);
 
-    const order = await createPendingOrder(store.id, product.id, product.priceInCents);
-    const afterReserve = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    const order = await createPendingOrder(store.id, product.id, variant.id, product.priceInCents);
+    const afterReserve = await prisma.productVariant.findUniqueOrThrow({ where: { id: variant.id } });
     expect(afterReserve.stock).toBe(4);
 
     await Promise.all([
@@ -57,7 +61,7 @@ test.describe("reserva de estoque", () => {
       prisma.$transaction((tx) => releaseStock(tx, order.id)),
     ]);
 
-    const afterRelease = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    const afterRelease = await prisma.productVariant.findUniqueOrThrow({ where: { id: variant.id } });
     expect(afterRelease.stock).toBe(5);
   });
 });

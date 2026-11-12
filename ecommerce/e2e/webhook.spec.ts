@@ -10,25 +10,27 @@ test.describe("webhook do Stripe", () => {
     request,
   }) => {
     const store = await prisma.store.findUniqueOrThrow({ where: { slug: STORE_SLUG } });
-    const product = await prisma.product.findFirstOrThrow({
-      where: { storeId: store.id, stock: { gt: 1 } },
+    const variant = await prisma.productVariant.findFirstOrThrow({
+      where: { stock: { gt: 1 }, product: { storeId: store.id } },
+      include: { product: true },
     });
-    const stockBefore = product.stock;
+    const stockBefore = variant.stock;
 
     const order = await prisma.$transaction(async (tx) => {
       const number = await nextOrderNumber(tx, store.id);
-      await reserveStock(tx, [{ productId: product.id, quantity: 1 }]);
+      await reserveStock(tx, [{ variantId: variant.id, quantity: 1 }]);
       return tx.order.create({
         data: {
           storeId: store.id,
           number,
-          totalInCents: product.priceInCents,
+          totalInCents: variant.product.priceInCents,
           items: {
             create: [
               {
-                productId: product.id,
-                productName: product.name,
-                unitPriceInCents: product.priceInCents,
+                productId: variant.productId,
+                variantId: variant.id,
+                productName: variant.product.name,
+                unitPriceInCents: variant.product.priceInCents,
                 quantity: 1,
               },
             ],
@@ -64,11 +66,11 @@ test.describe("webhook do Stripe", () => {
     expect(second.ok()).toBe(true);
 
     const updatedOrder = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
-    const updatedProduct = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    const updatedVariant = await prisma.productVariant.findUniqueOrThrow({ where: { id: variant.id } });
 
     expect(updatedOrder.status).toBe("PAID");
     expect(updatedOrder.customerEmail).toBe("cliente@teste.com");
-    expect(updatedProduct.stock).toBe(stockBefore - 1);
+    expect(updatedVariant.stock).toBe(stockBefore - 1);
 
     // F1.8: mesmo com o webhook repetido, só um evento PAID na linha do tempo
     const paidEvents = await prisma.orderEvent.findMany({ where: { orderId: order.id, type: "PAID" } });

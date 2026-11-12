@@ -5,7 +5,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type CartItem = {
+  variantId: string;
   productId: string;
+  variantLabel: string | null;
   name: string;
   priceInCents: number;
   image: string | null;
@@ -16,8 +18,8 @@ export type CartItem = {
 type CartState = {
   carts: Record<string, CartItem[]>;
   addItem: (store: string, item: Omit<CartItem, "quantity">, quantity?: number) => void;
-  updateQuantity: (store: string, productId: string, quantity: number) => void;
-  removeItem: (store: string, productId: string) => void;
+  updateQuantity: (store: string, variantId: string, quantity: number) => void;
+  removeItem: (store: string, variantId: string) => void;
   clearCart: (store: string) => void;
 };
 
@@ -31,21 +33,21 @@ export const useCart = create<CartState>()(
       addItem: (store, item, quantity = 1) =>
         set((s) => {
           const cart = s.carts[store] ?? [];
-          const existing = cart.find((i) => i.productId === item.productId);
+          const existing = cart.find((i) => i.variantId === item.variantId);
           const next = existing
-            ? cart.map((i) => (i.productId === item.productId ? { ...i, ...item, quantity: clamp(i.quantity + quantity, item.stock) } : i))
+            ? cart.map((i) => (i.variantId === item.variantId ? { ...i, ...item, quantity: clamp(i.quantity + quantity, item.stock) } : i))
             : [...cart, { ...item, quantity: clamp(quantity, item.stock) }];
           return { carts: { ...s.carts, [store]: next } };
         }),
-      updateQuantity: (store, productId, quantity) =>
+      updateQuantity: (store, variantId, quantity) =>
         set((s) => ({
           carts: {
             ...s.carts,
-            [store]: (s.carts[store] ?? []).map((i) => (i.productId === productId ? { ...i, quantity: clamp(quantity, i.stock) } : i)),
+            [store]: (s.carts[store] ?? []).map((i) => (i.variantId === variantId ? { ...i, quantity: clamp(quantity, i.stock) } : i)),
           },
         })),
-      removeItem: (store, productId) =>
-        set((s) => ({ carts: { ...s.carts, [store]: (s.carts[store] ?? []).filter((i) => i.productId !== productId) } })),
+      removeItem: (store, variantId) =>
+        set((s) => ({ carts: { ...s.carts, [store]: (s.carts[store] ?? []).filter((i) => i.variantId !== variantId) } })),
       clearCart: (store) => set((s) => ({ carts: { ...s.carts, [store]: [] } })),
     }),
     { name: "vitrine-cart" },

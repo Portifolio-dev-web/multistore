@@ -3,6 +3,7 @@ import { prisma, type Prisma } from "@repo/db";
 import { categoryAncestors, categoryDescendantIds, isPromoActive } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase } from "@/lib/paths";
+import { withDefaultVariantPricing } from "@/lib/product-display";
 import { ProductCard } from "@/components/product-card";
 import { ProductFilters, type FilterValues } from "@/components/product-filters";
 
@@ -47,7 +48,7 @@ export default async function StorePage({ params, searchParams }: Props) {
       ],
     }),
     ...(selectedCategory && { categories: { some: { id: { in: categoryDescendantIds(allCategories, selectedCategory.id) } } } }),
-    ...(filters.inStock && { stock: { gt: 0 } }),
+    ...(filters.inStock && { variants: { some: { stock: { gt: 0 } } } }),
     priceInCents: { gte: toCents(filters.min), lte: toCents(filters.max) },
   };
 
@@ -55,11 +56,12 @@ export default async function StorePage({ params, searchParams }: Props) {
     where,
     orderBy: SORTS[filters.sort],
     take: 60,
-    include: { categories: { select: { name: true } } },
+    include: { categories: { select: { name: true } }, variants: { orderBy: { position: "asc" }, take: 1 } },
   });
+  const withEffectivePrice = productsFetched.map(withDefaultVariantPricing);
   // ponytail: comparar priceInCents/compareAtPriceInCents exige SQL cru (duas colunas da mesma linha);
   // como a listagem já é um `take: 60` sem paginação de verdade, filtra em JS aqui mesmo.
-  const products = filters.onPromo ? productsFetched.filter((p) => isPromoActive(p)) : productsFetched;
+  const products = filters.onPromo ? withEffectivePrice.filter((p) => isPromoActive(p)) : withEffectivePrice;
   const categoryOptions = allCategories.map((c) => ({
     slug: c.slug,
     label: "— ".repeat(categoryAncestors(allCategories, c.id).length - 1) + c.name,

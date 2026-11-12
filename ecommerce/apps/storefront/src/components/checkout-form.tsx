@@ -104,7 +104,7 @@ export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
     startTransition(async () => {
       const result = await createCheckoutSession({
         storeSlug,
-        items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        items: items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
         ...details.data,
       });
       if ("error" in result) setSubmitError(result.error);
@@ -347,8 +347,8 @@ function ReviewStep({
         <p className="label">Itens</p>
         <ul className="divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-white text-sm">
           {items.map((it) => (
-            <li key={it.productId} className="flex justify-between p-3">
-              <span>{it.quantity}× {it.name}</span>
+            <li key={it.variantId} className="flex justify-between p-3">
+              <span>{it.quantity}× {it.name}{it.variantLabel ? ` (${it.variantLabel})` : ""}</span>
               <span>{formatBRL(it.priceInCents * it.quantity)}</span>
             </li>
           ))}

@@ -4,6 +4,8 @@ import {
   contrastText,
   categoryAncestors,
   categoryDescendantIds,
+  effectiveCompareAtPrice,
+  effectivePrice,
   formatAddress,
   formatBRL,
   isPromoActive,
@@ -11,6 +13,7 @@ import {
   parseBRLToCents,
   promoDiscountPercent,
   slugify,
+  variantLabel,
 } from "./utils";
 
 describe("parseBRLToCents", () => {
@@ -186,6 +189,36 @@ describe("categoryAncestors", () => {
 
   it("categoria raiz retorna só ela mesma", () => {
     expect(categoryAncestors(tree, "roupas").map((c) => c.name)).toEqual(["Roupas"]);
+  });
+});
+
+describe("effectivePrice / effectiveCompareAtPrice", () => {
+  const product = { priceInCents: 1000, compareAtPriceInCents: 1500 };
+
+  it("variante sem override usa preço e 'de' do produto", () => {
+    const variant = { priceInCents: null, compareAtPriceInCents: null };
+    expect(effectivePrice(variant, product)).toBe(1000);
+    expect(effectiveCompareAtPrice(variant, product)).toBe(1500);
+  });
+
+  it("variante com preço próprio usa o 'de' da própria variante, não o do produto", () => {
+    const variant = { priceInCents: 2000, compareAtPriceInCents: null };
+    expect(effectivePrice(variant, product)).toBe(2000);
+    expect(effectiveCompareAtPrice(variant, product)).toBeNull();
+  });
+});
+
+describe("variantLabel", () => {
+  it("retorna null pra combinação vazia (variante padrão)", () => {
+    expect(variantLabel({})).toBeNull();
+  });
+
+  it("junta os valores com ' / ', na ordem informada", () => {
+    expect(variantLabel({ Tamanho: "M", Cor: "Azul" }, ["Cor", "Tamanho"])).toBe("Azul / M");
+  });
+
+  it("sem ordem informada, cai pra ordem alfabética das chaves", () => {
+    expect(variantLabel({ Tamanho: "M", Cor: "Azul" })).toBe("Azul / M");
   });
 });
 

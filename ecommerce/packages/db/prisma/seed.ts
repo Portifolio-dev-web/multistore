@@ -46,9 +46,15 @@ async function main() {
       { name: "Garrafa Térmica Fosca", category: "Utilidades", priceInCents: 15900, stock: 0, images: [IMG.cup], description: "Mantém a temperatura por até 12 horas." },
       { name: "Vela Aromática Cedro", category: "Decoração", priceInCents: 6990, stock: 14, images: [], description: "Cera vegetal com notas de cedro e âmbar." },
     ];
-    for (const { category, ...p } of products) {
+    for (const { category, stock, ...p } of products) {
       await prisma.product.create({
-        data: { ...p, slug: slugify(p.name), storeId: store.id, categories: { connect: { id: categories[category] } } },
+        data: {
+          ...p,
+          slug: slugify(p.name),
+          storeId: store.id,
+          categories: { connect: { id: categories[category] } },
+          variants: { create: { stock } },
+        },
       });
     }
   }

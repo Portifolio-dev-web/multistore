@@ -238,6 +238,14 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     edição em massa de estoque e preço.
   - Vitrine: seletor por botões, combinações esgotadas desabilitadas, preço e foto mudam com a escolha.
   - Aceite: produto com 2 cores × 3 tamanhos vende e baixa estoque da combinação certa.
+  - Progresso (etapa 1/3, 2026-11-12): schema (`ProductOption`/`ProductVariant`) e migration
+    `20261112100000_product_variants` com backfill de uma variante padrão por produto (estoque
+    migrado pra ela; `Product.priceInCents` continua sendo a base, `ProductVariant.priceInCents`
+    nulo = herda do produto). `reserveStock`/`releaseStock`, `pricing.ts`, carrinho, checkout e
+    `OrderItem` já operam por `variantId` — hoje sempre a variante padrão (1 por produto), sem
+    mudança visível pro cliente final. `effectivePrice`/`effectiveCompareAtPrice`/`variantLabel`
+    novos em `@repo/db/utils`. Falta: etapa 2 (editor de opções/grade no admin) e etapa 3 (seletor
+    na vitrine) — é só aí que um produto passa a ter mais de uma variante de verdade.
 
 - [x] **F2.3 Preço promocional ("de/por")**
   - `compareAtPriceInCents` no produto/variante; selo "-20%" no card; filtro "Em promoção".
@@ -503,3 +511,5 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-09 | F2.4 | `Product.categories` é muitos-para-muitos (m2m implícita do Prisma), não um `categoryId` único | Roadmap pedia m2m; um produto pode estar em mais de uma categoria (ex.: "Promoções" e "Roupas" ao mesmo tempo) |
 | 2026-11-09 | F2.4 | Subárvore de categoria (descendentes) e breadcrumb calculados em memória em JS, não com CTE recursiva no Postgres | Lista de categorias por loja é pequena; evita escrever/manter SQL recursivo pra um caso que não tem problema de escala hoje |
 | 2026-11-09 | F2.4 | "Posição" da categoria é um campo numérico no formulário, não arrastar-e-soltar | Atende ao aceite (ordenação) sem precisar de uma lib de drag-and-drop |
+| 2026-11-12 | F2.2 etapa 1 | `Product.priceInCents` continua sendo o preço base; `ProductVariant.priceInCents` é opcional e só sobrescreve quando preenchido | Já é literalmente o que o roadmap pede ("opcional que sobrescreve o do produto"); evita duplicar o preço em toda variante que não muda de preço |
+| 2026-11-12 | F2.2 etapa 1 | `Product.stock` foi removido (não ficou como fallback) — estoque mora só em `ProductVariant.stock` | Estoque é por natureza granular por combinação; manter os dois criaria duas fontes de verdade pra reconciliar |

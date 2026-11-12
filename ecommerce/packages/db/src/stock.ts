@@ -1,12 +1,12 @@
 import type { Prisma } from "@prisma/client";
 
 export class OutOfStockError extends Error {
-  constructor(public readonly productId: string) {
-    super(`Estoque insuficiente para o produto ${productId}.`);
+  constructor(public readonly variantId: string) {
+    super(`Estoque insuficiente para a variante ${variantId}.`);
   }
 }
 
-export type StockLine = { productId: string; quantity: number };
+export type StockLine = { variantId: string; quantity: number };
 
 /**
  * Baixa o estoque de cada linha atomicamente (`UPDATE ... WHERE stock >= qty`). Se alguma
@@ -15,11 +15,11 @@ export type StockLine = { productId: string; quantity: number };
  */
 export async function reserveStock(tx: Prisma.TransactionClient, lines: StockLine[]): Promise<void> {
   for (const line of lines) {
-    const { count } = await tx.product.updateMany({
-      where: { id: line.productId, stock: { gte: line.quantity } },
+    const { count } = await tx.productVariant.updateMany({
+      where: { id: line.variantId, stock: { gte: line.quantity } },
       data: { stock: { decrement: line.quantity } },
     });
-    if (count === 0) throw new OutOfStockError(line.productId);
+    if (count === 0) throw new OutOfStockError(line.variantId);
   }
 }
 
@@ -34,8 +34,8 @@ export async function releaseStock(tx: Prisma.TransactionClient, orderId: string
   });
   if (count === 0) return;
 
-  const items = await tx.orderItem.findMany({ where: { orderId, productId: { not: null } } });
+  const items = await tx.orderItem.findMany({ where: { orderId, variantId: { not: null } } });
   for (const item of items) {
-    await tx.product.update({ where: { id: item.productId! }, data: { stock: { increment: item.quantity } } });
+    await tx.productVariant.update({ where: { id: item.variantId! }, data: { stock: { increment: item.quantity } } });
   }
 }

@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { nextOrderNumber, OutOfStockError, prisma, releaseStock, reserveStock, type Prisma } from "@repo/db";
-import { calculateOrderPricing } from "@repo/db/pricing";
+import { calculateOrderPricing, type PricingVariant } from "@repo/db/pricing";
+import { effectivePrice } from "@repo/db/utils";
 import { storeUrl } from "@repo/db/urls";
 import { getStripe } from "@/lib/stripe";
 import { customerDetailsSchema } from "@/lib/validation";
@@ -11,7 +12,7 @@ const checkoutSchema = z
   .object({
     storeSlug: z.string().min(1),
     items: z
-      .array(z.object({ productId: z.string().min(1), quantity: z.number().int().min(1).max(99) }))
+      .array(z.object({ variantId: z.string().min(1), quantity: z.number().int().min(1).max(99) }))
       .min(1, "Carrinho vazio")
       .max(50),
   })
@@ -43,15 +44,26 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
   if (!store) return { error: "Loja não encontrada." };
 
   // Preços e estoque SEMPRE vêm do banco, nunca do cliente
-  const products = await prisma.product.findMany({
-    where: { id: { in: items.map((i) => i.productId) }, storeId: store.id, active: true },
+  const variantRows = await prisma.productVariant.findMany({
+    where: { id: { in: items.map((i) => i.variantId) }, product: { storeId: store.id, active: true } },
+    include: { product: true },
   });
-  const byId = new Map(products.map((p) => [p.id, p]));
+  const byId = new Map(variantRows.map((v) => [v.id, v]));
+  const pricingVariants: PricingVariant[] = variantRows.map((v) => ({
+    id: v.id,
+    productId: v.productId,
+    name: v.product.name,
+    variantLabel: null,
+    sku: v.sku,
+    priceInCents: effectivePrice(v, v.product),
+    stock: v.stock,
+    active: v.product.active,
+  }));
 
-  const pricing = calculateOrderPricing(products, items);
+  const pricing = calculateOrderPricing(pricingVariants, items);
   if ("error" in pricing) return { error: pricing.error };
 
-  const lines = pricing.lines.map((l) => ({ product: byId.get(l.productId)!, quantity: l.quantity }));
+  const lines = pricing.lines.map((l) => ({ variant: byId.get(l.variantId)!, ...l }));
   const totalInCents = pricing.totalInCents;
 
   let order;
@@ -60,7 +72,7 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
       const orderNumber = await nextOrderNumber(tx, store.id);
       await reserveStock(
         tx,
-        lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
+        lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
       );
       const shippingAddress: Prisma.InputJsonValue = {
         name,
@@ -85,9 +97,12 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
           shippingAddress,
           items: {
             create: lines.map((l) => ({
-              productId: l.product.id,
-              productName: l.product.name,
-              unitPriceInCents: l.product.priceInCents,
+              productId: l.productId,
+              productName: l.name,
+              variantId: l.variantId,
+              variantLabel: l.variantLabel,
+              sku: l.sku,
+              unitPriceInCents: l.unitPriceInCents,
               quantity: l.quantity,
             })),
           },
@@ -100,8 +115,8 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
     });
   } catch (err) {
     if (err instanceof OutOfStockError) {
-      const product = byId.get(err.productId);
-      return { error: `Estoque insuficiente para "${product?.name ?? "um dos produtos"}".` };
+      const variant = byId.get(err.variantId);
+      return { error: `Estoque insuficiente para "${variant?.product.name ?? "um dos produtos"}".` };
     }
     throw err;
   }
@@ -120,10 +135,10 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
         quantity: l.quantity,
         price_data: {
           currency: store.currency,
-          unit_amount: l.product.priceInCents,
+          unit_amount: l.unitPriceInCents,
           product_data: {
-            name: l.product.name,
-            images: l.product.images.filter((u) => u.startsWith("https://")).slice(0, 1),
+            name: l.name + (l.variantLabel ? ` (${l.variantLabel})` : ""),
+            images: l.variant.product.images.filter((u) => u.startsWith("https://")).slice(0, 1),
           },
         },
       })),

@@ -7,12 +7,13 @@ const prisma = new PrismaClient();
 const stripe = new Stripe("sk_test_dummy");
 const url = process.env.WEBHOOK_URL;
 
-const product = await prisma.product.findFirst({ where: { stock: { gt: 1 } } });
+const variant = await prisma.productVariant.findFirst({ where: { stock: { gt: 1 } }, include: { product: true } });
+const product = variant.product;
 const order = await prisma.order.create({
   data: {
     storeId: product.storeId,
     totalInCents: product.priceInCents,
-    items: { create: [{ productId: product.id, productName: product.name, unitPriceInCents: product.priceInCents, quantity: 1 }] },
+    items: { create: [{ productId: product.id, variantId: variant.id, productName: product.name, unitPriceInCents: product.priceInCents, quantity: 1 }] },
   },
 });
 
@@ -39,6 +40,6 @@ for (let i = 1; i <= 2; i++) {
 }
 
 const updated = await prisma.order.findUnique({ where: { id: order.id } });
-const after = await prisma.product.findUnique({ where: { id: product.id } });
-console.log(`status=${updated.status} email=${updated.customerEmail} estoque ${product.stock} -> ${after.stock} (esperado ${product.stock - 1})`);
+const after = await prisma.productVariant.findUnique({ where: { id: variant.id } });
+console.log(`status=${updated.status} email=${updated.customerEmail} estoque ${variant.stock} -> ${after.stock}`);
 await prisma.$disconnect();

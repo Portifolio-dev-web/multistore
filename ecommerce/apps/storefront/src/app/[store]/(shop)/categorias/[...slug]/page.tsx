@@ -4,6 +4,7 @@ import { prisma } from "@repo/db";
 import { categoryAncestors, categoryDescendantIds } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
+import { withDefaultVariantPricing } from "@/lib/product-display";
 import { ProductCard } from "@/components/product-card";
 
 type Props = { params: { store: string; slug: string[] } };
@@ -26,12 +27,13 @@ export default async function CategoryPage({ params }: Props) {
     .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
 
   const descendantIds = categoryDescendantIds(allCategories, category.id);
-  const products = await prisma.product.findMany({
+  const productsFetched = await prisma.product.findMany({
     where: { storeId: store.id, active: true, categories: { some: { id: { in: descendantIds } } } },
     orderBy: { createdAt: "desc" },
     take: 60,
-    include: { categories: { select: { name: true } } },
+    include: { categories: { select: { name: true } }, variants: { orderBy: { position: "asc" }, take: 1 } },
   });
+  const products = productsFetched.map(withDefaultVariantPricing);
 
   const pathTo = (index: number) => storeHref(base, `/categorias/${breadcrumb.slice(0, index + 1).map((c) => c.slug).join("/")}`);
 

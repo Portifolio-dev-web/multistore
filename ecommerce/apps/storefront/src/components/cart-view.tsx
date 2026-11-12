@@ -28,7 +28,7 @@ export function CartView({ storeSlug }: { storeSlug: string }) {
     <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_340px]">
       <ul className="divide-y divide-ink/10 rounded-3xl border border-ink/10 bg-white" data-testid="cart-items">
         {items.map((item) => (
-          <CartLine key={item.productId} storeSlug={storeSlug} item={item} />
+          <CartLine key={item.variantId} storeSlug={storeSlug} item={item} />
         ))}
       </ul>
       <aside className="h-fit rounded-3xl bg-brand p-6 text-brand-contrast">
@@ -53,20 +53,23 @@ export function CartView({ storeSlug }: { storeSlug: string }) {
 function CartLine({ storeSlug, item }: { storeSlug: string; item: CartItem }) {
   const { updateQuantity, removeItem } = useCart();
   return (
-    <li className="flex gap-4 p-4" data-testid={`cart-item-${item.productId}`}>
+    <li className="flex gap-4 p-4" data-testid={`cart-item-${item.variantId}`}>
       <ProductImage src={item.image} alt={item.name} className="h-24 w-20 shrink-0 rounded-xl object-cover" />
       <div className="flex flex-1 flex-col justify-between">
         <div className="flex justify-between gap-3">
-          <p className="font-medium">{item.name}</p>
+          <p className="font-medium">
+            {item.name}
+            {item.variantLabel && <span className="block text-xs text-ink/50">{item.variantLabel}</span>}
+          </p>
           <p className="font-display font-semibold">{formatBRL(item.priceInCents * item.quantity)}</p>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center rounded-full border border-ink/15 text-sm">
-            <button type="button" className="px-3 py-1.5" onClick={() => updateQuantity(storeSlug, item.productId, item.quantity - 1)} data-testid={`cart-item-decrease-${item.productId}`}>−</button>
-            <span className="w-6 text-center" data-testid={`cart-item-qty-${item.productId}`}>{item.quantity}</span>
-            <button type="button" className="px-3 py-1.5" onClick={() => updateQuantity(storeSlug, item.productId, item.quantity + 1)} data-testid={`cart-item-increase-${item.productId}`}>+</button>
+            <button type="button" className="px-3 py-1.5" onClick={() => updateQuantity(storeSlug, item.variantId, item.quantity - 1)} data-testid={`cart-item-decrease-${item.variantId}`}>−</button>
+            <span className="w-6 text-center" data-testid={`cart-item-qty-${item.variantId}`}>{item.quantity}</span>
+            <button type="button" className="px-3 py-1.5" onClick={() => updateQuantity(storeSlug, item.variantId, item.quantity + 1)} data-testid={`cart-item-increase-${item.variantId}`}>+</button>
           </div>
-          <button type="button" onClick={() => removeItem(storeSlug, item.productId)} className="text-sm text-ink/50 hover:text-red-600" data-testid={`cart-item-remove-${item.productId}`}>
+          <button type="button" onClick={() => removeItem(storeSlug, item.variantId)} className="text-sm text-ink/50 hover:text-red-600" data-testid={`cart-item-remove-${item.variantId}`}>
             Remover
           </button>
         </div>

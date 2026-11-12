@@ -5,10 +5,13 @@ import { ProductImage } from "./product-image";
 
 type Props = {
   base: string;
-  product: Pick<
-    Product,
-    "id" | "slug" | "name" | "priceInCents" | "compareAtPriceInCents" | "promoStartsAt" | "promoEndsAt" | "images" | "stock"
-  > & { categories: { name: string }[] };
+  // preço/estoque já resolvidos pelo chamador (produto ou variante padrão — F2.2 etapa 1)
+  product: Pick<Product, "id" | "slug" | "name" | "promoStartsAt" | "promoEndsAt" | "images"> & {
+    priceInCents: number;
+    compareAtPriceInCents: number | null;
+    stock: number;
+    categories: { name: string }[];
+  };
 };
 
 export function ProductCard({ base, product }: Props) {

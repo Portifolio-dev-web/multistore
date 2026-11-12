@@ -73,7 +73,7 @@ export default async function OrderTrackingPage({ params }: Props) {
         <ul className="divide-y divide-ink/10 rounded-3xl border border-ink/10 bg-white">
           {order.items.map((it) => (
             <li key={it.id} className="flex justify-between gap-3 p-4 text-sm">
-              <span>{it.quantity}× {it.productName}</span>
+              <span>{it.quantity}× {it.productName}{it.variantLabel ? ` (${it.variantLabel})` : ""}</span>
               <span>{formatBRL(it.unitPriceInCents * it.quantity)}</span>
             </li>
           ))}

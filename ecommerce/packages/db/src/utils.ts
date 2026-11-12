@@ -57,6 +57,26 @@ export function promoDiscountPercent(compareAtPriceInCents: number, priceInCents
   return Math.round(((compareAtPriceInCents - priceInCents) / compareAtPriceInCents) * 100);
 }
 
+export type VariantPriceOverride = { priceInCents: number | null; compareAtPriceInCents: number | null };
+export type ProductBasePrice = { priceInCents: number; compareAtPriceInCents: number | null };
+
+/** `ProductVariant.priceInCents` nulo = usa o preço do produto; não-nulo = sobrescreve */
+export function effectivePrice(variant: VariantPriceOverride, product: ProductBasePrice): number {
+  return variant.priceInCents ?? product.priceInCents;
+}
+
+/** Segue o mesmo preço que `effectivePrice` escolheu: variante com preço próprio usa o "de" da variante */
+export function effectiveCompareAtPrice(variant: VariantPriceOverride, product: ProductBasePrice): number | null {
+  return variant.priceInCents != null ? variant.compareAtPriceInCents : product.compareAtPriceInCents;
+}
+
+/** "Azul / M" a partir da combinação de opções da variante; null pra variante padrão (sem opções) */
+export function variantLabel(combination: Record<string, string>, optionOrder?: string[]): string | null {
+  const keys = optionOrder ?? Object.keys(combination).sort();
+  const parts = keys.map((k) => combination[k]).filter(Boolean);
+  return parts.length > 0 ? parts.join(" / ") : null;
+}
+
 export type CategoryNode = { id: string; parentId: string | null };
 
 /**

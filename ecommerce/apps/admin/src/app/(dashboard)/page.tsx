@@ -13,7 +13,12 @@ export default async function OverviewPage() {
     prisma.order.count({ where: { storeId, status: "PAID" } }),
     prisma.order.count({ where: { storeId, status: "PENDING" } }),
     prisma.product.count({ where: { storeId } }),
-    prisma.product.findMany({ where: { storeId, active: true, stock: { lte: 3 } }, orderBy: { stock: "asc" }, take: 5 }),
+    prisma.productVariant.findMany({
+      where: { stock: { lte: 3 }, product: { storeId, active: true } },
+      orderBy: { stock: "asc" },
+      take: 5,
+      include: { product: { select: { id: true, name: true } } },
+    }),
     prisma.order.findMany({ where: { storeId }, orderBy: { createdAt: "desc" }, take: 6 }),
   ]);
 
@@ -61,11 +66,11 @@ export default async function OverviewPage() {
             <h2 className="font-semibold">Estoque baixo</h2>
           </div>
           <ul className="divide-y divide-line">
-            {lowStock.map((p) => (
-              <li key={p.id}>
-                <Link href={`/products/${p.id}`} className="flex justify-between px-5 py-3.5 text-sm hover:bg-bone/60" data-testid={`low-stock-${p.id}`}>
-                  <span className="truncate">{p.name}</span>
-                  <span className={`font-mono ${p.stock === 0 ? "text-red-700" : ""}`}>{p.stock} un.</span>
+            {lowStock.map((v) => (
+              <li key={v.id}>
+                <Link href={`/products/${v.product.id}`} className="flex justify-between px-5 py-3.5 text-sm hover:bg-bone/60" data-testid={`low-stock-${v.product.id}`}>
+                  <span className="truncate">{v.product.name}</span>
+                  <span className={`font-mono ${v.stock === 0 ? "text-red-700" : ""}`}>{v.stock} un.</span>
                 </Link>
               </li>
             ))}

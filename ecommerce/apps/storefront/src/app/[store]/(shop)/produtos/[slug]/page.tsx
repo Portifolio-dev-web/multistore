@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { prisma } from "@repo/db";
-import { formatBRL, isPromoActive, promoDiscountPercent } from "@repo/db/utils";
+import { effectiveCompareAtPrice, effectivePrice, formatBRL, isPromoActive, promoDiscountPercent, variantLabel } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
 import { AddToCart } from "@/components/add-to-cart";
@@ -15,7 +15,7 @@ export default async function ProductPage({ params }: Props) {
 
   const product = await prisma.product.findFirst({
     where: { slug: params.slug, storeId: store.id, active: true },
-    include: { categories: { select: { name: true, slug: true } } },
+    include: { categories: { select: { name: true, slug: true } }, variants: { orderBy: { position: "asc" }, take: 1 } },
   });
   if (!product) {
     // Slug antigo (produto renomeado)? Redireciona pro endereço atual.
@@ -29,7 +29,12 @@ export default async function ProductPage({ params }: Props) {
     notFound();
   }
 
-  const onPromo = isPromoActive(product);
+  // F2.2 etapa 1: produto tem uma variante só (a padrão) — é dela que vêm preço/estoque efetivos
+  const variant = product.variants[0];
+  const priceInCents = variant ? effectivePrice(variant, product) : product.priceInCents;
+  const compareAtPriceInCents = variant ? effectiveCompareAtPrice(variant, product) : product.compareAtPriceInCents;
+  const stock = variant?.stock ?? 0;
+  const onPromo = isPromoActive({ priceInCents, compareAtPriceInCents, promoStartsAt: product.promoStartsAt, promoEndsAt: product.promoEndsAt });
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
@@ -50,25 +55,35 @@ export default async function ProductPage({ params }: Props) {
           <div className="mt-5 flex items-center gap-3">
             {onPromo && (
               <span className="text-lg text-ink/40 line-through" data-testid="product-compare-price">
-                {formatBRL(product.compareAtPriceInCents!)}
+                {formatBRL(compareAtPriceInCents!)}
               </span>
             )}
-            <p className="font-display text-3xl font-semibold" data-testid="product-price">{formatBRL(product.priceInCents)}</p>
+            <p className="font-display text-3xl font-semibold" data-testid="product-price">{formatBRL(priceInCents)}</p>
             {onPromo && (
               <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold uppercase tracking-wider text-paper" data-testid="product-promo-badge">
-                -{promoDiscountPercent(product.compareAtPriceInCents!, product.priceInCents)}%
+                -{promoDiscountPercent(compareAtPriceInCents!, priceInCents)}%
               </span>
             )}
           </div>
           <p className="mt-2 text-sm text-ink/50" data-testid="product-stock">
-            {product.stock > 0 ? `${product.stock} em estoque` : "Esgotado"}
+            {stock > 0 ? `${stock} em estoque` : "Esgotado"}
           </p>
-          <div className="mt-8">
-            <AddToCart
-              storeSlug={store.slug}
-              item={{ productId: product.id, name: product.name, priceInCents: product.priceInCents, image: product.images[0] ?? null, stock: product.stock }}
-            />
-          </div>
+          {variant && (
+            <div className="mt-8">
+              <AddToCart
+                storeSlug={store.slug}
+                item={{
+                  variantId: variant.id,
+                  productId: product.id,
+                  variantLabel: variantLabel(variant.combination as Record<string, string>),
+                  name: product.name,
+                  priceInCents,
+                  image: product.images[0] ?? null,
+                  stock,
+                }}
+              />
+            </div>
+          )}
           {product.description && (
             <div className="mt-10 border-t border-ink/10 pt-8">
               <p className="label">Descrição</p>

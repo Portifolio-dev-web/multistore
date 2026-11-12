@@ -53,6 +53,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                 <tr key={it.id}>
                   <td className="td">
                     {it.productName}
+                    {it.variantLabel && <span className="ml-1 text-ink/50">({it.variantLabel})</span>}
                     <span className="block font-mono text-xs text-ink/50">{formatBRL(it.unitPriceInCents)} un.</span>
                   </td>
                   <td className="td font-mono">{it.quantity}</td>
