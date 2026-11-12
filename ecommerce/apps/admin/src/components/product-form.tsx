@@ -28,10 +28,13 @@ type Props = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   product?: ProductValues;
   categories: { id: string; label: string }[];
+  // Produto novo (undefined) ou com uma variante só: edita o estoque aqui. Com mais de uma,
+  // o estoque vira ambíguo (qual variante?) e passa a ser editado na grade de variações.
+  variantCount?: number;
   submitLabel: string;
 };
 
-export function ProductForm({ action, product, categories, submitLabel }: Props) {
+export function ProductForm({ action, product, categories, variantCount, submitLabel }: Props) {
   const [state, formAction] = useFormState(action, {});
   const e = state.fieldErrors;
 
@@ -66,11 +69,20 @@ export function ProductForm({ action, product, categories, submitLabel }: Props)
           <input id="priceInCents" name="priceInCents" inputMode="decimal" placeholder="129,90" defaultValue={product ? centsToInput(product.priceInCents) : ""} required className="field font-mono" data-testid="product-price-input" />
           <FieldError errors={e?.priceInCents} testId="product-price-error" />
         </div>
-        <div>
-          <label className="label" htmlFor="stock">Estoque</label>
-          <input id="stock" name="stock" type="number" min={0} defaultValue={product?.stock ?? 0} required className="field font-mono" data-testid="product-stock-input" />
-          <FieldError errors={e?.stock} />
-        </div>
+        {(variantCount ?? 1) <= 1 ? (
+          <div>
+            <label className="label" htmlFor="stock">Estoque</label>
+            <input id="stock" name="stock" type="number" min={0} defaultValue={product?.stock ?? 0} required className="field font-mono" data-testid="product-stock-input" />
+            <FieldError errors={e?.stock} />
+          </div>
+        ) : (
+          <div>
+            <span className="label">Estoque</span>
+            <p className="field flex items-center text-sm text-ink/50" data-testid="product-stock-managed-elsewhere">
+              Gerenciado nas variações ↓
+            </p>
+          </div>
+        )}
       </div>
       <div>
         <span className="label">Categorias</span>

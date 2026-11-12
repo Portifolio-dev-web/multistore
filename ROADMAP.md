@@ -246,6 +246,14 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     mudança visível pro cliente final. `effectivePrice`/`effectiveCompareAtPrice`/`variantLabel`
     novos em `@repo/db/utils`. Falta: etapa 2 (editor de opções/grade no admin) e etapa 3 (seletor
     na vitrine) — é só aí que um produto passa a ter mais de uma variante de verdade.
+  - Progresso (etapa 2/3, 2026-11-12): admin ganhou `/products/[id]/variants` — editor de opções
+    (nome + valores separados por vírgula, até 3 opções) que recalcula a grade de variações ao
+    salvar (cria a combinação nova, apaga a que não existe mais — pedido antigo mantém o snapshot,
+    só perde o vínculo pelo `onDelete: SetNull`); grade com SKU, preço, preço "de" e estoque por
+    linha, com "aplicar a todas" pra estoque e preço. `cartesianCombinations`/`combinationKey`
+    novos em `@repo/db/utils`. O formulário principal de produto só edita o estoque direto quando
+    o produto tem uma variante só — com mais, vira um link pra grade. Falta: etapa 3 (seletor por
+    botões na vitrine, ligar carrinho/checkout à variante escolhida de verdade).
 
 - [x] **F2.3 Preço promocional ("de/por")**
   - `compareAtPriceInCents` no produto/variante; selo "-20%" no card; filtro "Em promoção".

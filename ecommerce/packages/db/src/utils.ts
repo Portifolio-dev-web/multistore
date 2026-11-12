@@ -77,6 +77,21 @@ export function variantLabel(combination: Record<string, string>, optionOrder?: 
   return parts.length > 0 ? parts.join(" / ") : null;
 }
 
+export type ProductOptionValues = { name: string; values: string[] };
+
+/** Produto cartesiano das opções: [{name:"Cor",values:["Azul","Verde"]},{name:"Tam",values:["P","M"]}] -> 4 combinações. Sem opções: uma combinação vazia (a variante padrão). */
+export function cartesianCombinations(options: ProductOptionValues[]): Record<string, string>[] {
+  return options.reduce<Record<string, string>[]>(
+    (combos, option) => combos.flatMap((combo) => option.values.map((value) => ({ ...combo, [option.name]: value }))),
+    [{}],
+  );
+}
+
+/** Chave canônica (ordem das chaves não importa) pra comparar/indexar combinações */
+export function combinationKey(combination: Record<string, string>): string {
+  return Object.keys(combination).sort().map((k) => `${k}=${combination[k]}`).join("|");
+}
+
 export type CategoryNode = { id: string; parentId: string | null };
 
 /**

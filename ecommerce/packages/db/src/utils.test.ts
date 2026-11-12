@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   centsToInput,
   contrastText,
+  cartesianCombinations,
   categoryAncestors,
   categoryDescendantIds,
+  combinationKey,
   effectiveCompareAtPrice,
   effectivePrice,
   formatAddress,
@@ -219,6 +221,38 @@ describe("variantLabel", () => {
 
   it("sem ordem informada, cai pra ordem alfabética das chaves", () => {
     expect(variantLabel({ Tamanho: "M", Cor: "Azul" })).toBe("Azul / M");
+  });
+});
+
+describe("cartesianCombinations", () => {
+  it("sem opções, retorna uma única combinação vazia (a variante padrão)", () => {
+    expect(cartesianCombinations([])).toEqual([{}]);
+  });
+
+  it("uma opção gera uma combinação por valor", () => {
+    expect(cartesianCombinations([{ name: "Cor", values: ["Azul", "Verde"] }])).toEqual([
+      { Cor: "Azul" },
+      { Cor: "Verde" },
+    ]);
+  });
+
+  it("duas opções geram o produto cartesiano (2 cores x 3 tamanhos = 6)", () => {
+    const combos = cartesianCombinations([
+      { name: "Cor", values: ["Azul", "Verde"] },
+      { name: "Tamanho", values: ["P", "M", "G"] },
+    ]);
+    expect(combos).toHaveLength(6);
+    expect(combos).toContainEqual({ Cor: "Azul", Tamanho: "G" });
+  });
+});
+
+describe("combinationKey", () => {
+  it("é igual não importando a ordem das chaves", () => {
+    expect(combinationKey({ Cor: "Azul", Tamanho: "M" })).toBe(combinationKey({ Tamanho: "M", Cor: "Azul" }));
+  });
+
+  it("combinações diferentes geram chaves diferentes", () => {
+    expect(combinationKey({ Cor: "Azul" })).not.toBe(combinationKey({ Cor: "Verde" }));
   });
 });
 

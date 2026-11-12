@@ -152,6 +152,15 @@ S3-compatível (`lib/storage.ts`; RustFS em dev, S3/R2 em produção).
   `prisma db push`. Banco criado antes da F0.2: alinhar uma vez com
   `yarn workspace @repo/db prisma migrate resolve --applied 20261104111225_init`.
 - Hoje todas as lojas recebem na mesma conta Stripe (`STRIPE_SECRET_KEY` global). A F1.4 corrige isso.
+- Um arquivo `"use client"` só pode exportar componentes React. Uma função utilitária comum
+  exportada junto (ex.: `toVariantRow` em `variants-grid.tsx`) vira uma referência de client
+  component e quebra em runtime ("is not a function") se um Server Component tentar chamá-la —
+  bota esse tipo de helper num arquivo separado sem `"use client"`.
+- Quando um Server Action de um formulário precisa atualizar os dados que outro componente da
+  mesma página usa como `initial` (ex.: salvar opções recalcula a grade de variações abaixo),
+  só `revalidatePath` não é suficiente — o componente já montado não re-sincroniza sozinho. Chama
+  `router.refresh()` num `useEffect` quando `state.success` fica verdadeiro, e dá uma `key` pro
+  componente dependente (baseada nos ids atuais) pra ele remontar com o `initial` novo.
 
 ## Como trabalhar
 

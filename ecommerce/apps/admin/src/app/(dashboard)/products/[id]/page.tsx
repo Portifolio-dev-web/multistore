@@ -12,7 +12,7 @@ export default async function EditProductPage({ params }: { params: { id: string
   const { storeId } = await requireSession();
   const product = await prisma.product.findFirst({
     where: { id: params.id, storeId },
-    include: { categories: true, variants: { orderBy: { position: "asc" }, take: 1 } },
+    include: { categories: true, variants: { orderBy: { position: "asc" } } },
   });
   if (!product) notFound();
 
@@ -28,12 +28,20 @@ export default async function EditProductPage({ params }: { params: { id: string
       <PageHeader
         title={product.name}
         subtitle="Editar produto"
-        action={<DeleteButton action={deleteProduct.bind(null, product.id)} />}
+        action={
+          <div className="flex gap-2">
+            <Link href={`/products/${product.id}/variants`} className="btn-outline" data-testid="manage-variants-link">
+              Variações ({product.variants.length})
+            </Link>
+            <DeleteButton action={deleteProduct.bind(null, product.id)} />
+          </div>
+        }
       />
       <ProductForm
         action={updateProduct.bind(null, product.id)}
         product={{ ...product, categoryIds: product.categories.map((c) => c.id), stock: product.variants[0]?.stock ?? 0 }}
         categories={categories}
+        variantCount={product.variants.length}
         submitLabel="Salvar alterações"
       />
     </>

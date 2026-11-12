@@ -48,7 +48,9 @@ export const productSchema = z.object({
     .trim()
     .optional()
     .transform((v) => (v ? new Date(v) : null)),
-  stock: z.coerce.number({ invalid_type_error: "Estoque inválido" }).int().min(0, "Estoque não pode ser negativo").max(1_000_000),
+  // Opcional: só vem no formulário quando o produto tem uma variante só (sem opções) — com
+  // várias variantes, o estoque é editado na grade em /products/[id]/variants.
+  stock: z.coerce.number({ invalid_type_error: "Estoque inválido" }).int().min(0, "Estoque não pode ser negativo").max(1_000_000).optional(),
   images: z
     .string()
     .transform((v) => v.split(/\s*[\n,]\s*/).map((s) => s.trim()).filter(Boolean))
@@ -68,6 +70,44 @@ export const categorySchema = z.object({
     .pipe(z.string().url("URL inválida").nullable()),
   position: z.coerce.number({ invalid_type_error: "Posição inválida" }).int().min(0).max(100_000).default(0),
   parentId: optionalText(40),
+});
+
+const jsonArray = <T extends z.ZodTypeAny>(arraySchema: T) =>
+  z
+    .string()
+    .transform((v, ctx) => {
+      try {
+        return JSON.parse(v || "[]");
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "JSON inválido" });
+        return z.NEVER;
+      }
+    })
+    .pipe(arraySchema);
+
+export const productOptionsSchema = z.object({
+  optionsJson: jsonArray(
+    z
+      .array(
+        z.object({
+          name: z.string().trim().min(1, "Nome da opção obrigatório").max(40),
+          values: z.array(z.string().trim().min(1).max(40)).min(1, "Informe ao menos um valor"),
+        }),
+      )
+      .max(3, "Máximo de 3 opções"),
+  ),
+});
+
+const variantRowSchema = z.object({
+  id: z.string().min(1),
+  sku: z.string().trim().max(60).nullable(),
+  priceInCents: z.number().int().min(0).max(99_999_999).nullable(),
+  compareAtPriceInCents: z.number().int().min(0).max(99_999_999).nullable(),
+  stock: z.number().int().min(0, "Estoque não pode ser negativo").max(1_000_000),
+});
+
+export const productVariantsSchema = z.object({
+  variantsJson: jsonArray(z.array(variantRowSchema)),
 });
 
 export const storeSettingsSchema = z.object({

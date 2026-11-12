@@ -3,7 +3,9 @@ import {
   categorySchema,
   fulfillmentSchema,
   loginSchema,
+  productOptionsSchema,
   productSchema,
+  productVariantsSchema,
   registerSchema,
   storeSettingsSchema,
 } from "./validation";
@@ -85,6 +87,51 @@ describe("productSchema", () => {
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.images).toHaveLength(2);
+  });
+});
+
+describe("productOptionsSchema", () => {
+  it("aceita opções válidas", () => {
+    const result = productOptionsSchema.safeParse({ optionsJson: JSON.stringify([{ name: "Cor", values: ["Azul", "Verde"] }]) });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.optionsJson).toEqual([{ name: "Cor", values: ["Azul", "Verde"] }]);
+  });
+
+  it("lista vazia é válida (produto sem opções)", () => {
+    expect(productOptionsSchema.safeParse({ optionsJson: "[]" }).success).toBe(true);
+  });
+
+  it("recusa mais de 3 opções", () => {
+    const options = Array.from({ length: 4 }, (_, i) => ({ name: `Opção ${i}`, values: ["a"] }));
+    expect(productOptionsSchema.safeParse({ optionsJson: JSON.stringify(options) }).success).toBe(false);
+  });
+
+  it("recusa opção sem valores", () => {
+    expect(productOptionsSchema.safeParse({ optionsJson: JSON.stringify([{ name: "Cor", values: [] }]) }).success).toBe(false);
+  });
+
+  it("recusa JSON inválido", () => {
+    expect(productOptionsSchema.safeParse({ optionsJson: "não é json" }).success).toBe(false);
+  });
+});
+
+describe("productVariantsSchema", () => {
+  it("aceita variantes com preço nulo (herda do produto) e com override", () => {
+    const result = productVariantsSchema.safeParse({
+      variantsJson: JSON.stringify([
+        { id: "v1", sku: null, priceInCents: null, compareAtPriceInCents: null, stock: 10 },
+        { id: "v2", sku: "AZ-M", priceInCents: 5000, compareAtPriceInCents: null, stock: 5 },
+      ]),
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.variantsJson).toHaveLength(2);
+  });
+
+  it("recusa estoque negativo", () => {
+    const result = productVariantsSchema.safeParse({
+      variantsJson: JSON.stringify([{ id: "v1", sku: null, priceInCents: null, compareAtPriceInCents: null, stock: -1 }]),
+    });
+    expect(result.success).toBe(false);
   });
 });
 
