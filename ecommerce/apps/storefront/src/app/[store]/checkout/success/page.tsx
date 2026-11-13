@@ -52,6 +52,12 @@ export default async function CheckoutSuccess({ params, searchParams }: Props) {
             <span>{formatBRL(it.unitPriceInCents * it.quantity)}</span>
           </li>
         ))}
+        {order.discountInCents > 0 && (
+          <li className="flex justify-between p-4 text-sm text-emerald-700" data-testid="success-order-discount">
+            <span>Desconto{order.couponCode ? ` (${order.couponCode})` : ""}</span>
+            <span>-{formatBRL(order.discountInCents)}</span>
+          </li>
+        )}
         <li className="flex justify-between p-4 font-semibold">
           <span>Total</span>
           <span data-testid="success-order-total">{formatBRL(order.totalInCents)}</span>

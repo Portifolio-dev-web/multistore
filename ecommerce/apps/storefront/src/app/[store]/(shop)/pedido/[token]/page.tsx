@@ -77,6 +77,12 @@ export default async function OrderTrackingPage({ params }: Props) {
               <span>{formatBRL(it.unitPriceInCents * it.quantity)}</span>
             </li>
           ))}
+          {order.discountInCents > 0 && (
+            <li className="flex justify-between gap-3 p-4 text-sm text-emerald-700" data-testid="tracking-discount">
+              <span>Desconto{order.couponCode ? ` (${order.couponCode})` : ""}</span>
+              <span>-{formatBRL(order.discountInCents)}</span>
+            </li>
+          )}
           <li className="flex justify-between p-4 font-semibold">
             <span>Total</span>
             <span data-testid="tracking-total">{formatBRL(order.totalInCents)}</span>

@@ -75,3 +75,33 @@ export function shippingUpdateEmail(o: ShippingMail) {
   const text = `Pedido #${o.code} enviado${o.carrier ? ` via ${o.carrier}` : ""}.\nCódigo de rastreio: ${o.trackingCode}\n${o.trackingUrl ?? ""}\n\nStatus: ${o.orderUrl}`;
   return { subject: `Pedido #${o.code} enviado — ${o.store.name}`, html: shell(o.store, `Código de rastreio: ${o.trackingCode}`, body), text };
 }
+
+// F3.1: login sem senha — o link expira em 15 minutos e só funciona uma vez
+export function customerLoginLinkEmail(o: { store: StoreTheme; loginUrl: string }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Entrar na sua conta</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">Clique no botão abaixo para entrar em <strong>${esc(o.store.name)}</strong>. O link expira em 15 minutos e só pode ser usado uma vez.</p>
+<p style="margin:32px 0 0">${button(o.store, o.loginUrl, "Entrar na minha conta")}</p>
+<p style="margin:24px 0 0;font-size:12px;color:#8a857b">Se você não pediu este e-mail, pode ignorá-lo.</p>`;
+  const text = `Entrar em ${o.store.name}\n\n${o.loginUrl}\n\nO link expira em 15 minutos e só pode ser usado uma vez. Se você não pediu, ignore este e-mail.`;
+  return { subject: `Entrar em ${o.store.name}`, html: shell(o.store, "Seu link de acesso", body), text };
+}
+
+// F3.4: recuperação de carrinho abandonado
+export function abandonedCartEmail(o: { store: StoreTheme; recoverUrl: string; unsubscribeUrl: string; items: Item[] }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Esqueceu algo no carrinho?</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">Separamos os itens do seu carrinho em <strong>${esc(o.store.name)}</strong>. Continue de onde parou:</p>
+${itemsTable(o.items, o.items.reduce((s, i) => s + i.unitPriceInCents * i.quantity, 0))}
+<p style="margin:32px 0 0">${button(o.store, o.recoverUrl, "Voltar ao carrinho")}</p>
+<p style="margin:24px 0 0;font-size:12px;color:#8a857b"><a href="${esc(o.unsubscribeUrl)}" style="color:#8a857b">Não quero mais receber estes lembretes</a></p>`;
+  const text = `Esqueceu algo no carrinho em ${o.store.name}?\n\n${o.items.map((i) => `${i.quantity}x ${i.productName}`).join("\n")}\n\nVoltar ao carrinho: ${o.recoverUrl}\n\nDescadastrar: ${o.unsubscribeUrl}`;
+  return { subject: `Você esqueceu algo no carrinho — ${o.store.name}`, html: shell(o.store, "Seu carrinho ainda está aqui", body), text };
+}
+
+// F3.6: pede avaliação alguns dias depois da entrega
+export function reviewRequestEmail(o: { store: StoreTheme; code: string; reviewUrl: string; productName: string }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">O que você achou?</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">Esperamos que esteja gostando do seu pedido <strong>#${esc(o.code)}</strong>. Conta pra gente o que achou de <strong>${esc(o.productName)}</strong>:</p>
+<p style="margin:32px 0 0">${button(o.store, o.reviewUrl, "Avaliar produto")}</p>`;
+  const text = `O que você achou do pedido #${o.code}?\n\nAvaliar "${o.productName}": ${o.reviewUrl}`;
+  return { subject: `Avalie sua compra — ${o.store.name}`, html: shell(o.store, "Conta pra gente o que achou", body), text };
+}

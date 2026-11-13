@@ -9,6 +9,7 @@ import {
   isPromoActive,
   promoDiscountPercent,
   variantLabel,
+  waLink,
 } from "@repo/db/utils";
 import { AddToCart } from "./add-to-cart";
 import { ProductGallery } from "./product-gallery";
@@ -37,13 +38,14 @@ type Props = {
   };
   options: { name: string; values: string[] }[];
   variants: VariantData[];
+  whatsappPhone?: string | null;
   // Categorias/título e descrição não dependem da variante escolhida — renderizados no servidor
   // e encaixados em volta do bloco dinâmico (preço/opções/carrinho).
   header: React.ReactNode;
   footer?: React.ReactNode;
 };
 
-export function ProductVariantPicker({ storeSlug, product, options, variants, header, footer }: Props) {
+export function ProductVariantPicker({ storeSlug, product, options, variants, whatsappPhone, header, footer }: Props) {
   const optionNames = options.map((o) => o.name);
   const byKey = useMemo(() => new Map(variants.map((v) => [combinationKey(v.combination), v])), [variants]);
   const initialCombination = useMemo(
@@ -135,6 +137,17 @@ export function ProductVariantPicker({ storeSlug, product, options, variants, he
                 stock,
               }}
             />
+            {whatsappPhone && (
+              <a
+                href={waLink(whatsappPhone, `Olá! Quero comprar "${product.name}"${variant.sku ? ` (SKU ${variant.sku})` : ""}.`)}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="btn-ghost mt-3 w-full"
+                data-testid="product-whatsapp-buy-button"
+              >
+                Comprar pelo WhatsApp
+              </a>
+            )}
           </div>
         )}
         {footer}

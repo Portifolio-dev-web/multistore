@@ -1,7 +1,9 @@
 import { prisma } from "@repo/db";
 import { orderTrackingUrl } from "@repo/db/urls";
 import { sendMail } from "./transport";
-import { orderConfirmationEmail, shippingUpdateEmail } from "./templates";
+import { abandonedCartEmail, customerLoginLinkEmail, orderConfirmationEmail, reviewRequestEmail, shippingUpdateEmail } from "./templates";
+
+type StoreTheme = { name: string; primaryColor: string; accentColor: string; logoUrl: string | null };
 
 async function loadOrder(orderId: string) {
   return prisma.order.findUnique({ where: { id: orderId }, include: { items: true, store: true } });
@@ -63,6 +65,47 @@ export async function sendShippingUpdate(orderId: string): Promise<boolean> {
     return sent;
   } catch (err) {
     console.error("[mail] falha no aviso de envio", orderId, err);
+    return false;
+  }
+}
+
+/** F3.1: a chamada já recebe o link pronto (token gerado e salvo pelo chamador) — só envia. */
+export async function sendCustomerLoginLink(store: StoreTheme, to: string, loginUrl: string): Promise<boolean> {
+  try {
+    const mail = customerLoginLinkEmail({ store, loginUrl });
+    return await sendMail({ ...mail, to, fromName: store.name });
+  } catch (err) {
+    console.error("[mail] falha no link de login", to, err);
+    return false;
+  }
+}
+
+type AbandonedCartItem = { productName: string; quantity: number; unitPriceInCents: number };
+
+/** F3.4: idempotência (remindedAt1h/24h) é controlada pelo chamador, não aqui. */
+export async function sendAbandonedCartReminder(
+  store: StoreTheme,
+  to: string,
+  items: AbandonedCartItem[],
+  recoverUrl: string,
+  unsubscribeUrl: string,
+): Promise<boolean> {
+  try {
+    const mail = abandonedCartEmail({ store, recoverUrl, unsubscribeUrl, items });
+    return await sendMail({ ...mail, to, fromName: store.name });
+  } catch (err) {
+    console.error("[mail] falha no lembrete de carrinho abandonado", to, err);
+    return false;
+  }
+}
+
+/** F3.6: idempotência (Order.reviewRequestSentAt) é controlada pelo chamador. */
+export async function sendReviewRequest(store: StoreTheme, to: string, code: string, productName: string, reviewUrl: string): Promise<boolean> {
+  try {
+    const mail = reviewRequestEmail({ store, code, productName, reviewUrl });
+    return await sendMail({ ...mail, to, fromName: store.name });
+  } catch (err) {
+    console.error("[mail] falha no pedido de avaliação", to, err);
     return false;
   }
 }

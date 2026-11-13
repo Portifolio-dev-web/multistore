@@ -7,7 +7,7 @@ import { contrastText } from "@repo/db/utils";
 import { updateStoreSettings } from "@/actions/settings";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
-type Props = { store: Pick<Store, "name" | "slug" | "description" | "logoUrl" | "primaryColor" | "accentColor" | "customDomain"> };
+type Props = { store: Pick<Store, "name" | "slug" | "description" | "logoUrl" | "primaryColor" | "accentColor" | "customDomain" | "whatsapp"> };
 
 export function SettingsForm({ store }: Props) {
   const [state, action] = useFormState(updateStoreSettings, {});
@@ -46,6 +46,18 @@ export function SettingsForm({ store }: Props) {
           <label className="label" htmlFor="customDomain">Domínio próprio (opcional)</label>
           <input id="customDomain" name="customDomain" defaultValue={store.customDomain ?? ""} placeholder="www.minhaloja.com.br" className="field font-mono text-sm" data-testid="settings-custom-domain-input" />
           <FieldError errors={e?.customDomain} testId="settings-custom-domain-error" />
+        </div>
+        <div>
+          <label className="label" htmlFor="whatsapp">WhatsApp (opcional)</label>
+          <input
+            id="whatsapp"
+            name="whatsapp"
+            defaultValue={store.whatsapp ?? ""}
+            placeholder="5511999999999 (DDI+DDD+número)"
+            className="field font-mono text-sm"
+            data-testid="settings-whatsapp-input"
+          />
+          <FieldError errors={e?.whatsapp} testId="settings-whatsapp-error" />
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
           <ColorField name="primaryColor" label="Cor principal" value={primary} onChange={setPrimary} errors={e?.primaryColor} />

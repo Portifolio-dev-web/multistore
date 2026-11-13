@@ -14,7 +14,9 @@
     "COOKIE_SECURE",
     "ALLOW_REGISTRATION",
     "ANTHROPIC_API_KEY",
-    "ANTHROPIC_MODEL"
+    "ANTHROPIC_MODEL",
+    "CRON_SECRET",
+    "REVIEW_REQUEST_DAYS_AFTER_DELIVERY"
   ],
   "tasks": {
     "build": {

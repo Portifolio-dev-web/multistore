@@ -9,6 +9,11 @@ const NAV = [
   { href: "/products", label: "Produtos", id: "products" },
   { href: "/categories", label: "Categorias", id: "categories" },
   { href: "/orders", label: "Pedidos", id: "orders" },
+  { href: "/customers", label: "Clientes", id: "customers" },
+  { href: "/coupons", label: "Cupons", id: "coupons" },
+  { href: "/promotions", label: "Promoções", id: "promotions" },
+  { href: "/abandoned-carts", label: "Carrinhos abandonados", id: "abandoned-carts" },
+  { href: "/reviews", label: "Avaliações", id: "reviews" },
   { href: "/settings", label: "Aparência", id: "settings" },
 ];
 

@@ -27,6 +27,12 @@ model Store {
   slugRedirects SlugRedirect[]
   categories   Category[]
   aiGenerations AiGeneration[]
+  whatsapp     String?
+  customers    Customer[]
+  coupons      Coupon[]
+  promotions   Promotion[]
+  abandonedCarts AbandonedCart[]
+  reviews      Review[]
 }
 
 // F2.8: um registro por chamada à IA, só pra contar o limite diário por loja (sem TTL/reset —
@@ -38,6 +44,56 @@ model AiGeneration {
   createdAt DateTime @default(now())
 
   @@index([storeId, createdAt])
+}
+
+// F3.1: conta do cliente por loja (e-mail único por loja, não globalmente)
+model Customer {
+  id               String    @id @default(cuid())
+  storeId          String
+  store            Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  email            String
+  name             String?
+  phone            String?
+  document         String?
+  acceptsMarketing Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  orders           Order[]
+  addresses        CustomerAddress[]
+  loginTokens      CustomerLoginToken[]
+  reviews          Review[]
+
+  @@unique([storeId, email])
+}
+
+model CustomerAddress {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  name       String
+  zip        String
+  street     String
+  number     String
+  complement String?
+  district   String
+  city       String
+  state      String
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+}
+
+// Login sem senha: token de uso único, guardado com hash (como uma redefinição de senha)
+model CustomerLoginToken {
+  id         String    @id @default(cuid())
+  customerId String
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([customerId])
 }
 
 model User {
@@ -73,9 +129,106 @@ model Product {
   categories   Category[]
   options      ProductOption[]
   variants     ProductVariant[]
+  reviews      Review[]
 
   @@unique([storeId, slug])
   @@index([storeId, active])
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
+  FREE_SHIPPING
+}
+
+// F3.2: cupom de desconto por loja. `value` é a porcentagem (1-100) para PERCENT ou os centavos
+// para FIXED; ignorado em FREE_SHIPPING (que hoje só "zera" o selo, já que frete ainda não existe — F1.6).
+model Coupon {
+  id                 String     @id @default(cuid())
+  storeId            String
+  store              Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  code               String
+  type               CouponType
+  value              Int        @default(0)
+  minOrderInCents    Int?
+  startsAt           DateTime?
+  endsAt             DateTime?
+  maxUses            Int?
+  maxUsesPerCustomer Int?
+  active             Boolean    @default(true)
+  usesCount          Int        @default(0)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@unique([storeId, code])
+}
+
+enum PromotionType {
+  BUY_X_PAY_Y
+  QUANTITY_DISCOUNT
+}
+
+// F3.3: regras automáticas por produto (ou toda a loja, se productIds vazio). Escopo reduzido a
+// quantidade (ver Decisões) — "à vista no Pix" e "frete grátis por região" dependem de F1.5/F1.6,
+// que ainda não existem.
+model Promotion {
+  id          String        @id @default(cuid())
+  storeId     String
+  store       Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  type        PromotionType
+  buyQuantity Int?
+  payQuantity Int?
+  minQuantity Int?
+  percentOff  Int?
+  productIds  String[]      @default([])
+  active      Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([storeId, active])
+}
+
+// F3.4: carrinho salvo quando o cliente informa e-mail no checkout mas não conclui o pagamento.
+model AbandonedCart {
+  id             String    @id @default(cuid())
+  storeId        String
+  store          Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  token          String    @unique @default(dbgenerated("gen_random_uuid()::text"))
+  email          String
+  name           String?
+  phone          String?
+  items          Json
+  remindedAt1h   DateTime?
+  remindedAt24h  DateTime?
+  recoveredOrderId String?
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([storeId, createdAt])
+}
+
+// F3.6: avaliação de produto, moderada no admin antes de aparecer na vitrine.
+model Review {
+  id                 String    @id @default(cuid())
+  storeId            String
+  store              Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId          String
+  product            Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId            String?
+  order              Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  customerId         String?
+  customer           Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  rating             Int
+  text               String
+  authorName         String
+  verifiedPurchase   Boolean   @default(false)
+  approved           Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+
+  @@index([productId, approved])
+  @@index([storeId, approved])
 }
 
 model ProductOption {
@@ -195,6 +348,11 @@ model Order {
   customerName          String?
   customerPhone         String?
   customerDocument      String?
+  customerId            String?
+  customer              Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  couponCode            String?
+  discountInCents       Int         @default(0)
+  reviewRequestSentAt   DateTime?
   totalInCents          Int
   currency              String      @default("brl")
   stripeSessionId       String?     @unique
@@ -204,10 +362,12 @@ model Order {
   updatedAt             DateTime    @updatedAt
   items                 OrderItem[]
   events                OrderEvent[]
+  reviews               Review[]
 
   @@unique([storeId, number])
   @@index([storeId, status])
   @@index([storeId, createdAt])
+  @@index([customerId])
 }
 
 model OrderItem {

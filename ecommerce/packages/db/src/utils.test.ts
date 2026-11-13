@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  averageRating,
   buildCsv,
   centsToInput,
   contrastText,
@@ -18,6 +19,8 @@ import {
   promoDiscountPercent,
   slugify,
   variantLabel,
+  waLink,
+  WHATSAPP_PHONE,
 } from "./utils";
 
 describe("parseBRLToCents", () => {
@@ -310,5 +313,31 @@ describe("formatAddress", () => {
 
   it("retorna lista vazia quando não há endereço", () => {
     expect(formatAddress(null)).toEqual([]);
+  });
+});
+
+describe("waLink", () => {
+  it("monta o link do wa.me só com dígitos e mensagem codificada", () => {
+    expect(waLink("(11) 99999-9999", "Olá!")).toBe("https://wa.me/11999999999?text=Ol%C3%A1!");
+  });
+});
+
+describe("WHATSAPP_PHONE", () => {
+  it("aceita número com DDI", () => {
+    expect(WHATSAPP_PHONE.test("5511999999999")).toBe(true);
+  });
+
+  it("recusa número muito curto", () => {
+    expect(WHATSAPP_PHONE.test("123")).toBe(false);
+  });
+});
+
+describe("averageRating", () => {
+  it("calcula a média com uma casa decimal", () => {
+    expect(averageRating([5, 4, 4])).toBe(4.3);
+  });
+
+  it("retorna null sem avaliações", () => {
+    expect(averageRating([])).toBeNull();
   });
 });

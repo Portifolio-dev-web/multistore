@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { FulfillmentStatus } from "@repo/db";
-import { HEX_COLOR, HOSTNAME, parseBRLToCents, SLUG } from "@repo/db/utils";
+import { HEX_COLOR, HOSTNAME, onlyDigits, parseBRLToCents, SLUG, WHATSAPP_PHONE } from "@repo/db/utils";
 
 const optionalText = (max: number) =>
   z
@@ -134,6 +134,12 @@ export const storeSettingsSchema = z.object({
     .optional()
     .transform((v) => v?.replace(/^https?:\/\//, "").replace(/\/.*$/, "") || null)
     .pipe(z.string().regex(HOSTNAME, "Domínio inválido (ex.: www.minhaloja.com.br)").nullable()),
+  whatsapp: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? onlyDigits(v) : null))
+    .pipe(z.string().regex(WHATSAPP_PHONE, "Número inválido (DDI+DDD+número, só dígitos)").nullable()),
 });
 
 export const fulfillmentSchema = z
@@ -153,6 +159,57 @@ export const fulfillmentSchema = z
     path: ["trackingCode"],
     message: "Informe o código de rastreio para marcar como enviado",
   });
+
+export const couponSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .min(3, "Mínimo de 3 caracteres")
+      .max(30)
+      .regex(/^[A-Z0-9_-]+$/, "Use letras, números, - ou _"),
+    type: z.enum(["PERCENT", "FIXED", "FREE_SHIPPING"]),
+    value: z.string().optional(),
+    minOrder: z.string().trim().optional(),
+    startsAt: z.string().trim().optional(),
+    endsAt: z.string().trim().optional(),
+    maxUses: z.string().trim().optional(),
+    maxUsesPerCustomer: z.string().trim().optional(),
+    active: z.boolean(),
+  })
+  .transform((d) => ({
+    code: d.code,
+    type: d.type,
+    value: d.type === "FREE_SHIPPING" ? 0 : d.type === "PERCENT" ? Number(d.value) || 0 : parseBRLToCents(d.value || "0"),
+    minOrderInCents: d.minOrder ? parseBRLToCents(d.minOrder) : null,
+    startsAt: d.startsAt ? new Date(d.startsAt) : null,
+    endsAt: d.endsAt ? new Date(d.endsAt) : null,
+    maxUses: d.maxUses ? Number(d.maxUses) : null,
+    maxUsesPerCustomer: d.maxUsesPerCustomer ? Number(d.maxUsesPerCustomer) : null,
+    active: d.active,
+  }))
+  .refine((d) => d.type !== "PERCENT" || (d.value >= 1 && d.value <= 100), {
+    path: ["value"],
+    message: "Porcentagem entre 1 e 100",
+  });
+
+export const promotionSchema = z.object({
+  name: z.string().trim().min(2, "Nome muito curto").max(80),
+  type: z.enum(["BUY_X_PAY_Y", "QUANTITY_DISCOUNT"]),
+  buyQuantity: z.coerce.number().int().min(2).max(50).optional(),
+  payQuantity: z.coerce.number().int().min(1).max(49).optional(),
+  minQuantity: z.coerce.number().int().min(2).max(1000).optional(),
+  percentOff: z.coerce.number().int().min(1).max(100).optional(),
+  productIds: z.array(z.string()).default([]),
+  active: z.boolean(),
+}).refine((d) => d.type !== "BUY_X_PAY_Y" || (d.buyQuantity != null && d.payQuantity != null && d.payQuantity < d.buyQuantity), {
+  path: ["payQuantity"],
+  message: "Quantidade a pagar deve ser menor que a quantidade mínima",
+}).refine((d) => d.type !== "QUANTITY_DISCOUNT" || (d.minQuantity != null && d.percentOff != null), {
+  path: ["minQuantity"],
+  message: "Informe a quantidade mínima e o desconto",
+});
 
 export function formToObject(formData: FormData): Record<string, string> {
   const obj: Record<string, string> = {};

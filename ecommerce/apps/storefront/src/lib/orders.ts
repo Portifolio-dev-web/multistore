@@ -34,6 +34,19 @@ export async function markOrderPaid(session: Stripe.Checkout.Session): Promise<v
     });
     if (result.count > 0) {
       await tx.orderEvent.create({ data: { orderId, type: "PAID", actor: "SYSTEM", message: "Pagamento confirmado" } });
+      // F3.2: uso do cupom só conta quando o pedido é de fato pago (idempotente — esta
+      // transação só roda uma vez por pedido, graças ao updateMany acima com status != PAID)
+      const paid = await tx.order.findUnique({ where: { id: orderId }, select: { storeId: true, couponCode: true, customerEmail: true } });
+      if (paid?.couponCode) {
+        await tx.coupon.updateMany({ where: { storeId: paid.storeId, code: paid.couponCode }, data: { usesCount: { increment: 1 } } });
+      }
+      // F3.4: pedido pago para de receber lembrete de carrinho abandonado
+      if (paid?.customerEmail) {
+        await tx.abandonedCart.updateMany({
+          where: { storeId: paid.storeId, email: paid.customerEmail, recoveredOrderId: null },
+          data: { recoveredOrderId: orderId },
+        });
+      }
     }
     return result;
   });

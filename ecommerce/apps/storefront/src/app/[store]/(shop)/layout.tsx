@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
 import { CartBadge } from "@/components/cart-badge";
+import { WhatsappButton } from "@/components/whatsapp-button";
 
 type Props = { children: React.ReactNode; params: { store: string } };
 
@@ -27,7 +28,12 @@ export default async function ShopLayout({ children, params }: Props) {
             )}
             <span className="font-display text-lg font-semibold tracking-tight">{store.name}</span>
           </Link>
-          <CartBadge />
+          <div className="flex items-center gap-4">
+            <Link href={storeHref(base, "/conta")} className="text-sm text-ink/60 hover:text-ink" data-testid="account-header-link">
+              Minha conta
+            </Link>
+            <CartBadge />
+          </div>
         </div>
       </header>
       <main className="flex-1">{children}</main>
@@ -37,6 +43,7 @@ export default async function ShopLayout({ children, params }: Props) {
           <span className="opacity-70">Pagamento seguro via Stripe · Preços em R$</span>
         </div>
       </footer>
+      <WhatsappButton phone={store.whatsapp} storeName={store.name} />
     </>
   );
 }

@@ -346,7 +346,7 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
 
 ## Fase 3: Clientes e conversão
 
-- [ ] **F3.1 Conta do cliente** **(grande)** · Depende de F1.3
+- [x] **F3.1 Conta do cliente** **(grande)** · Depende de F1.3
   - Model `Customer` (por loja: e-mail único por loja, nome, telefone, documento, aceita marketing)
     e `CustomerAddress`. Pedido ganha `customerId` (criado/atualizado no checkout pelo e-mail).
   - Login sem senha por link mágico (token com hash, validade de 15 min, uso único), cookie de sessão
@@ -354,22 +354,51 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - Vitrine: `/conta` com pedidos, endereços e dados; checkout preenchido para cliente logado.
   - Admin: `/clientes` com busca, total gasto, número de pedidos, exportação CSV.
   - Aceite: cliente vê só os próprios pedidos e só na loja em que comprou.
+  - Resultado: feito numa sessão só (schema + todas as telas), em vez de etapas separadas — ver
+    Decisões. `CustomerLoginToken` (hash SHA-256, 15 min, uso único) + sessão JWT própria
+    (`customer_session`, `jose`, mesmo `AUTH_SECRET` do admin) em `storefront/src/lib/customer-session.ts`.
+    `/conta` (grupo `(protected)` dentro de `(shop)`) exige sessão válida com `storeId` batendo com a
+    loja atual. Checkout (`createCheckoutSession`) cria/atualiza o `Customer` pelo e-mail sempre, sem
+    exigir login, e pré-preenche o formulário quando o cliente já está logado (identificação +
+    endereço mais recente). Admin ganhou `/customers` (busca, total gasto/pedidos pagos via
+    `groupBy`, exportação CSV) e `/customers/[id]` (pedidos, endereços, link WhatsApp — também cobre
+    o pedido da F3.5). Testado de ponta a ponta num navegador real: pedir o link, achar o e-mail no
+    Mailpit, confirmar, ver "Olá, ..." em `/conta`, checkout pré-preenchido na segunda compra. Achei e
+    corrigi um bug real nesse teste: o Route Handler de confirmação montava a URL de redirecionamento
+    a partir de `req.url`, que em modo subdomínio não reflete o host externo de verdade — trocado por
+    `storeUrl()` (a mesma função usada no e-mail), que sempre monta a URL certa a partir do `.env`.
 
-- [ ] **F3.2 Cupons de desconto** · Depende de F0.3
+- [x] **F3.2 Cupons de desconto** · Depende de F0.3
   - Model `Coupon` (`code` único por loja, tipo `PERCENT` | `FIXED` | `FREE_SHIPPING`, valor,
     pedido mínimo, início/fim, limite total, limite por cliente, ativo, usos).
   - Admin: `/cupons` com CRUD no padrão de `/products`.
   - Vitrine: campo de cupom no carrinho/checkout; validação e cálculo no servidor via `@repo/db/pricing`.
   - `Order` guarda `couponCode` e `discountInCents`; uso contado só quando o pedido é pago (idempotente).
   - Aceite: cupom expirado, esgotado ou abaixo do mínimo é recusado com mensagem clara; testes cobrem cada regra.
+  - Resultado: `applyCoupon`/`applyDiscounts` em `@repo/db/pricing` (puras, testadas — ver
+    `pricing.test.ts`). Campo de cupom só na etapa de revisão do checkout (não duplicado no
+    carrinho — ver Decisões), com pré-visualização via `previewDiscounts` (Server Action sem efeito
+    no banco) antes de confirmar o pedido de verdade. `Coupon.usesCount` incrementa dentro da mesma
+    transação/guarda de idempotência de `markOrderPaid` — nunca na criação do pedido. `OrderItem`
+    guarda sempre o preço original; o desconto some como linha própria (`Order.discountInCents`) em
+    todas as telas que mostram o pedido (revisão do checkout, sucesso, acompanhamento, admin).
+    Testado manualmente: cupom de 10% + promoção da F3.3 combinados no mesmo pedido batem o valor
+    esperado centavo a centavo.
 
-- [ ] **F3.3 Promoções automáticas** · Depende de F3.2
+- [x] **F3.3 Promoções automáticas** · Depende de F3.2
   - Regras por loja: "leve X, pague Y", desconto progressivo por quantidade, desconto à vista no Pix,
     frete grátis por região.
   - Mostrar a promoção no produto e o desconto aplicado no carrinho.
   - Aceite: regras combinadas seguem uma ordem documentada e testada.
+  - Resultado: `Promotion` (`BUY_X_PAY_Y`/`QUANTITY_DISCOUNT`, por produto ou toda a loja). Escopo
+    reduzido a regras por quantidade — "à vista no Pix" e "frete grátis por região" dependem de
+    meios de pagamento distintos (F1.5) e frete pago (F1.6), nenhum dos dois existe ainda (ver
+    Decisões). Ordem documentada e testada em `applyDiscounts`/`pricing.test.ts`: promoções aplicam
+    primeiro por produto, cupom aplica depois sobre o restante, nunca fica negativo. Badge "Leve 3,
+    pague 2" (ou "X% off a partir de Y un.") na página do produto; desconto automático aparece no
+    resumo do carrinho (`previewDiscounts` sem cupom) e no checkout.
 
-- [ ] **F3.4 Recuperação de carrinho abandonado** · Depende de F1.3
+- [x] **F3.4 Recuperação de carrinho abandonado** · Depende de F1.3
   - Model `Cart` no servidor (itens, e-mail, token, `remindedAt`, `recoveredOrderId`), salvo quando o
     cliente informa o e-mail no checkout.
   - Rota de job `/api/cron/abandoned-carts` protegida por `CRON_SECRET`, chamada periodicamente
@@ -378,18 +407,39 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - Admin: lista de carrinhos abandonados, com botão "enviar link pelo WhatsApp".
   - Link de descadastro no e-mail.
   - Aceite: carrinho que vira pedido pago para de receber lembretes.
+  - Resultado: chamado `AbandonedCart` (não `Cart`, pra não confundir com o carrinho do navegador —
+    ver Decisões), com `remindedAt1h`/`remindedAt24h` separados em vez de um `remindedAt` genérico.
+    Salvo (silencioso, nunca bloqueia o checkout) ao validar a etapa de identificação. `markOrderPaid`
+    marca como recuperado pelo e-mail. `/api/cron/abandoned-carts` chamado por agendador externo (ver
+    Decisões — nenhum serviço novo no `docker-compose.yml`). `/carrinho/recuperar/[token]` sempre
+    busca estoque/preço atuais de novo (nunca confia no snapshot do e-mail); link de descadastro em
+    `/carrinho/descadastrar/[token]`. Testado manualmente: etapa 1 do checkout grava a linha no
+    banco com os itens certos; cron com `CRON_SECRET` certo processa e responde contagem; sem a
+    variável configurada, a rota sempre recusa (401), por design.
 
-- [ ] **F3.5 WhatsApp**
+- [x] **F3.5 WhatsApp**
   - `Store.whatsapp`; botão flutuante na vitrine com mensagem pronta; botão "Comprar pelo WhatsApp"
     opcional no produto.
   - Admin: no detalhe do pedido e do cliente, link `wa.me` com mensagem pré-preenchida (status, rastreio).
   - Aceite: número inválido é recusado; botão some quando não configurado.
+  - Resultado: `Store.whatsapp` (só dígitos, `WHATSAPP_PHONE` valida DDI+DDD+número) no formulário de
+    aparência. `waLink()` em `@repo/db/utils` monta o link `wa.me` reusado em quatro lugares: botão
+    flutuante da vitrine, "Comprar pelo WhatsApp" na página do produto, pedido no admin e carrinho
+    abandonado no admin — todos somem sem o número configurado. Testado manualmente com e sem o
+    número cadastrado.
 
-- [ ] **F3.6 Avaliações de produto**
+- [x] **F3.6 Avaliações de produto**
   - Model `Review` (nota 1–5, texto, nome, compra verificada, aprovada).
   - E-mail pedindo avaliação X dias depois de `DELIVERED`; moderação no admin.
   - Estrelas no card e na página do produto.
   - Aceite: só aparecem avaliações aprovadas; compra verificada tem selo.
+  - Resultado: `Review` sempre entra `approved: false`. "Compra verificada" é um link assinado por
+    HMAC (`storefront/src/lib/review-token.ts`, mesmo `AUTH_SECRET`, sem tabela nova) ligando
+    `orderId`+`productId`, mandado só quando `fulfillmentStatus: DELIVERED`
+    (`/api/cron/review-requests`, mesmo mecanismo de agendador externo da F3.4). Admin: `/reviews`
+    com abas pendentes/aprovadas, aprovar/rejeitar. Estrelas (`Stars`, média com uma casa decimal) no
+    card da vitrine e na página do produto. Testado manualmente de ponta a ponta: avaliação sem
+    token não leva o selo e fica pendente; aprovar no admin faz aparecer na vitrine com estrelas.
 
 ---
 
@@ -564,3 +614,12 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-13 | F2.7 | `imageAlts` é um array paralelo a `images` (mesma posição), não um array de objetos `{url,alt}` nem um model `ProductImage` novo | Muda só o tipo de um campo existente sem tocar nos outros ~10 lugares que já leem `product.images` (card, galeria, checkout, CSV, seed); um model relacional seria mais "correto" mas exigiria migrar todos esses pontos pra uma funcionalidade que não pede isso |
 | 2026-11-13 | F2.8 | Chamada à Anthropic via SDK oficial (`@anthropic-ai/sdk`), não `fetch` cru | O roadmap já pedia o SDK; é a forma oficial suportada |
 | 2026-11-13 | F2.8 | Título/descrição de SEO que a IA gera não são salvos em nenhum campo — aparecem como sugestão pra copiar manualmente | `Product` não tem campos de SEO hoje e nenhuma tarefa do roadmap pede isso ainda; inventar schema novo só pra essa tela seria escopo além do pedido |
+| 2026-11-13 | F3.1 | Toda a Fase 3 (incluindo a tarefa "(grande)") feita numa sessão só, em vez de uma etapa por sessão | Pedido explícito do usuário ("comece a fase 3 e finalize") |
+| 2026-11-13 | F3.1 | Conta do cliente não tem senha — login é sempre por link mágico, e o `Customer` é criado automaticamente no checkout mesmo sem o cliente nunca ter "criado conta" | Já é o que o roadmap pede ("login sem senha"); exigir um cadastro prévio seria fricção extra que o roadmap não pediu |
+| 2026-11-13 | F3.1 | Sem backfill de `Order.customerId` para pedidos feitos antes desta tarefa | O roadmap descreve o campo como preenchido "no checkout", não pede migrar pedidos antigos; pedidos anônimos anteriores continuam sem cliente vinculado |
+| 2026-11-13 | F3.2 | Campo de cupom só aparece na etapa de revisão do checkout, não duplicado no carrinho | Evita duas implementações de preview do mesmo cálculo; o carrinho já mostra o desconto automático de promoções (F3.3), que não depende de digitar nada |
+| 2026-11-13 | F3.2/F3.3 | `OrderItem` sempre guarda o preço original (sem desconto); o desconto aparece como linha própria (`Order.discountInCents`) em vez de alterar `unitPriceInCents` | Evita que a Stripe Checkout Session (que não aceita `unit_amount` negativo) force a distorcer o preço gravado — só a sessão do Stripe usa preços proporcionalmente reduzidos, calculados à parte, pra cobrar o valor certo |
+| 2026-11-13 | F3.3 | Escopo de promoções automáticas reduzido a regras por quantidade (leve X pague Y, desconto progressivo) — sem "à vista no Pix" nem "frete grátis por região" | Pix como meio de pagamento distinto (F1.5) e frete pago (F1.6) ainda não existem; implementar essas duas regras hoje não teria o que diferenciar |
+| 2026-11-13 | F3.4 | Model chamado `AbandonedCart`, não `Cart` como o roadmap sugeria; campo único `remindedAt` virou dois (`remindedAt1h`/`remindedAt24h`) | `Cart` colidiria conceitualmente com o carrinho do navegador (zustand); dois campos deixam explícito qual lembrete já foi mandado, sem precisar guardar "qual estágio" em outro lugar |
+| 2026-11-13 | F3.4/F3.6 | `/api/cron/abandoned-carts` e `/api/cron/review-requests` são chamados por um agendador externo (cron do host, GitHub Actions agendado, etc.), sem serviço novo no `docker-compose.yml` | O roadmap já aceitava as duas opções ("serviço no docker-compose ou agendador externo"); adicionar um serviço de cron ao compose só pra isso é mais peça de infraestrutura do que o catálogo de hoje precisa |
+| 2026-11-13 | F3.6 | "Compra verificada" usa um link assinado por HMAC (mesmo `AUTH_SECRET`), sem tabela nova ligando pedido+avaliação | Mais simples que uma tabela de "convites de avaliação"; o link já carrega tudo que precisa (`orderId`+`productId`) e a assinatura garante que não foi forjado |

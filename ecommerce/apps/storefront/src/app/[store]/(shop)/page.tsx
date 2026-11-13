@@ -61,7 +61,11 @@ export default async function StorePage({ params, searchParams }: Props) {
   };
 
   const page = Math.max(1, Number(searchParams.page) || 1);
-  const productInclude = { categories: { select: { name: true } }, variants: { orderBy: { position: "asc" as const }, take: 1 } } satisfies Prisma.ProductInclude;
+  const productInclude = {
+    categories: { select: { name: true } },
+    variants: { orderBy: { position: "asc" as const }, take: 1 },
+    reviews: { where: { approved: true }, select: { rating: true } },
+  } satisfies Prisma.ProductInclude;
 
   const { total, products } = filters.onPromo
     ? await (async () => {

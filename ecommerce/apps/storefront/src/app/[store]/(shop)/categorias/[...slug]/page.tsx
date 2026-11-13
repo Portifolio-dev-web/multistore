@@ -31,7 +31,11 @@ export default async function CategoryPage({ params }: Props) {
     where: { storeId: store.id, active: true, categories: { some: { id: { in: descendantIds } } } },
     orderBy: { createdAt: "desc" },
     take: 60,
-    include: { categories: { select: { name: true } }, variants: { orderBy: { position: "asc" }, take: 1 } },
+    include: {
+      categories: { select: { name: true } },
+      variants: { orderBy: { position: "asc" }, take: 1 },
+      reviews: { where: { approved: true }, select: { rating: true } },
+    },
   });
   const products = productsFetched.map(withDefaultVariantPricing);
 

@@ -22,6 +22,7 @@ async function main() {
       description: "Uma vitrine de exemplo — edite tudo pelo painel do lojista.",
       primaryColor: "#1f3a2e",
       accentColor: "#e8b04b",
+      whatsapp: "5511999999999",
     },
   });
 
@@ -57,6 +58,26 @@ async function main() {
         },
       });
     }
+  }
+
+  await prisma.coupon.upsert({
+    where: { storeId_code: { storeId: store.id, code: "BEMVINDO10" } },
+    update: {},
+    create: { storeId: store.id, code: "BEMVINDO10", type: "PERCENT", value: 10 },
+  });
+
+  const copoShake = await prisma.product.findFirst({ where: { storeId: store.id, name: "Copo Shake 500ml" }, select: { id: true } });
+  if (copoShake && (await prisma.promotion.count({ where: { storeId: store.id } })) === 0) {
+    await prisma.promotion.create({
+      data: {
+        storeId: store.id,
+        name: "Leve 3, pague 2 no Copo Shake",
+        type: "BUY_X_PAY_Y",
+        buyQuantity: 3,
+        payQuantity: 2,
+        productIds: [copoShake.id],
+      },
+    });
   }
 
   const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();

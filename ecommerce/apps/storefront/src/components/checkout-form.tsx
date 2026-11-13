@@ -5,7 +5,8 @@ import type { z } from "zod";
 import { formatBRL } from "@repo/db/utils";
 import { useHydrated, useStoreCart, type CartItem } from "@/lib/cart-store";
 import { addressSchema, customerDetailsSchema, identificationSchema } from "@/lib/validation";
-import { createCheckoutSession } from "@/actions/checkout";
+import { createCheckoutSession, previewDiscounts, type DiscountPreview } from "@/actions/checkout";
+import { saveAbandonedCart } from "@/actions/abandoned-cart";
 
 type Step = 1 | 2 | 3;
 
@@ -37,16 +38,26 @@ async function lookupCep(cep: string) {
   }
 }
 
-export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
+type Props = {
+  storeSlug: string;
+  // F3.1: cliente logado já chega com estes campos preenchidos (ainda editáveis)
+  initialIdentification?: typeof emptyIdentification;
+  initialAddress?: typeof emptyAddress;
+};
+
+export function CheckoutForm({ storeSlug, initialIdentification, initialAddress }: Props) {
   const hydrated = useHydrated();
   const items = useStoreCart(storeSlug);
   const [step, setStep] = useState<Step>(1);
-  const [identification, setIdentification] = useState(emptyIdentification);
-  const [address, setAddress] = useState(emptyAddress);
+  const [identification, setIdentification] = useState(initialIdentification ?? emptyIdentification);
+  const [address, setAddress] = useState(initialAddress ?? emptyAddress);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [cepStatus, setCepStatus] = useState<"idle" | "loading" | "not-found">("idle");
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [discount, setDiscount] = useState<DiscountPreview | null>(null);
+  const [couponPending, startCouponTransition] = useTransition();
 
   if (!hydrated) return <div className="mx-auto max-w-lg px-5 py-10"><div className="h-64 animate-pulse rounded-3xl bg-ink/5" /></div>;
 
@@ -68,6 +79,13 @@ export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
     }
     setErrors({});
     setStep(2);
+    // F3.4: salva o carrinho (silencioso, nunca bloqueia o checkout) pra poder lembrar por e-mail depois
+    saveAbandonedCart(storeSlug, {
+      email: result.data.email,
+      name: result.data.name,
+      phone: result.data.phone,
+      items: items.map((i) => ({ variantId: i.variantId, productName: i.name, variantLabel: i.variantLabel, unitPriceInCents: i.priceInCents, quantity: i.quantity })),
+    });
   }
 
   async function handleCepBlur() {
@@ -93,6 +111,21 @@ export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
     setStep(3);
   }
 
+  function applyCoupon() {
+    if (!couponCode.trim()) {
+      setDiscount(null);
+      return;
+    }
+    startCouponTransition(async () => {
+      const result = await previewDiscounts(
+        storeSlug,
+        items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+        couponCode,
+      );
+      setDiscount(result);
+    });
+  }
+
   function submit() {
     // Revalida tudo junto antes de mandar pro servidor (os passos 1 e 2 já validaram em separado)
     const details = customerDetailsSchema.safeParse({ ...identification, ...address });
@@ -105,6 +138,7 @@ export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
       const result = await createCheckoutSession({
         storeSlug,
         items: items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+        couponCode: discount && !("error" in discount) ? couponCode.trim().toUpperCase() : undefined,
         ...details.data,
       });
       if ("error" in result) setSubmitError(result.error);
@@ -155,6 +189,11 @@ export function CheckoutForm({ storeSlug }: { storeSlug: string }) {
           subtotal={subtotal}
           pending={pending}
           error={submitError}
+          couponCode={couponCode}
+          onCouponCodeChange={setCouponCode}
+          onApplyCoupon={applyCoupon}
+          couponPending={couponPending}
+          discount={discount}
           onBack={() => setStep(2)}
           onSubmit={submit}
         />
@@ -316,6 +355,11 @@ function ReviewStep({
   subtotal,
   pending,
   error,
+  couponCode,
+  onCouponCodeChange,
+  onApplyCoupon,
+  couponPending,
+  discount,
   onBack,
   onSubmit,
 }: {
@@ -325,9 +369,16 @@ function ReviewStep({
   subtotal: number;
   pending: boolean;
   error: string | null;
+  couponCode: string;
+  onCouponCodeChange: (v: string) => void;
+  onApplyCoupon: () => void;
+  couponPending: boolean;
+  discount: DiscountPreview | null;
   onBack: () => void;
   onSubmit: () => void;
 }) {
+  const totalInCents = discount && !("error" in discount) ? discount.totalInCents : subtotal;
+
   return (
     <div className="space-y-6" data-testid="checkout-step-review">
       <section>
@@ -344,6 +395,27 @@ function ReviewStep({
         </p>
       </section>
       <section>
+        <p className="label">Cupom de desconto</p>
+        <div className="mt-2 flex gap-2">
+          <input
+            className="field"
+            placeholder="CÓDIGO"
+            value={couponCode}
+            onChange={(e) => onCouponCodeChange(e.target.value.toUpperCase())}
+            data-testid="checkout-coupon-input"
+          />
+          <button type="button" onClick={onApplyCoupon} disabled={couponPending} className="btn-ghost shrink-0" data-testid="checkout-coupon-apply-button">
+            {couponPending ? "…" : "Aplicar"}
+          </button>
+        </div>
+        {discount && "error" in discount && (
+          <p className="mt-1 text-xs text-red-700" data-testid="checkout-coupon-error">{discount.error}</p>
+        )}
+        {discount && !("error" in discount) && (discount.couponDiscountInCents > 0 || discount.promotionDiscountInCents > 0) && (
+          <p className="mt-1 text-xs text-emerald-700" data-testid="checkout-coupon-applied">Desconto aplicado!</p>
+        )}
+      </section>
+      <section>
         <p className="label">Itens</p>
         <ul className="divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-white text-sm">
           {items.map((it) => (
@@ -352,9 +424,15 @@ function ReviewStep({
               <span>{formatBRL(it.priceInCents * it.quantity)}</span>
             </li>
           ))}
+          {discount && !("error" in discount) && discount.promotionDiscountInCents + discount.couponDiscountInCents > 0 && (
+            <li className="flex justify-between p-3 text-emerald-700" data-testid="checkout-review-discount">
+              <span>Desconto</span>
+              <span>-{formatBRL(discount.promotionDiscountInCents + discount.couponDiscountInCents)}</span>
+            </li>
+          )}
           <li className="flex justify-between p-3 font-semibold">
             <span>Total</span>
-            <span data-testid="checkout-review-total">{formatBRL(subtotal)}</span>
+            <span data-testid="checkout-review-total">{formatBRL(totalInCents)}</span>
           </li>
         </ul>
       </section>

@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { prisma } from "@repo/db";
+import { averageRating } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
 import { ProductVariantPicker } from "@/components/product-variant-picker";
+import { Stars } from "@/components/stars";
+import { ReviewList } from "@/components/review-list";
+import { ReviewForm } from "@/components/review-form";
+import { verifyReviewToken } from "@/lib/review-token";
 
-type Props = { params: { store: string; slug: string } };
+type Props = { params: { store: string; slug: string }; searchParams: { order?: string; token?: string } };
 
-export default async function ProductPage({ params }: Props) {
+export default async function ProductPage({ params, searchParams }: Props) {
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 
@@ -17,8 +22,18 @@ export default async function ProductPage({ params }: Props) {
       categories: { select: { name: true, slug: true } },
       options: { orderBy: { position: "asc" } },
       variants: { orderBy: { position: "asc" } },
+      reviews: { where: { approved: true }, orderBy: { createdAt: "desc" } },
     },
   });
+  const promotions = product
+    ? await prisma.promotion.findMany({ where: { storeId: store.id, active: true } })
+    : [];
+  const promotion = promotions.find((p) => p.productIds.length === 0 || p.productIds.includes(product?.id ?? ""));
+  const promotionText = promotion
+    ? promotion.type === "BUY_X_PAY_Y"
+      ? `Promoção: leve ${promotion.buyQuantity}, pague ${promotion.payQuantity}`
+      : `Promoção: ${promotion.percentOff}% off a partir de ${promotion.minQuantity} un.`
+    : null;
   if (!product) {
     // Slug antigo (produto renomeado)? Redireciona pro endereço atual.
     const redirect = await prisma.slugRedirect.findUnique({
@@ -32,6 +47,12 @@ export default async function ProductPage({ params }: Props) {
   }
 
   const base = getStoreBase(store.slug);
+  const avgRating = averageRating(product.reviews.map((r) => r.rating));
+
+  const verified =
+    searchParams.order && searchParams.token && verifyReviewToken(searchParams.order, product.id, searchParams.token)
+      ? { orderId: searchParams.order, token: searchParams.token }
+      : undefined;
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
@@ -50,6 +71,7 @@ export default async function ProductPage({ params }: Props) {
             stock: v.stock,
             imageUrl: v.imageUrl,
           }))}
+          whatsappPhone={store.whatsapp}
           header={
             <>
               {product.categories.length > 0 && (
@@ -62,15 +84,37 @@ export default async function ProductPage({ params }: Props) {
                 </p>
               )}
               <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl" data-testid="product-name">{product.name}</h1>
+              {avgRating !== null && (
+                <div className="mt-2 flex items-center gap-2" data-testid="product-rating-summary">
+                  <Stars rating={avgRating} />
+                  <span className="text-sm text-ink/50">{avgRating} ({product.reviews.length})</span>
+                </div>
+              )}
+              {promotionText && (
+                <p className="mt-2 inline-block rounded-full bg-accent/30 px-3 py-1 text-xs font-semibold text-ink" data-testid="product-promotion-badge">
+                  {promotionText}
+                </p>
+              )}
             </>
           }
           footer={
-            product.description && (
+            <>
+              {product.description && (
+                <div className="mt-10 border-t border-ink/10 pt-8">
+                  <p className="label">Descrição</p>
+                  <p className="whitespace-pre-line text-base leading-relaxed text-ink/70" data-testid="product-description">{product.description}</p>
+                </div>
+              )}
               <div className="mt-10 border-t border-ink/10 pt-8">
-                <p className="label">Descrição</p>
-                <p className="whitespace-pre-line text-base leading-relaxed text-ink/70" data-testid="product-description">{product.description}</p>
+                <p className="label">Avaliações</p>
+                <div className="mt-4">
+                  <ReviewList reviews={product.reviews} />
+                </div>
+                <div className="mt-6">
+                  <ReviewForm storeSlug={store.slug} productId={product.id} verified={verified} />
+                </div>
               </div>
-            )
+            </>
           }
         />
       </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@repo/db";
-import { formatAddress, formatBRL } from "@repo/db/utils";
+import { formatAddress, formatBRL, ORDER_STATUS_LABEL, waLink } from "@repo/db/utils";
 import { orderTrackingUrl } from "@repo/db/urls";
 import { requireSession } from "@/lib/session";
 import { addOrderNote, updateFulfillment } from "@/actions/orders";
@@ -21,6 +21,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
   if (!order) notFound();
   const address = formatAddress(order.shippingAddress);
   const trackingPage = orderTrackingUrl(order.store, order.publicToken);
+  const whatsappMessage = `Olá${order.customerName ? `, ${order.customerName.split(" ")[0]}` : ""}! Sobre o seu pedido #${order.number} (${ORDER_STATUS_LABEL[order.status]})${order.trackingCode ? `, código de rastreio: ${order.trackingCode}` : ""}.`;
 
   const meta = [
     { label: "Criado em", value: dateFmt.format(order.createdAt) },
@@ -62,6 +63,12 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               ))}
             </tbody>
             <tfoot className="border-t border-ink">
+              {order.discountInCents > 0 && (
+                <tr>
+                  <td className="td text-emerald-700" colSpan={2}>Desconto{order.couponCode ? ` (${order.couponCode})` : ""}</td>
+                  <td className="td text-right font-mono text-emerald-700" data-testid="order-detail-discount">-{formatBRL(order.discountInCents)}</td>
+                </tr>
+              )}
               <tr>
                 <td className="td font-semibold" colSpan={2}>Total</td>
                 <td className="td text-right font-mono text-lg font-semibold" data-testid="order-detail-total">{formatBRL(order.totalInCents)}</td>
@@ -77,6 +84,13 @@ export default async function OrderDetailPage({ params }: { params: { id: string
             <p className="label mb-0.5">Página do cliente</p>
             <a href={trackingPage} target="_blank" rel="noreferrer" className="break-all font-mono text-xs underline underline-offset-4" data-testid="order-tracking-page-link">{trackingPage}</a>
           </div>
+          {order.customerPhone && (
+            <div className="px-5 py-3.5">
+              <a href={waLink(order.customerPhone, whatsappMessage)} target="_blank" rel="noreferrer" className="btn-ghost" data-testid="order-whatsapp-link">
+                Falar no WhatsApp
+              </a>
+            </div>
+          )}
           {meta.map((m) => (
             <div key={m.label} className="px-5 py-3.5">
               <p className="label mb-0.5">{m.label}</p>

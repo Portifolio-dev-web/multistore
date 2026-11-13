@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Product } from "@repo/db";
-import { formatBRL, isPromoActive, promoDiscountPercent } from "@repo/db/utils";
+import { averageRating, formatBRL, isPromoActive, promoDiscountPercent } from "@repo/db/utils";
 import { ProductImage } from "./product-image";
+import { Stars } from "./stars";
 
 type Props = {
   base: string;
@@ -11,12 +12,14 @@ type Props = {
     compareAtPriceInCents: number | null;
     stock: number;
     categories: { name: string }[];
+    reviews: { rating: number }[];
   };
 };
 
 export function ProductCard({ base, product }: Props) {
   const soldOut = product.stock <= 0;
   const onPromo = isPromoActive(product);
+  const avgRating = averageRating(product.reviews.map((r) => r.rating));
   return (
     <Link href={`${base}/produtos/${product.slug}`} className="group block" data-testid={`product-card-${product.id}`}>
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-ink/5">
@@ -49,6 +52,7 @@ export function ProductCard({ base, product }: Props) {
         <div>
           {product.categories[0] && <p className="text-[11px] uppercase tracking-[0.14em] text-ink/40">{product.categories[0].name}</p>}
           <h3 className="font-medium leading-snug">{product.name}</h3>
+          {avgRating !== null && <Stars rating={avgRating} size="text-xs" />}
         </div>
         <span className="shrink-0 text-right">
           {onPromo && (

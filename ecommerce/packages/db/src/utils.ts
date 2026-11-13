@@ -237,6 +237,19 @@ export function isValidCpfOrCnpj(value: string): boolean {
   return digits.length === 11 ? isValidCpf(digits) : digits.length === 14 ? isValidCnpj(digits) : false;
 }
 
+// F3.5: WhatsApp — número guardado só com dígitos (DDI+DDD+número, 10 a 13 dígitos)
+export const WHATSAPP_PHONE = /^\d{10,13}$/;
+
+export function waLink(phone: string, message: string): string {
+  return `https://wa.me/${onlyDigits(phone)}?text=${encodeURIComponent(message)}`;
+}
+
+// F3.6: média simples (1 casa decimal) das notas aprovadas de um produto
+export function averageRating(ratings: number[]): number | null {
+  if (ratings.length === 0) return null;
+  return Math.round((ratings.reduce((s, r) => s + r, 0) / ratings.length) * 10) / 10;
+}
+
 // CSV (F2.6): separador ";", sem libs externas — as regras (aspas, escape) são poucas o bastante
 // pra valer a pena um parser próprio pequeno em vez de uma dependência nova.
 const CSV_DELIMITER = ";";

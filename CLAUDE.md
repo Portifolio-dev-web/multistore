@@ -129,6 +129,42 @@ loja: uma linha em `AiGeneration` por chamada, conta quantas tem "hoje" — sem 
 própria consulta já filtra pela data. Preenche só a descrição; não existe campo de SEO no
 `Product` hoje, então título/meta sugeridos pela IA só aparecem na tela pra copiar manualmente.
 
+**Conta do cliente.** Login sem senha: `Customer` (único por `storeId`+`email`, criado/atualizado
+automaticamente no checkout pelo e-mail, sem precisar de login) e `CustomerLoginToken` (hash
+SHA-256 do token, expira em 15 min, uso único). Sessão JWT própria (`storefront/src/lib/customer-session.ts`,
+`jose`, cookie `customer_session`, mesmo `AUTH_SECRET` do admin) — separada da sessão do lojista.
+`/{slug}/conta` (grupo `(protected)` dentro de `(shop)`) exige sessão válida **e** que
+`storeId` bata com a loja atual (mesmo cookie não vale pedido de outra loja). Checkout pré-preenche
+identificação/endereço quando o cliente está logado.
+
+**Cupons e promoções automáticas.** `Coupon` (código único por loja, `PERCENT`/`FIXED`/`FREE_SHIPPING`)
+e `Promotion` (`BUY_X_PAY_Y` ou `QUANTITY_DISCOUNT`, por produto ou toda a loja) são avaliados por
+funções puras em `@repo/db/pricing` (`applyCoupon`, `applyPromotions`, `applyDiscounts`) — a mesma
+lógica roda na pré-visualização do carrinho/checkout (`previewDiscounts`, sem efeito no banco) e na
+criação do pedido de verdade (`createCheckoutSession`), que nunca confia no cálculo do cliente.
+Ordem combinada: promoções aplicam primeiro por produto, cupom aplica depois sobre o restante.
+`OrderItem` sempre guarda o preço **original** (o desconto aparece como linha separada em
+`Order.discountInCents`); só o valor cobrado no Stripe usa preços proporcionalmente reduzidos
+(`distributeDiscountProportionally`, já que o Stripe não aceita `unit_amount` negativo). Uso do
+cupom (`Coupon.usesCount`) só é contado quando o pedido é de fato pago, dentro da mesma guarda de
+idempotência de `markOrderPaid`.
+
+**Carrinho abandonado.** `AbandonedCart` é salvo (silencioso, nunca bloqueia o checkout) quando o
+cliente valida a etapa de identificação sem terminar a compra. `markOrderPaid` marca o carrinho como
+recuperado pelo e-mail. `/api/cron/abandoned-carts` e `/api/cron/review-requests` (protegidas por
+`CRON_SECRET`) são chamadas por um agendador externo — nenhum serviço novo no `docker-compose.yml`
+(ver Decisões). Recuperar (`/carrinho/recuperar/[token]`) sempre busca o estoque/preço atuais de
+novo, nunca confia no snapshot salvo no e-mail.
+
+**Avaliações.** `Review` entra sempre com `approved: false`; só aparece na vitrine depois de
+aprovada no admin (`/reviews`). "Compra verificada" é um link assinado por HMAC
+(`storefront/src/lib/review-token.ts`, mesmo `AUTH_SECRET`) ligando `orderId`+`productId` sem
+precisar de uma tabela nova — mandado só depois que o pedido tem `fulfillmentStatus: DELIVERED`.
+
+**WhatsApp.** `Store.whatsapp` (só dígitos, `WHATSAPP_PHONE` valida DDI+DDD+número) habilita o botão
+flutuante da vitrine, o "Comprar pelo WhatsApp" na página do produto e o link `wa.me` no pedido (admin)
+e no carrinho abandonado — todos somem sem o número configurado (`waLink()` em `@repo/db/utils`).
+
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.
 - `@repo/db/utils`: funções puras (formatação BRL, labels de status, regex). Pode ir para Client Components.

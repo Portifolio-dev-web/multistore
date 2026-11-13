@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatBRL } from "@repo/db/utils";
 import { useCart, useHydrated, useStoreCart, type CartItem } from "@/lib/cart-store";
+import { previewDiscounts } from "@/actions/checkout";
 import { ProductImage } from "./product-image";
 import { useStoreContext } from "./store-context";
 
@@ -10,6 +12,20 @@ export function CartView({ storeSlug }: { storeSlug: string }) {
   const { href } = useStoreContext();
   const items = useStoreCart(storeSlug);
   const hydrated = useHydrated();
+  const [promoDiscountInCents, setPromoDiscountInCents] = useState(0);
+
+  // F3.3: promoções automáticas aplicam sem precisar de cupom — só pra exibir no resumo (o
+  // servidor recalcula tudo de novo no checkout, isto aqui é só preview)
+  useEffect(() => {
+    if (items.length === 0) return;
+    let active = true;
+    previewDiscounts(storeSlug, items.map((i) => ({ variantId: i.variantId, quantity: i.quantity }))).then((result) => {
+      if (active && !("error" in result)) setPromoDiscountInCents(result.promotionDiscountInCents);
+    });
+    return () => {
+      active = false;
+    };
+  }, [storeSlug, items]);
 
   if (!hydrated) return <div className="mt-10 h-40 animate-pulse rounded-3xl bg-ink/5" />;
 
@@ -37,7 +53,13 @@ export function CartView({ storeSlug }: { storeSlug: string }) {
           <span>Subtotal</span>
           <span className="font-display text-3xl font-bold" data-testid="cart-subtotal">{formatBRL(subtotal)}</span>
         </div>
-        <p className="mt-2 text-xs opacity-70">Frete e impostos calculados no checkout.</p>
+        {promoDiscountInCents > 0 && (
+          <div className="mt-1 flex items-baseline justify-between text-sm" data-testid="cart-promo-discount">
+            <span>Promoção aplicada</span>
+            <span>-{formatBRL(promoDiscountInCents)}</span>
+          </div>
+        )}
+        <p className="mt-2 text-xs opacity-70">Frete, cupom e impostos calculados no checkout.</p>
         <Link
           href={href("/checkout")}
           className="mt-6 block w-full rounded-full bg-accent px-6 py-3.5 text-center text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5"

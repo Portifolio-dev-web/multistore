@@ -51,11 +51,13 @@ Cartão de teste: `4242 4242 4242 4242`, qualquer validade futura e qualquer CVC
 | `STRIPE_SECRET_KEY`     | storefront  | Chave secreta do Stripe |
 | `STRIPE_WEBHOOK_SECRET` | storefront  | Segredo de assinatura do webhook |
 | `STOREFRONT_URL`        | storefront/admin | URL pública da vitrine (URLs de retorno do Stripe e link "Ver vitrine") |
-| `AUTH_SECRET`           | admin       | Segredo do JWT da sessão (mín. 32 caracteres) |
-| `COOKIE_SECURE`         | admin       | `false` para http://localhost; `true` em produção (https) |
+| `AUTH_SECRET`           | admin/storefront | Segredo do JWT da sessão do lojista e do cliente (mín. 32 caracteres) |
+| `COOKIE_SECURE`         | admin/storefront | `false` para http://localhost; `true` em produção (https) |
 | `ALLOW_REGISTRATION`    | admin       | `false` desativa o cadastro de novos lojistas |
 | `ANTHROPIC_API_KEY`     | admin       | Chave da API da Anthropic; sem ela, o botão "Gerar com IA" fica escondido |
 | `ANTHROPIC_MODEL`       | admin       | Modelo usado para gerar descrição de produto (padrão: `claude-haiku-5-5`) |
+| `CRON_SECRET`           | storefront  | Protege `/api/cron/*` (carrinho abandonado, pedido de avaliação); sem ela, os dois recusam a chamada |
+| `REVIEW_REQUEST_DAYS_AFTER_DELIVERY` | storefront | Dias após a entrega pra mandar o e-mail pedindo avaliação (padrão: 7) |
 
 ## Desenvolvimento sem Docker
 
