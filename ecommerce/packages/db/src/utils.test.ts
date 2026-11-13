@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCsv,
   centsToInput,
   contrastText,
   cartesianCombinations,
@@ -13,6 +14,7 @@ import {
   isPromoActive,
   isValidCpfOrCnpj,
   parseBRLToCents,
+  parseCsv,
   promoDiscountPercent,
   slugify,
   variantLabel,
@@ -253,6 +255,26 @@ describe("combinationKey", () => {
 
   it("combinações diferentes geram chaves diferentes", () => {
     expect(combinationKey({ Cor: "Azul" })).not.toBe(combinationKey({ Cor: "Verde" }));
+  });
+});
+
+describe("buildCsv / parseCsv", () => {
+  it("roda de volta linhas simples", () => {
+    const csv = buildCsv([["a", "b"], ["1", "2"]]);
+    expect(parseCsv(csv)).toEqual([["a", "b"], ["1", "2"]]);
+  });
+
+  it("escapa e desescapa campo com o separador, aspas e quebra de linha", () => {
+    const rows = [["tem; ponto e vírgula", 'tem "aspas"', "tem\nquebra"]];
+    expect(parseCsv(buildCsv(rows))).toEqual(rows);
+  });
+
+  it("ignora o BOM no início do arquivo", () => {
+    expect(parseCsv("﻿a;b\n1;2")).toEqual([["a", "b"], ["1", "2"]]);
+  });
+
+  it("ignora linhas em branco no fim", () => {
+    expect(parseCsv("a;b\n1;2\n")).toEqual([["a", "b"], ["1", "2"]]);
   });
 });
 

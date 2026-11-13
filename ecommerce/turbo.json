@@ -12,7 +12,9 @@
     "MAIL_FROM",
     "AUTH_SECRET",
     "COOKIE_SECURE",
-    "ALLOW_REGISTRATION"
+    "ALLOW_REGISTRATION",
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_MODEL"
   ],
   "tasks": {
     "build": {

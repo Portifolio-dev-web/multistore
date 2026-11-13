@@ -2,10 +2,11 @@ import { notFound } from "next/navigation";
 import { prisma, type Prisma } from "@repo/db";
 import { categoryAncestors, categoryDescendantIds, isPromoActive } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
-import { getStoreBase } from "@/lib/paths";
+import { getStoreBase, storeHref } from "@/lib/paths";
 import { withDefaultVariantPricing } from "@/lib/product-display";
 import { ProductCard } from "@/components/product-card";
 import { ProductFilters, type FilterValues } from "@/components/product-filters";
+import { Pagination } from "@/components/pagination";
 
 type Props = { params: { store: string }; searchParams: Record<string, string | undefined> };
 
@@ -20,6 +21,13 @@ const toCents = (v?: string) => {
   const n = Number(v?.replace(",", "."));
   return v && Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : undefined;
 };
+
+const PAGE_SIZE = 24;
+// ponytail: comparar priceInCents/compareAtPriceInCents exige SQL cru (duas colunas da mesma
+// linha) — sem isso não dá pra paginar "Em promoção" direto no banco. Busca até esse teto, filtra
+// em memória e pagina o resultado já filtrado. Catálogo bem maior com esse filtro ligado precisaria
+// de uma coluna calculada; não é o caso hoje.
+const PROMO_FILTER_SCAN_LIMIT = 500;
 
 export default async function StorePage({ params, searchParams }: Props) {
   const store = await getStoreBySlug(params.store);
@@ -52,21 +60,42 @@ export default async function StorePage({ params, searchParams }: Props) {
     priceInCents: { gte: toCents(filters.min), lte: toCents(filters.max) },
   };
 
-  const productsFetched = await prisma.product.findMany({
-    where,
-    orderBy: SORTS[filters.sort],
-    take: 60,
-    include: { categories: { select: { name: true } }, variants: { orderBy: { position: "asc" }, take: 1 } },
-  });
-  const withEffectivePrice = productsFetched.map(withDefaultVariantPricing);
-  // ponytail: comparar priceInCents/compareAtPriceInCents exige SQL cru (duas colunas da mesma linha);
-  // como a listagem já é um `take: 60` sem paginação de verdade, filtra em JS aqui mesmo.
-  const products = filters.onPromo ? withEffectivePrice.filter((p) => isPromoActive(p)) : withEffectivePrice;
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const productInclude = { categories: { select: { name: true } }, variants: { orderBy: { position: "asc" as const }, take: 1 } } satisfies Prisma.ProductInclude;
+
+  const { total, products } = filters.onPromo
+    ? await (async () => {
+        const candidates = await prisma.product.findMany({ where, orderBy: SORTS[filters.sort], take: PROMO_FILTER_SCAN_LIMIT, include: productInclude });
+        const onPromo = candidates.map(withDefaultVariantPricing).filter((p) => isPromoActive(p));
+        return { total: onPromo.length, products: onPromo.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) };
+      })()
+    : await (async () => {
+        const [count, rows] = await Promise.all([
+          prisma.product.count({ where }),
+          prisma.product.findMany({ where, orderBy: SORTS[filters.sort], skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE, include: productInclude }),
+        ]);
+        return { total: count, products: rows.map(withDefaultVariantPricing) };
+      })();
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const categoryOptions = allCategories.map((c) => ({
     slug: c.slug,
     label: "— ".repeat(categoryAncestors(allCategories, c.id).length - 1) + c.name,
   }));
   const base = getStoreBase(store.slug);
+  const buildPageHref = (p: number) =>
+    storeHref(
+      base,
+      `?${new URLSearchParams({
+        ...(filters.q && { q: filters.q }),
+        ...(filters.category && { category: filters.category }),
+        ...(filters.min && { min: filters.min }),
+        ...(filters.max && { max: filters.max }),
+        ...(filters.sort !== "recent" && { sort: filters.sort }),
+        ...(filters.inStock && { stock: "1" }),
+        ...(filters.onPromo && { promo: "1" }),
+        page: String(p),
+      })}`,
+    );
 
   return (
     <div className="mx-auto max-w-7xl px-5 sm:px-8">
@@ -82,7 +111,7 @@ export default async function StorePage({ params, searchParams }: Props) {
         <ProductFilters base={base} categories={categoryOptions} values={filters} />
         <section>
           <p className="mb-6 text-sm text-ink/50" data-testid="products-count">
-            {products.length} {products.length === 1 ? "produto" : "produtos"}
+            {total} {total === 1 ? "produto" : "produtos"}
           </p>
           {products.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-ink/15 p-16 text-center text-ink/50" data-testid="products-empty">
@@ -97,6 +126,7 @@ export default async function StorePage({ params, searchParams }: Props) {
               ))}
             </ul>
           )}
+          <Pagination page={page} totalPages={totalPages} buildHref={buildPageHref} />
         </section>
       </div>
     </div>

@@ -9,11 +9,17 @@ import { formToObject, productSchema } from "@/lib/validation";
 import type { FormState } from "@/lib/form";
 
 function parseProduct(formData: FormData) {
-  return productSchema.safeParse({
+  const parsed = productSchema.safeParse({
     ...formToObject(formData),
     categoryIds: formData.getAll("categoryIds"),
     active: formData.get("active") === "on",
   });
+  // Alinha imageAlts em tamanho com images — os dois vêm de inputs separados no ImageUploader
+  if (parsed.success) {
+    const { images, imageAlts } = parsed.data;
+    parsed.data.imageAlts = images.map((_, i) => imageAlts[i] ?? "");
+  }
+  return parsed;
 }
 
 /** slugify(name ou o texto digitado) + sufixo numérico se já existir outro produto com o mesmo slug */

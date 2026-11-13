@@ -42,6 +42,7 @@ export default async function EditProductPage({ params }: { params: { id: string
         product={{ ...product, categoryIds: product.categories.map((c) => c.id), stock: product.variants[0]?.stock ?? 0 }}
         categories={categories}
         variantCount={product.variants.length}
+        aiEnabled={!!process.env.ANTHROPIC_API_KEY}
         submitLabel="Salvar alterações"
       />
     </>

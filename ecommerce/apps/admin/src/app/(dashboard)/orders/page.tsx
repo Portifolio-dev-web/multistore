@@ -1,22 +1,59 @@
 import Link from "next/link";
-import { prisma, OrderStatus } from "@repo/db";
+import { prisma, OrderStatus, FulfillmentStatus, type Prisma } from "@repo/db";
 import { formatBRL, FULFILLMENT_LABEL, ORDER_STATUS_LABEL } from "@repo/db/utils";
 import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { Pagination } from "@/components/pagination";
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+const PAGE_SIZE = 20;
 
-export default async function OrdersPage({ searchParams }: { searchParams: { status?: string } }) {
+type SearchParams = { status?: string; fulfillment?: string; q?: string; from?: string; to?: string; page?: string };
+
+export default async function OrdersPage({ searchParams }: { searchParams: SearchParams }) {
   const { storeId } = await requireSession();
   const status = Object.values(OrderStatus).find((s) => s === searchParams.status);
+  const fulfillment = Object.values(FulfillmentStatus).find((s) => s === searchParams.fulfillment);
+  const q = searchParams.q?.trim();
+  const page = Math.max(1, Number(searchParams.page) || 1);
 
-  const orders = await prisma.order.findMany({
-    where: { storeId, ...(status && { status }) },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: { _count: { select: { items: true } } },
-  });
+  const where: Prisma.OrderWhereInput = {
+    storeId,
+    ...(status && { status }),
+    ...(fulfillment && { fulfillmentStatus: fulfillment }),
+    ...(searchParams.from && { createdAt: { gte: new Date(searchParams.from) } }),
+    ...(searchParams.to && { createdAt: { lte: new Date(`${searchParams.to}T23:59:59`) } }),
+    ...(q && {
+      OR: [
+        ...(Number.isInteger(Number(q)) ? [{ number: Number(q) }] : []),
+        { customerEmail: { contains: q, mode: "insensitive" as const } },
+        { customerName: { contains: q, mode: "insensitive" as const } },
+        { customerDocument: { contains: q } },
+      ],
+    }),
+  };
+
+  const [total, orders] = await Promise.all([
+    prisma.order.count({ where }),
+    prisma.order.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: { _count: { select: { items: true } } },
+    }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const buildHref = (p: number) =>
+    `/orders?${new URLSearchParams({
+      ...(status && { status }),
+      ...(fulfillment && { fulfillment }),
+      ...(q && { q }),
+      ...(searchParams.from && { from: searchParams.from }),
+      ...(searchParams.to && { to: searchParams.to }),
+      page: String(p),
+    })}`;
 
   const tabs = [{ value: undefined, label: "Todos" }, ...Object.values(OrderStatus).map((s) => ({ value: s, label: ORDER_STATUS_LABEL[s] }))];
 
@@ -35,6 +72,32 @@ export default async function OrdersPage({ searchParams }: { searchParams: { sta
           </Link>
         ))}
       </div>
+      <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+        {status && <input type="hidden" name="status" value={status} />}
+        <div>
+          <label className="label" htmlFor="q">Buscar</label>
+          <input id="q" name="q" defaultValue={q} placeholder="Nº, e-mail, nome ou CPF/CNPJ" className="field" data-testid="orders-search-input" />
+        </div>
+        <div>
+          <label className="label" htmlFor="fulfillment">Entrega</label>
+          <select id="fulfillment" name="fulfillment" defaultValue={fulfillment ?? ""} className="field" data-testid="orders-fulfillment-select">
+            <option value="">Todas</option>
+            {Object.values(FulfillmentStatus).map((f) => (
+              <option key={f} value={f}>{FULFILLMENT_LABEL[f]}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="from">De</label>
+          <input id="from" name="from" type="date" defaultValue={searchParams.from} className="field" data-testid="orders-from-input" />
+        </div>
+        <div>
+          <label className="label" htmlFor="to">Até</label>
+          <input id="to" name="to" type="date" defaultValue={searchParams.to} className="field" data-testid="orders-to-input" />
+        </div>
+        <button type="submit" className="btn-outline" data-testid="orders-filter-apply-button">Filtrar</button>
+        <Link href={status ? `/orders?status=${status}` : "/orders"} className="btn-ghost" data-testid="orders-filter-clear-link">Limpar</Link>
+      </form>
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[720px]" data-testid="orders-table">
           <thead className="border-b border-line">
@@ -72,6 +135,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: { sta
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </>
   );
 }

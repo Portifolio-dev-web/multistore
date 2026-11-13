@@ -290,30 +290,57 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     último segmento da URL (slug é único por loja) com breadcrumb e subcategorias; filtro de
     categoria da home passou a usar slug + inclusão de subárvore.
 
-- [ ] **F2.5 Paginação e busca**
+- [x] **F2.5 Paginação e busca**
   - Vitrine: paginação na URL (`?page=`), 24 por página; total de resultados.
   - Admin: paginação e busca em produtos (nome, SKU) e pedidos (número, e-mail, nome, CPF);
     filtros de pedido por status, entrega, meio de pagamento e período.
   - Índice `pg_trgm` (migration SQL) para busca por trecho sem diferenciar acentos.
   - Aceite: loja com 2.000 produtos de seed abre e busca rápido.
+  - Resultado: `?page=` com 24/página na vitrine e 20/página no admin (produtos e pedidos), com
+    `<Pagination>` próprio em cada app. Busca por nome+SKU (produtos) e número/e-mail/nome/CPF-CNPJ
+    (pedidos); filtros de pedido por status/entrega/período (sem filtro de "meio de pagamento" —
+    ver Decisões). Migration `20261113100000_search_indexes` cria `pg_trgm` e índices GIN em
+    `Product.name`, `ProductVariant.sku` e três campos de `Order` (acelera o `ILIKE` do Prisma;
+    não resolve acento — ver Decisões). Filtro "Em promoção" da vitrine passou a paginar de
+    verdade também, com um teto de 500 produtos escaneados em memória (mesma limitação já
+    registrada na F2.3, só que agora com paginação real em cima do resultado filtrado).
 
-- [ ] **F2.6 Importar e exportar produtos (CSV)** · Depende de F2.2
+- [x] **F2.6 Importar e exportar produtos (CSV)** · Depende de F2.2
   - Exportar todos os produtos com variantes em CSV (separador `;`, UTF-8 com BOM para abrir no Excel).
   - Importar com pré-visualização, validação linha a linha e relatório de erros; atualiza por SKU.
   - Aceite: exportar e reimportar o mesmo arquivo não muda nada.
+  - Resultado: `/products/import-export` no admin. `GET /api/products/export` gera o CSV (uma linha
+    por variante); parser/serializer CSV próprios em `@repo/db/utils` (sem dependência nova — regras
+    de aspas/escape poucas o bastante). Importar lê o arquivo no navegador, mostra pré-visualização
+    com erro por linha, e só manda o CSV validado pro servidor (que revalida tudo de novo) ao
+    confirmar. Atualiza (nunca cria) por SKU — linha sem SKU é ignorada e aparece no relatório (ver
+    Decisões). Testado de ponta a ponta: exportar → reimportar sem editar não muda nada; editar um
+    preço numa linha e reimportar aplica só aquela variante.
 
-- [ ] **F2.7 Imagens**
+- [x] **F2.7 Imagens**
   - Reordenar, definir principal, texto alternativo por imagem.
   - `next/image` com `remotePatterns` do storage e tamanhos responsivos.
   - Upload por arrastar e soltar, vários arquivos de uma vez.
   - Aceite: página de produto carrega imagens no tamanho certo para celular.
+  - Resultado: `Product.imageAlts` novo (array paralelo a `images`, mesma posição — ver Decisões).
+    `ImageUploader` ganhou texto alternativo por imagem, botões ←/→ pra reordenar (além do "definir
+    capa" que já existia) e arrastar-e-soltar de verdade no dropzone. `ProductImage` passou a usar
+    `next/image` com `fill` + `sizes` por contexto (card, galeria, miniatura, carrinho);
+    `remotePatterns` no `next.config.mjs` libera o storage e o Unsplash do seed.
 
-- [ ] **F2.8 Descrição de produto com IA**
+- [x] **F2.8 Descrição de produto com IA**
   - Botão "Gerar com IA" no formulário de produto: Server Action que chama a API da Anthropic
     (`@anthropic-ai/sdk`, `ANTHROPIC_API_KEY`, modelo em `ANTHROPIC_MODEL`, ex.: `claude-haiku-5-5`)
     com nome, categoria e atributos, e devolve descrição em pt-BR + título e descrição para SEO.
   - Limite de usos por loja por dia. O texto entra no campo para o lojista revisar, nunca salva sozinho.
   - Aceite: funciona sem a chave configurada (botão escondido) e com a chave (texto gerado).
+  - Resultado: `generateProductDescription` usa `@anthropic-ai/sdk` de verdade (modelo
+    `claude-haiku-5-5` por padrão, configurável via `ANTHROPIC_MODEL`). Limite diário por loja via
+    tabela `AiGeneration` (uma linha por chamada, conta "hoje"). Botão escondido sem
+    `ANTHROPIC_API_KEY` configurada — testado sem a chave (nesta loja ainda não há chave real, só o
+    caminho "escondido" foi validado; o caminho "com chave" não foi testado contra a API de verdade).
+    Preenche só a descrição; título/meta de SEO aparecem como sugestão pra copiar manualmente (ver
+    Decisões — não existe campo de SEO no Product hoje).
 
 ---
 
@@ -530,3 +557,10 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-12 | F2.2 etapa 1 | `Product.priceInCents` continua sendo o preço base; `ProductVariant.priceInCents` é opcional e só sobrescreve quando preenchido | Já é literalmente o que o roadmap pede ("opcional que sobrescreve o do produto"); evita duplicar o preço em toda variante que não muda de preço |
 | 2026-11-12 | F2.2 etapa 1 | `Product.stock` foi removido (não ficou como fallback) — estoque mora só em `ProductVariant.stock` | Estoque é por natureza granular por combinação; manter os dois criaria duas fontes de verdade pra reconciliar |
 | 2026-11-12 | F2.2 etapa 3 | Botão de opção fica desabilitado quando a combinação com as *outras* opções já escolhidas fixas está esgotada — não recalcula a seleção inteira | Cobre o aceite ("combinações esgotadas desabilitadas") com uma checagem simples por botão; uma combinação ótima globalmente é um problema maior que o catálogo de hoje não pede |
+| 2026-11-13 | F2.5 | Sem filtro de "meio de pagamento" nos pedidos, apesar de citado no roadmap | Hoje só existe Stripe (uma conta global pra todas as lojas, F1.4 pendente); um filtro com uma opção só não ajuda ninguém — revisar quando houver mais de um meio de pagamento de verdade |
+| 2026-11-13 | F2.5 | Índice `pg_trgm` acelera busca por trecho (`ILIKE`); não resolve diferença de acento | Buscar "ole" não acha "Óleo" sem a extensão `unaccent` aplicada também na query (não só no índice), o que exigiria SQL cru no lugar do `contains` do Prisma — fora do escopo desta tarefa |
+| 2026-11-13 | F2.6 | Importar CSV **atualiza** variantes existentes por SKU — nunca cria produto ou variante nova | O texto do roadmap ("atualiza por SKU") não pede criação; criar exigiria também resolver `ProductOption`/slug/categoria a partir do CSV, bem mais escopo do que "atualização em massa de preço/estoque" |
+| 2026-11-13 | F2.6 | Linha de CSV sem SKU é ignorada (nunca atualiza por slug ou nome) | SKU é opcional no catálogo hoje; sem uma chave estável, "atualizar por posição/nome" arrisca trocar o produto errado numa planilha reordenada — mais seguro ignorar e avisar no relatório |
+| 2026-11-13 | F2.7 | `imageAlts` é um array paralelo a `images` (mesma posição), não um array de objetos `{url,alt}` nem um model `ProductImage` novo | Muda só o tipo de um campo existente sem tocar nos outros ~10 lugares que já leem `product.images` (card, galeria, checkout, CSV, seed); um model relacional seria mais "correto" mas exigiria migrar todos esses pontos pra uma funcionalidade que não pede isso |
+| 2026-11-13 | F2.8 | Chamada à Anthropic via SDK oficial (`@anthropic-ai/sdk`), não `fetch` cru | O roadmap já pedia o SDK; é a forma oficial suportada |
+| 2026-11-13 | F2.8 | Título/descrição de SEO que a IA gera não são salvos em nenhum campo — aparecem como sugestão pra copiar manualmente | `Product` não tem campos de SEO hoje e nenhuma tarefa do roadmap pede isso ainda; inventar schema novo só pra essa tela seria escopo além do pedido |

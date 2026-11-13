@@ -6,7 +6,7 @@ import { ProductImage } from "./product-image";
 type Props = {
   base: string;
   // preço/estoque já resolvidos pelo chamador (produto ou variante padrão — F2.2 etapa 1)
-  product: Pick<Product, "id" | "slug" | "name" | "promoStartsAt" | "promoEndsAt" | "images"> & {
+  product: Pick<Product, "id" | "slug" | "name" | "promoStartsAt" | "promoEndsAt" | "images" | "imageAlts"> & {
     priceInCents: number;
     compareAtPriceInCents: number | null;
     stock: number;
@@ -22,8 +22,9 @@ export function ProductCard({ base, product }: Props) {
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-ink/5">
         <ProductImage
           src={product.images[0]}
-          alt={product.name}
+          alt={product.imageAlts[0] || product.name}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          sizes="(min-width: 1024px) 33vw, 50vw"
         />
         {soldOut && (
           <span className="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-paper">

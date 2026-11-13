@@ -18,7 +18,7 @@ export default async function NewProductPage() {
     <>
       <Link href="/products" className="font-mono text-xs text-ink/50 hover:text-ink" data-testid="back-to-products-link">← produtos</Link>
       <PageHeader title="Novo produto" />
-      <ProductForm action={createProduct} categories={categories} submitLabel="Criar produto" />
+      <ProductForm action={createProduct} categories={categories} aiEnabled={!!process.env.ANTHROPIC_API_KEY} submitLabel="Criar produto" />
     </>
   );
 }

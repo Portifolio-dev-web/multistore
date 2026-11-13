@@ -110,6 +110,25 @@ sem recalcular a seleção inteira) e troca preço/estoque/foto com a escolha; c
 (`reserveStock`/`releaseStock`, `pricing.ts`, `OrderItem.variantId`) operam por `variantId` desde a
 fundação, nunca por `productId`.
 
+**Importar/exportar CSV.** `/products/import-export` no admin. `GET /api/products/export` gera o CSV
+(uma linha por variante; `@repo/db/utils` tem `buildCsv`/`parseCsv` próprios, sem dependência
+nova). A importação lê e pré-valida o arquivo no navegador (mesma `parseImportCsv` reusada depois
+no servidor, que nunca confia só no que já foi validado no cliente) e **só atualiza** variantes
+existentes pelo SKU — nunca cria produto ou variante; linha sem SKU é ignorada e aparece no
+relatório.
+
+**Imagens.** `Product.images` (URLs) e `Product.imageAlts` (texto alternativo) são dois arrays
+paralelos na mesma posição — não um array de objetos nem um model `ProductImage`. `ProductImage`
+usa `next/image` (`fill` + `sizes` por contexto); `remotePatterns` no `next.config.mjs` libera o
+storage e o Unsplash do seed.
+
+**Descrição com IA.** `admin/src/actions/ai-description.ts` chama a Anthropic de verdade via
+`@anthropic-ai/sdk` (`ANTHROPIC_MODEL`, padrão `claude-haiku-5-5`). Sem `ANTHROPIC_API_KEY`
+configurada, o botão "Gerar com IA" do formulário de produto fica escondido. Limite diário por
+loja: uma linha em `AiGeneration` por chamada, conta quantas tem "hoje" — sem job de reset, a
+própria consulta já filtra pela data. Preenche só a descrição; não existe campo de SEO no
+`Product` hoje, então título/meta sugeridos pela IA só aparecem na tela pra copiar manualmente.
+
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.
 - `@repo/db/utils`: funções puras (formatação BRL, labels de status, regex). Pode ir para Client Components.
@@ -165,6 +184,10 @@ S3-compatível (`lib/storage.ts`; RustFS em dev, S3/R2 em produção).
   `prisma db push`. Banco criado antes da F0.2: alinhar uma vez com
   `yarn workspace @repo/db prisma migrate resolve --applied 20261104111225_init`.
 - Hoje todas as lojas recebem na mesma conta Stripe (`STRIPE_SECRET_KEY` global). A F1.4 corrige isso.
+- `CREATE EXTENSION pg_trgm` cria o `gin_trgm_ops` num schema (normalmente `public`) — o `yarn e2e`
+  roda as migrations num schema isolado (`e2e_test`) sem `public` no `search_path`, então um índice
+  GIN com esse operador sem qualificar o schema (`public.gin_trgm_ops`) funciona no dev mas quebra
+  só no e2e. Qualifique sempre que usar extensão + índice assim numa migration.
 - Um arquivo `"use client"` só pode exportar componentes React. Uma função utilitária comum
   exportada junto (ex.: `toVariantRow` em `variants-grid.tsx`) vira uma referência de client
   component e quebra em runtime ("is not a function") se um Server Component tentar chamá-la —

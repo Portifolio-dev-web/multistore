@@ -55,6 +55,11 @@ export const productSchema = z.object({
     .string()
     .transform((v) => v.split(/\s*[\n,]\s*/).map((s) => s.trim()).filter(Boolean))
     .pipe(z.array(z.string().url("URL de imagem inválida")).max(10, "Máximo de 10 imagens")),
+  // Mesma ordem/posição de `images` (pode ter string vazia = sem alt pra aquela imagem).
+  imageAlts: z
+    .string()
+    .optional()
+    .transform((v) => (v ?? "").split("\n").map((s) => s.trim())),
   active: z.boolean(),
 });
 

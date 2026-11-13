@@ -54,7 +54,7 @@ function CartLine({ storeSlug, item }: { storeSlug: string; item: CartItem }) {
   const { updateQuantity, removeItem } = useCart();
   return (
     <li className="flex gap-4 p-4" data-testid={`cart-item-${item.variantId}`}>
-      <ProductImage src={item.image} alt={item.name} className="h-24 w-20 shrink-0 rounded-xl object-cover" />
+      <ProductImage src={item.image} alt={item.name} className="h-24 w-20 shrink-0 rounded-xl object-cover" sizes="80px" />
       <div className="flex flex-1 flex-col justify-between">
         <div className="flex justify-between gap-3">
           <p className="font-medium">

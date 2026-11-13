@@ -5,6 +5,7 @@ import { centsToInput } from "@repo/db/utils";
 import type { FormState } from "@/lib/form";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 import { ImageUploader } from "./image-uploader";
+import { AiDescriptionButton } from "./ai-description-button";
 
 type ProductValues = {
   name: string;
@@ -17,6 +18,7 @@ type ProductValues = {
   promoEndsAt: Date | null;
   stock: number;
   images: string[];
+  imageAlts: string[];
   active: boolean;
 };
 
@@ -31,10 +33,11 @@ type Props = {
   // Produto novo (undefined) ou com uma variante só: edita o estoque aqui. Com mais de uma,
   // o estoque vira ambíguo (qual variante?) e passa a ser editado na grade de variações.
   variantCount?: number;
+  aiEnabled?: boolean;
   submitLabel: string;
 };
 
-export function ProductForm({ action, product, categories, variantCount, submitLabel }: Props) {
+export function ProductForm({ action, product, categories, variantCount, aiEnabled, submitLabel }: Props) {
   const [state, formAction] = useFormState(action, {});
   const e = state.fieldErrors;
 
@@ -62,6 +65,7 @@ export function ProductForm({ action, product, categories, variantCount, submitL
         <label className="label" htmlFor="description">Descrição</label>
         <textarea id="description" name="description" rows={5} defaultValue={product?.description} className="field" data-testid="product-description-input" />
         <FieldError errors={e?.description} />
+        <AiDescriptionButton enabled={!!aiEnabled} />
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
@@ -145,7 +149,7 @@ export function ProductForm({ action, product, categories, variantCount, submitL
       </div>
       <div>
         <span className="label">Imagens</span>
-        <ImageUploader initial={product?.images} />
+        <ImageUploader initialImages={product?.images} initialAlts={product?.imageAlts} />
         <FieldError errors={e?.images} testId="product-images-error" />
       </div>
       <label className="flex cursor-pointer items-center gap-2 text-sm">

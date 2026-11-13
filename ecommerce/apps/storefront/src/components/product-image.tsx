@@ -1,7 +1,8 @@
-/* eslint-disable @next/next/no-img-element */
-type Props = { src?: string | null; alt: string; className?: string };
+import Image from "next/image";
 
-export function ProductImage({ src, alt, className }: Props) {
+type Props = { src?: string | null; alt: string; className?: string; sizes?: string };
+
+export function ProductImage({ src, alt, className, sizes = "(min-width: 1024px) 50vw, 100vw" }: Props) {
   if (!src) {
     return (
       <div className={`grid place-items-center bg-brand ${className ?? ""}`}>
@@ -9,5 +10,9 @@ export function ProductImage({ src, alt, className }: Props) {
       </div>
     );
   }
-  return <img src={src} alt={alt} loading="lazy" className={className} />;
+  return (
+    <span className="relative block h-full w-full overflow-hidden">
+      <Image src={src} alt={alt} fill sizes={sizes} className={className} />
+    </span>
+  );
 }

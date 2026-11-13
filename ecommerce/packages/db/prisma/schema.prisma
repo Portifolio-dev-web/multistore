@@ -26,6 +26,18 @@ model Store {
   users        User[]
   slugRedirects SlugRedirect[]
   categories   Category[]
+  aiGenerations AiGeneration[]
+}
+
+// F2.8: um registro por chamada à IA, só pra contar o limite diário por loja (sem TTL/reset —
+// a consulta já filtra por "hoje").
+model AiGeneration {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([storeId, createdAt])
 }
 
 model User {
@@ -52,6 +64,7 @@ model Product {
   promoStartsAt DateTime?
   promoEndsAt   DateTime?
   images       String[]
+  imageAlts    String[]    @default([])
   active       Boolean     @default(true)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt

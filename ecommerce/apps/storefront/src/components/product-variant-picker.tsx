@@ -33,6 +33,7 @@ type Props = {
     promoStartsAt: Date | null;
     promoEndsAt: Date | null;
     images: string[];
+    imageAlts: string[];
   };
   options: { name: string; values: string[] }[];
   variants: VariantData[];
@@ -57,7 +58,8 @@ export function ProductVariantPicker({ storeSlug, product, options, variants, he
   const compareAtPriceInCents = variant ? effectiveCompareAtPrice(variant, product) : product.compareAtPriceInCents;
   const stock = variant?.stock ?? 0;
   const onPromo = isPromoActive({ priceInCents, compareAtPriceInCents, promoStartsAt: product.promoStartsAt, promoEndsAt: product.promoEndsAt });
-  const images = variant?.imageUrl ? [variant.imageUrl, ...product.images] : product.images;
+  const imageUrls = variant?.imageUrl ? [variant.imageUrl, ...product.images] : product.images;
+  const images = imageUrls.map((url, i) => ({ url, alt: (variant?.imageUrl ? product.imageAlts[i - 1] : product.imageAlts[i]) || product.name }));
 
   // Esgotado só nessa combinação: trava o valor sem esconder o botão (mesma combinação com os
   // outros valores já escolhidos fixos — não recalcula o resto da seleção).
@@ -129,7 +131,7 @@ export function ProductVariantPicker({ storeSlug, product, options, variants, he
                 variantLabel: variantLabel(variant.combination, optionNames),
                 name: product.name,
                 priceInCents,
-                image: images[0] ?? null,
+                image: images[0]?.url ?? null,
                 stock,
               }}
             />

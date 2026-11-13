@@ -54,6 +54,8 @@ Cartão de teste: `4242 4242 4242 4242`, qualquer validade futura e qualquer CVC
 | `AUTH_SECRET`           | admin       | Segredo do JWT da sessão (mín. 32 caracteres) |
 | `COOKIE_SECURE`         | admin       | `false` para http://localhost; `true` em produção (https) |
 | `ALLOW_REGISTRATION`    | admin       | `false` desativa o cadastro de novos lojistas |
+| `ANTHROPIC_API_KEY`     | admin       | Chave da API da Anthropic; sem ela, o botão "Gerar com IA" fica escondido |
+| `ANTHROPIC_MODEL`       | admin       | Modelo usado para gerar descrição de produto (padrão: `claude-haiku-5-5`) |
 
 ## Desenvolvimento sem Docker
 

@@ -236,3 +236,57 @@ export function isValidCpfOrCnpj(value: string): boolean {
   const digits = onlyDigits(value);
   return digits.length === 11 ? isValidCpf(digits) : digits.length === 14 ? isValidCnpj(digits) : false;
 }
+
+// CSV (F2.6): separador ";", sem libs externas — as regras (aspas, escape) são poucas o bastante
+// pra valer a pena um parser próprio pequeno em vez de uma dependência nova.
+const CSV_DELIMITER = ";";
+
+export function csvEscape(value: string): string {
+  return /[;"\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+export function buildCsv(rows: string[][]): string {
+  return rows.map((row) => row.map(csvEscape).join(CSV_DELIMITER)).join("\r\n");
+}
+
+/** Parser simples (RFC4180-ish) pro separador ";" usado no export/import de produtos */
+export function parseCsv(text: string): string[][] {
+  const clean = text.replace(/^﻿/, "");
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  const pushField = () => {
+    row.push(field);
+    field = "";
+  };
+  const pushRow = () => {
+    pushField();
+    rows.push(row);
+    row = [];
+  };
+
+  for (let i = 0; i < clean.length; i++) {
+    const c = clean[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (clean[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === CSV_DELIMITER) {
+      pushField();
+    } else if (c === "\r") {
+      // ignora, a quebra de linha é tratada no \n
+    } else if (c === "\n") {
+      pushRow();
+    } else {
+      field += c;
+    }
+  }
+  if (field || row.length) pushRow();
+  return rows.filter((r) => !(r.length === 1 && r[0] === ""));
+}

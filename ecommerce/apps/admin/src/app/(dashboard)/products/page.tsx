@@ -3,25 +3,52 @@ import { prisma } from "@repo/db";
 import { formatBRL } from "@repo/db/utils";
 import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 
-export default async function ProductsPage({ searchParams }: { searchParams: { q?: string } }) {
+const PAGE_SIZE = 20;
+
+export default async function ProductsPage({ searchParams }: { searchParams: { q?: string; page?: string } }) {
   const { storeId } = await requireSession();
   const q = searchParams.q?.trim();
-  const products = await prisma.product.findMany({
-    where: { storeId, ...(q && { name: { contains: q, mode: "insensitive" } }) },
-    orderBy: { createdAt: "desc" },
-    include: { categories: { select: { name: true } }, variants: { select: { stock: true } } },
-  });
+  const page = Math.max(1, Number(searchParams.page) || 1);
+
+  const where = {
+    storeId,
+    ...(q && {
+      OR: [
+        { name: { contains: q, mode: "insensitive" as const } },
+        { variants: { some: { sku: { contains: q, mode: "insensitive" as const } } } },
+      ],
+    }),
+  };
+
+  const [total, products] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: { categories: { select: { name: true } }, variants: { select: { stock: true } } },
+    }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const buildHref = (p: number) => `/products?${new URLSearchParams({ ...(q && { q }), page: String(p) })}`;
 
   return (
     <>
       <PageHeader
         title="Produtos"
-        subtitle={`${products.length} no catálogo`}
-        action={<Link href="/products/new" className="btn" data-testid="new-product-button">+ Novo produto</Link>}
+        subtitle={`${total} no catálogo`}
+        action={
+          <div className="flex gap-2">
+            <Link href="/products/import-export" className="btn-outline" data-testid="import-export-link">Importar/exportar</Link>
+            <Link href="/products/new" className="btn" data-testid="new-product-button">+ Novo produto</Link>
+          </div>
+        }
       />
       <form method="get" className="mb-4 max-w-sm">
-        <input name="q" defaultValue={q} placeholder="Buscar por nome…" className="field" data-testid="products-search-input" />
+        <input name="q" defaultValue={q} placeholder="Buscar por nome ou SKU…" className="field" data-testid="products-search-input" />
       </form>
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[640px]" data-testid="products-table">
@@ -67,6 +94,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { q
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </>
   );
 }
