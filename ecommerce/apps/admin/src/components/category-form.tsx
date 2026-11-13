@@ -14,6 +14,8 @@ type CategoryValues = {
   imageUrl: string | null;
   position: number;
   parentId: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
 };
 
 type Props = {
@@ -74,6 +76,21 @@ export function CategoryForm({ action, category, options, submitLabel }: Props) 
         <label className="label" htmlFor="imageUrl">Imagem (URL)</label>
         <input id="imageUrl" name="imageUrl" defaultValue={category?.imageUrl ?? ""} placeholder="https://…" className="field" data-testid="category-image-input" />
         <FieldError errors={e?.imageUrl} />
+      </div>
+      <div className="border-t border-line pt-5">
+        <p className="label">SEO</p>
+        <div className="mt-3 space-y-4">
+          <div>
+            <label className="label" htmlFor="seoTitle">Título para buscadores (opcional)</label>
+            <input id="seoTitle" name="seoTitle" defaultValue={category?.seoTitle ?? ""} placeholder="usa o nome da categoria se deixar em branco" className="field" data-testid="category-seo-title-input" />
+            <FieldError errors={e?.seoTitle} />
+          </div>
+          <div>
+            <label className="label" htmlFor="seoDescription">Descrição para buscadores (opcional)</label>
+            <textarea id="seoDescription" name="seoDescription" rows={2} defaultValue={category?.seoDescription ?? ""} className="field" data-testid="category-seo-description-input" />
+            <FieldError errors={e?.seoDescription} />
+          </div>
+        </div>
       </div>
       <div className="flex justify-end border-t border-line pt-5">
         <SubmitButton testId="category-submit-button">{submitLabel}</SubmitButton>

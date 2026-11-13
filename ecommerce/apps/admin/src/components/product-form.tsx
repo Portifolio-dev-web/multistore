@@ -20,6 +20,11 @@ type ProductValues = {
   images: string[];
   imageAlts: string[];
   active: boolean;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  brand: string | null;
+  gtin: string | null;
+  condition: "NEW" | "USED" | "REFURBISHED";
 };
 
 function toDateInput(value: Date | null | undefined): string {
@@ -156,6 +161,48 @@ export function ProductForm({ action, product, categories, variantCount, aiEnabl
         <input type="checkbox" name="active" defaultChecked={product?.active ?? true} className="h-4 w-4 accent-ink" data-testid="product-active-checkbox" />
         Visível na vitrine
       </label>
+
+      <div className="border-t border-line pt-5">
+        <p className="label">SEO</p>
+        <div className="mt-3 space-y-4">
+          <div>
+            <label className="label" htmlFor="seoTitle">Título para buscadores (opcional)</label>
+            <input id="seoTitle" name="seoTitle" defaultValue={product?.seoTitle ?? ""} placeholder="usa o nome do produto se deixar em branco" className="field" data-testid="product-seo-title-input" />
+            <FieldError errors={e?.seoTitle} />
+          </div>
+          <div>
+            <label className="label" htmlFor="seoDescription">Descrição para buscadores (opcional)</label>
+            <textarea id="seoDescription" name="seoDescription" rows={2} defaultValue={product?.seoDescription ?? ""} className="field" data-testid="product-seo-description-input" />
+            <FieldError errors={e?.seoDescription} />
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-line pt-5">
+        <p className="label">Feed de produtos (Google/Meta)</p>
+        <div className="mt-3 grid gap-5 sm:grid-cols-3">
+          <div>
+            <label className="label" htmlFor="brand">Marca (opcional)</label>
+            <input id="brand" name="brand" defaultValue={product?.brand ?? ""} className="field" data-testid="product-brand-input" />
+            <FieldError errors={e?.brand} />
+          </div>
+          <div>
+            <label className="label" htmlFor="gtin">GTIN/EAN (opcional)</label>
+            <input id="gtin" name="gtin" defaultValue={product?.gtin ?? ""} className="field font-mono text-sm" data-testid="product-gtin-input" />
+            <FieldError errors={e?.gtin} />
+          </div>
+          <div>
+            <label className="label" htmlFor="condition">Condição</label>
+            <select id="condition" name="condition" defaultValue={product?.condition ?? "NEW"} className="field" data-testid="product-condition-select">
+              <option value="NEW">Novo</option>
+              <option value="USED">Usado</option>
+              <option value="REFURBISHED">Recondicionado</option>
+            </select>
+            <FieldError errors={e?.condition} />
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-end border-t border-line pt-5">
         <SubmitButton testId="product-submit-button">{submitLabel}</SubmitButton>
       </div>

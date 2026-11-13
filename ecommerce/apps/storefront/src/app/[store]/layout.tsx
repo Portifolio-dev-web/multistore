@@ -7,6 +7,8 @@ import { getStoreBase } from "@/lib/paths";
 import { MAINTENANCE_COOKIE, verifyMaintenanceAccess } from "@/lib/maintenance";
 import { StoreProvider } from "@/components/store-context";
 import { MaintenanceGate } from "@/components/maintenance-gate";
+import { CookieConsentBanner } from "@/components/cookie-consent-banner";
+import { AnalyticsScripts } from "@/components/analytics-scripts";
 
 type Props = { children: React.ReactNode; params: { store: string } };
 
@@ -47,6 +49,8 @@ export default async function StoreLayout({ children, params }: Props) {
       >
         {children}
       </div>
+      <AnalyticsScripts gaId={store.gaId} gtmId={store.gtmId} metaPixelId={store.metaPixelId} tiktokPixelId={store.tiktokPixelId} />
+      <CookieConsentBanner />
     </StoreProvider>
   );
 }

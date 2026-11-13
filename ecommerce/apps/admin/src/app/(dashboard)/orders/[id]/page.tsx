@@ -4,11 +4,12 @@ import { prisma } from "@repo/db";
 import { formatAddress, formatBRL, ORDER_STATUS_LABEL, waLink } from "@repo/db/utils";
 import { orderTrackingUrl } from "@repo/db/urls";
 import { requireSession } from "@/lib/session";
-import { addOrderNote, updateFulfillment } from "@/actions/orders";
+import { addOrderNote, cancelOrder, refundOrder, updateFulfillment } from "@/actions/orders";
 import { FulfillmentForm } from "@/components/fulfillment-form";
 import { OrderTimeline } from "@/components/order-timeline";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { DeleteButton } from "@/components/delete-button";
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short" });
 
@@ -38,7 +39,30 @@ export default async function OrderDetailPage({ params }: { params: { id: string
   return (
     <>
       <Link href="/orders" className="font-mono text-xs text-ink/50 hover:text-ink" data-testid="back-to-orders-link">← pedidos</Link>
-      <PageHeader title={`Pedido #${order.number}`} action={<StatusBadge status={order.status} testId="order-detail-status" />} />
+      <PageHeader
+        title={`Pedido #${order.number}`}
+        action={
+          <div className="flex items-center gap-3">
+            <StatusBadge status={order.status} testId="order-detail-status" />
+            {(order.status === "PAID" || order.status === "PENDING") && (
+              <DeleteButton
+                action={cancelOrder.bind(null, order.id)}
+                confirmMessage="Cancelar este pedido? O estoque reservado será devolvido e o cliente será avisado por e-mail."
+                label="Cancelar pedido"
+                testId="cancel-order-button"
+              />
+            )}
+            {order.status === "PAID" && (
+              <DeleteButton
+                action={refundOrder.bind(null, order.id)}
+                confirmMessage="Marcar este pedido como reembolsado? Lembre-se de fazer o reembolso no Dashboard do Stripe antes — isso aqui só registra e avisa o cliente."
+                label="Marcar como reembolsado"
+                testId="refund-order-button"
+              />
+            )}
+          </div>
+        }
+      />
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <section className="card overflow-hidden">
           <table className="w-full">

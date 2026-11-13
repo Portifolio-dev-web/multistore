@@ -47,6 +47,21 @@ export function PageForm({ action, page, aiEnabled, submitLabel }: Props) {
         <input type="checkbox" name="published" defaultChecked={page?.published ?? true} data-testid="page-published-checkbox" />
         Publicada
       </label>
+      <div className="border-t border-line pt-5">
+        <p className="label">SEO</p>
+        <div className="mt-3 space-y-4">
+          <div>
+            <label className="label" htmlFor="seoTitle">Título para buscadores (opcional)</label>
+            <input id="seoTitle" name="seoTitle" defaultValue={page?.seoTitle ?? ""} placeholder="usa o título da página se deixar em branco" className="field" data-testid="page-seo-title-input" />
+            <FieldError errors={e?.seoTitle} />
+          </div>
+          <div>
+            <label className="label" htmlFor="seoDescription">Descrição para buscadores (opcional)</label>
+            <textarea id="seoDescription" name="seoDescription" rows={2} defaultValue={page?.seoDescription ?? ""} className="field" data-testid="page-seo-description-input" />
+            <FieldError errors={e?.seoDescription} />
+          </div>
+        </div>
+      </div>
       <div className="flex justify-end border-t border-line pt-5">
         <SubmitButton testId="page-submit-button">{submitLabel}</SubmitButton>
       </div>

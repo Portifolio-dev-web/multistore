@@ -1,9 +1,24 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@repo/db";
 import { renderSafeMarkdown } from "@repo/db/markdown";
+import { storeUrl } from "@repo/db/urls";
 import { getStoreBySlug } from "@/lib/store";
 
-export default async function InstitutionalPage({ params }: { params: { store: string; slug: string } }) {
+type Props = { params: { store: string; slug: string } };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const store = await getStoreBySlug(params.store);
+  if (!store) return {};
+  const page = await prisma.page.findFirst({ where: { storeId: store.id, slug: params.slug, published: true } });
+  if (!page) return {};
+  const title = page.seoTitle || `${page.title} — ${store.name}`;
+  const description = page.seoDescription || undefined;
+  const url = `${storeUrl(store)}/p/${page.slug}`;
+  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url, type: "website" } };
+}
+
+export default async function InstitutionalPage({ params }: Props) {
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 

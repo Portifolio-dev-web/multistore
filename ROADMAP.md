@@ -519,31 +519,74 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
 
 ## Fase 5: SEO e marketing
 
-- [ ] **F5.1 SEO técnico** · Depende de F2.1 e F2.4
+- [x] **F5.1 SEO técnico** · Depende de F2.1 e F2.4
   - `generateMetadata` em produto, categoria e página: título, descrição, canonical (com `storeUrl`),
     Open Graph com a imagem do produto. Campos `seoTitle` e `seoDescription` editáveis.
   - `sitemap.xml` e `robots.txt` por loja (funcionando em `/{slug}`, subdomínio e domínio próprio).
   - JSON-LD: `Product` (preço, disponibilidade, avaliações), `BreadcrumbList`, `Organization`.
   - Aceite: as páginas passam no Teste de pesquisa aprimorada do Google sem erros.
+  - Resultado: `seoTitle`/`seoDescription` em `Product`, `Category` e `Page` (em branco usa
+    nome/descrição como fallback), editáveis nos 3 formulários do admin. `generateMetadata` em
+    `produtos/[slug]`, `categorias/[...slug]` e `p/[slug]` com `alternates.canonical` e Open Graph
+    via `storeUrl()` (`@repo/db/urls`) — nunca combinado com `getStoreBase()`, pra não duplicar o
+    `/{slug}` no modo de caminho principal. `sitemap.xml`/`robots.txt` por loja são rotas literais
+    (`app/[store]/sitemap.xml/route.ts`, não o arquivo especial `sitemap.ts`) — funcionam igual nos
+    3 modos de domínio porque o middleware já reescreve pra lá; respeitam `maintenanceMode`
+    (fecham o `robots.txt` e tiram do sitemap), resolvendo a pendência registrada na F4.5. JSON-LD
+    (`apps/storefront/src/lib/seo.ts`): `Organization` no layout da loja, `Product` + `BreadcrumbList`
+    na página de produto, `BreadcrumbList` na categoria — serializado com escape de `<` pra nunca
+    fechar a `<script>` cedo. Testado manualmente: `<title>`/canonical/JSON-LD aparecem no HTML do
+    produto; `sitemap.xml`/`robots.txt` respondem XML/texto corretos para a loja demo.
 
-- [ ] **F5.2 Pixels e analytics por loja**
+- [x] **F5.2 Pixels e analytics por loja**
   - Campos para GA4, Google Tag Manager, Meta Pixel e TikTok Pixel; scripts com `next/script` no
     layout da loja.
   - Eventos: `view_item`, `add_to_cart`, `begin_checkout`, `purchase` (uma vez por pedido).
   - Banner de consentimento de cookies (LGPD): pixels de marketing só carregam depois do aceite.
   - Aceite: compra de teste aparece no DebugView do GA4 uma única vez.
+  - Resultado: `Store.gaId`/`gtmId`/`metaPixelId`/`tiktokPixelId` editáveis em "Configurações" (admin).
+  - `CookieConsentBanner` guarda a escolha em `localStorage` (não é dado sensível, não precisa de
+    cookie/servidor); `AnalyticsScripts` só injeta os `<Script>` depois do "accepted", escutando um
+    evento customizado pra reagir à escolha sem precisar recarregar a página. Eventos disparados via
+    `lib/analytics-events.ts` (no-op se o pixel não carregou): `view_item` na página de produto,
+    `add_to_cart` no botão de adicionar, `begin_checkout` ao entrar no checkout com itens no
+    carrinho, `purchase` na página de sucesso — deduplicado por `localStorage` por `orderId`, pra
+    nunca contar 2x num reload. Testado: banner aparece, some após aceitar, scripts entram no HTML
+    só depois disso.
 
-- [ ] **F5.3 Feeds de produtos** · Depende de F2.2
+- [x] **F5.3 Feeds de produtos** · Depende de F2.2
   - `/feeds/google.xml` (Google Merchant Center) e feed para o catálogo da Meta (Instagram/Facebook).
   - Campos novos no produto: marca, GTIN, condição; variantes com `item_group_id`.
   - Aceite: feed validado no Merchant Center sem erros bloqueantes.
+  - Resultado: `Product.brand`/`gtin`/`condition` (enum `NEW`/`USED`/`REFURBISHED`) editáveis no
+    formulário de produto. `buildProductFeed()` (`apps/storefront/src/lib/feed.ts`) gera um RSS 2.0
+    com namespace `g:` (formato aceito tanto pelo Google Merchant Center quanto pelo catálogo da
+    Meta — por isso as duas rotas, `/feeds/google.xml` e `/feeds/meta.xml`, reusam o mesmo builder).
+    Um item por variante (preço/estoque são por variante, não por produto); `g:item_group_id` é o
+    `productId`, agrupando as variantes do mesmo produto. Respeita `maintenanceMode` (404). Testado
+    manualmente: feed responde XML válido com os campos esperados para a loja demo.
 
-- [ ] **F5.4 E-mails transacionais completos**
+- [x] **F5.4 E-mails transacionais completos**
   - Templates: pedido recebido (com instruções de Pix/boleto), pagamento aprovado, enviado, entregue
     (pedindo avaliação), cancelado, reembolsado.
   - Aviso de nova venda para o lojista.
   - Logo e cores da loja em todos os e-mails; versão texto puro.
   - Aceite: todos visíveis no Mailpit e legíveis no celular.
+  - Resultado: 5 templates novos em `@repo/mail` (mesmo "shell" com logo/cores da loja + versão
+    texto puro dos templates existentes) — `orderReceivedEmail`, `newSaleNoticeEmail`,
+    `orderCanceledEmail`, `orderRefundedEmail`, `deliveryConfirmationEmail`. "Pedido recebido" dispara
+    quando o Stripe Checkout retorna `checkout.session.completed` com `payment_status` ainda não
+    "paid" (caso do Pix/boleto assíncrono no Brasil — o pagamento confirma depois, via
+    `async_payment_succeeded/failed`); pagamento no cartão vai direto pra confirmação, sem passar por
+    aqui. Aviso de nova venda vai pro primeiro `User` da loja (ainda não existe `Membership`/equipe —
+    isso é F6.2). Cancelamento/reembolso agora têm ação no admin (botões na página do pedido,
+    `cancelOrder`/`refundOrder`) — status `CANCELED` ganhou um gatilho real (antes só existia no tipo,
+    nunca era alcançado) e `OrderStatus.REFUNDED` é novo; os dois devolvem o estoque reservado
+    (`releaseStock`, idempotente) e avisam o cliente por e-mail. Confirmação de entrega dispara pelo
+    mesmo checkbox "avisar cliente" já usado no envio, ao marcar `DELIVERED` no admin. Todos os
+    e-mails novos (exceto cancelamento/reembolso, que são eventos únicos não repetíveis) têm trava de
+    idempotência num campo `*EmailSentAt`/`*NotifiedAt` em `Order`, no mesmo padrão de
+    `confirmationEmailSentAt`. Testado: typecheck/lint/build/testes unitários e e2e completos.
 
 ---
 
@@ -667,3 +710,11 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-13 | F4.4 | Fonte "serifada" e "monoespaçada" usam pilhas de fontes do sistema (Georgia, Courier New), não fontes novas carregadas do Google Fonts | A fonte "sem serifa" já usa Google Fonts carregadas desde o início do projeto (Bricolage Grotesque/Instrument Sans); trocar por completo pra cada opção exigiria carregar fontes novas só pra essa escolha — pilhas do sistema já diferenciam visualmente sem esse custo |
 | 2026-11-13 | F4.5 | Cookie de acesso da loja em construção é um HMAC simples do `storeId` (`storefront/src/lib/maintenance.ts`), não uma sessão JWT completa | Não protege dado sensível (a loja não tem nada atrás da senha além do próprio catálogo ainda não lançado); só evita pedir a senha nas próximas páginas |
 | 2026-11-13 | F4.5 | "Não aparece no sitemap" não foi implementado à parte — hoje não existe sitemap.xml (isso é F5.1) | Quando a F5.1 criar o sitemap, filtrar por `maintenanceMode` lá junto; não faz sentido um sitemap só pra essa exceção antes de o sitemap existir |
+| 2026-11-13 | F5.1 | `sitemap.xml`/`robots.txt` por loja são rotas literais (`app/[store]/sitemap.xml/route.ts`), não o arquivo especial `sitemap.ts`/`robots.ts` do Next.js | O arquivo especial não garante receber os `params` da rota dinâmica `[store]` sem usar `generateSitemaps` (pensado pra dividir UM sitemap grande, não pra sitemaps por loja); uma rota comum com `{params}` é direta e já funciona nos 3 modos de domínio graças à reescrita do middleware |
+| 2026-11-13 | F5.1/F5.3 | Toda a Fase 5 feita numa sessão só, em vez de uma etapa por sessão | Pedido explícito do usuário ("inicie a fase 5 completa"), mesmo padrão já autorizado nas Fases 3 e 4 |
+| 2026-11-13 | F5.2 | Consentimento de cookies guardado em `localStorage` no navegador, não em cookie nem em tabela no banco | A escolha não é dado sensível e só decide se um `<script>` carrega no próprio navegador; um cookie exigiria decidir isso no servidor sem necessidade — mesma lógica de preferência de UI já usada no carrinho (zustand+localStorage) |
+| 2026-11-13 | F5.2 | Moeda dos eventos de analytics (`add_to_cart`/`begin_checkout`) é "BRL" fixo no componente, não lida de `Store.currency` | Essas chamadas ficam em componentes de cliente que não recebem a loja inteira como prop hoje, e `Store.currency` nunca teve UI pra mudar (sempre "brl"); passar a moeda por toda a árvore só pra isso seria esforço sem um caso de uso real ainda |
+| 2026-11-13 | F5.3 | Um item do feed por variante (não por produto), usando `item_group_id` = `productId` | Preço, estoque e SKU são por variante no catálogo de hoje; um item por produto teria que escolher arbitrariamente qual variante representar — `item_group_id` já é o campo que o Google/Meta esperam pra agrupar variações do mesmo produto |
+| 2026-11-13 | F5.4 | Sem integração de reembolso de verdade com o Stripe — "marcar como reembolsado" no admin só registra o status e avisa o cliente; o lojista reembolsa no Dashboard do Stripe por fora | Reembolsar via API do Stripe exigiria decidir reembolso total vs. parcial, estorno de taxa, etc. — escopo de uma tarefa de pagamentos própria, não de "e-mails transacionais"; o aceite da F5.4 é sobre o e-mail existir e chegar, não sobre automatizar o reembolso |
+| 2026-11-13 | F5.4 | "Pedido recebido com instruções de Pix/boleto" dispara no `checkout.session.completed` com `payment_status` diferente de "paid" (pagamento assíncrono), não imediatamente ao criar o pedido | O cliente é redirecionado pro Stripe Checkout no mesmo instante que o pedido é criado — mandar um e-mail "aguardando pagamento" antes mesmo de ele escolher a forma de pagamento seria prematuro; o instante certo é quando o Stripe confirma que o checkout foi concluído mas o Pix/boleto ainda não caiu |
+| 2026-11-13 | F5.4 | E-mail de entrega confirma a entrega mas não repete o convite de avaliação | O convite com link assinado já existe desde a F3.6 (cron 7 dias após a entrega); meter outro convite aqui duplicaria o mesmo pedido em dois e-mails diferentes, além de o link assinado (`review-token.ts`) viver só no app storefront, não no pacote `@repo/mail` compartilhado |

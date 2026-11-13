@@ -1,14 +1,15 @@
 import type Stripe from "stripe";
 import { prisma, releaseStock, type OrderStatus, type Prisma } from "@repo/db";
-import { sendOrderConfirmation } from "@repo/mail";
+import { sendNewSaleNotice, sendOrderConfirmation, sendOrderReceivedNotice } from "@repo/mail";
 
-// setOrderStatus só é chamado com FAILED/EXPIRED/CANCELED na prática (PENDING nunca acontece,
-// mas entra no tipo porque o parâmetro é Exclude<OrderStatus, "PAID">)
-const STATUS_EVENT: Record<Exclude<OrderStatus, "PAID">, { type: "FAILED" | "EXPIRED" | "CANCELED"; message: string } | null> = {
+// setOrderStatus só é chamado com FAILED/EXPIRED na prática (o resto entra no tipo porque o
+// parâmetro é Exclude<OrderStatus, "PAID"> — CANCELED/REFUNDED são merchant-iniciados, ver actions/orders.ts no admin)
+const STATUS_EVENT: Record<Exclude<OrderStatus, "PAID">, { type: "FAILED" | "EXPIRED" | "CANCELED" | "REFUNDED"; message: string } | null> = {
   PENDING: null,
   FAILED: { type: "FAILED", message: "Pagamento falhou" },
   EXPIRED: { type: "EXPIRED", message: "Sessão de pagamento expirou" },
   CANCELED: { type: "CANCELED", message: "Pedido cancelado" },
+  REFUNDED: null,
 };
 
 /** Marca o pedido como PAID (idempotente) e envia a confirmação. O estoque já foi reservado na criação. */
@@ -52,7 +53,17 @@ export async function markOrderPaid(session: Stripe.Checkout.Session): Promise<v
   });
 
   // Falha de e-mail nunca derruba o webhook
-  if (count > 0) await sendOrderConfirmation(orderId).catch((err) => console.error("[mail]", err));
+  if (count > 0) {
+    await sendOrderConfirmation(orderId).catch((err) => console.error("[mail]", err));
+    await sendNewSaleNotice(orderId).catch((err) => console.error("[mail]", err));
+  }
+}
+
+/** F5.4: Pix/boleto fica "pendente" entre o checkout.session.completed e a confirmação assíncrona */
+export async function notifyOrderReceived(session: Stripe.Checkout.Session): Promise<void> {
+  const orderId = session.metadata?.orderId;
+  if (!orderId) return;
+  await sendOrderReceivedNotice(orderId).catch((err) => console.error("[mail]", err));
 }
 
 /** Expirado, falhou ou cancelado: muda o status (só a partir de PENDING) e devolve o estoque reservado. */

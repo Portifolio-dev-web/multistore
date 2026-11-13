@@ -57,6 +57,12 @@ model Store {
   announcementBar         String?
   maintenanceMode         Boolean   @default(false)
   maintenancePasswordHash String?
+
+  // F5.2: IDs de pixels/analytics — os scripts só carregam depois do aceite no banner de cookies
+  gaId         String?
+  gtmId        String?
+  metaPixelId  String?
+  tiktokPixelId String?
 }
 
 enum Theme {
@@ -83,6 +89,10 @@ model Page {
   published Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // F5.1: SEO técnico — em branco usa title/content como fallback na página
+  seoTitle       String?
+  seoDescription String?
 
   @@unique([storeId, slug])
 }
@@ -183,8 +193,23 @@ model Product {
   variants     ProductVariant[]
   reviews      Review[]
 
+  // F5.1: SEO técnico — em branco usa name/description como fallback na página
+  seoTitle       String?
+  seoDescription String?
+
+  // F5.3: feeds de produtos (Google Merchant Center / catálogo da Meta)
+  brand     String?
+  gtin      String?
+  condition ProductCondition @default(NEW)
+
   @@unique([storeId, slug])
   @@index([storeId, active])
+}
+
+enum ProductCondition {
+  NEW
+  USED
+  REFURBISHED
 }
 
 enum CouponType {
@@ -330,6 +355,10 @@ model Category {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  // F5.1: SEO técnico — em branco usa name/description como fallback na página
+  seoTitle       String?
+  seoDescription String?
+
   @@unique([storeId, slug])
   @@index([storeId, parentId])
 }
@@ -352,6 +381,7 @@ enum OrderStatus {
   FAILED
   EXPIRED
   CANCELED
+  REFUNDED
 }
 
 enum FulfillmentStatus {
@@ -396,6 +426,11 @@ model Order {
   shippingAddress         Json?
   confirmationEmailSentAt DateTime?
   stockReleasedAt         DateTime?
+  refundedAt              DateTime?
+  // F5.4: idempotência dos e-mails transacionais novos (mesmo esquema de confirmationEmailSentAt)
+  receivedEmailSentAt     DateTime?
+  merchantNotifiedAt      DateTime?
+  deliveryEmailSentAt     DateTime?
   customerEmail         String?
   customerName          String?
   customerPhone         String?

@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { parseNavigation, parseSocialLinks } from "@repo/db/content";
 import { formatAddress } from "@repo/db/utils";
+import { storeUrl } from "@repo/db/urls";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
 import { CartBadge } from "@/components/cart-badge";
 import { WhatsappButton } from "@/components/whatsapp-button";
 import { NavMenu } from "@/components/nav-menu";
+import { jsonLdScriptProps, organizationJsonLd } from "@/lib/seo";
 
 type Props = { children: React.ReactNode; params: { store: string } };
 
@@ -23,6 +25,8 @@ export default async function ShopLayout({ children, params }: Props) {
 
   return (
     <>
+      {/* eslint-disable-next-line react/no-danger */}
+      <script {...jsonLdScriptProps(organizationJsonLd(store, storeUrl(store)))} />
       {store.announcementBar && (
         <div className="bg-ink px-4 py-2 text-center text-xs font-medium text-paper" data-testid="announcement-bar">
           {store.announcementBar}

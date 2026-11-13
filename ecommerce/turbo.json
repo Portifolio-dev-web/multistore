@@ -16,7 +16,8 @@
     "ANTHROPIC_API_KEY",
     "ANTHROPIC_MODEL",
     "CRON_SECRET",
-    "REVIEW_REQUEST_DAYS_AFTER_DELIVERY"
+    "REVIEW_REQUEST_DAYS_AFTER_DELIVERY",
+    "ADMIN_URL"
   ],
   "tasks": {
     "build": {

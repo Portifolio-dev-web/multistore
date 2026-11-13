@@ -1,6 +1,6 @@
 // Utilitários puros (seguros para Client Components — não importam o Prisma)
 
-export type OrderStatusKey = "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "CANCELED";
+export type OrderStatusKey = "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "CANCELED" | "REFUNDED";
 
 export const ORDER_STATUS_LABEL: Record<OrderStatusKey, string> = {
   PENDING: "Aguardando pagamento",
@@ -8,6 +8,7 @@ export const ORDER_STATUS_LABEL: Record<OrderStatusKey, string> = {
   FAILED: "Falhou",
   EXPIRED: "Expirado",
   CANCELED: "Cancelado",
+  REFUNDED: "Reembolsado",
 };
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });

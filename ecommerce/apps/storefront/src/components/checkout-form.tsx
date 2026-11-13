@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { z } from "zod";
 import { formatBRL } from "@repo/db/utils";
 import { useHydrated, useStoreCart, type CartItem } from "@/lib/cart-store";
 import { addressSchema, customerDetailsSchema, identificationSchema } from "@/lib/validation";
 import { createCheckoutSession, previewDiscounts, type DiscountPreview } from "@/actions/checkout";
 import { saveAbandonedCart } from "@/actions/abandoned-cart";
+import { trackBeginCheckout } from "@/lib/analytics-events";
 
 type Step = 1 | 2 | 3;
 
@@ -53,6 +54,11 @@ export function CheckoutForm({ storeSlug, initialIdentification, initialAddress 
   const [address, setAddress] = useState(initialAddress ?? emptyAddress);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [cepStatus, setCepStatus] = useState<"idle" | "loading" | "not-found">("idle");
+
+  useEffect(() => {
+    if (items.length > 0) trackBeginCheckout(items.map((i) => ({ id: i.variantId, name: i.name, priceInCents: i.priceInCents, quantity: i.quantity })), "BRL");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");

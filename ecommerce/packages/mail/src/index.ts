@@ -1,7 +1,18 @@
 import { prisma } from "@repo/db";
 import { orderTrackingUrl } from "@repo/db/urls";
 import { sendMail } from "./transport";
-import { abandonedCartEmail, customerLoginLinkEmail, orderConfirmationEmail, reviewRequestEmail, shippingUpdateEmail } from "./templates";
+import {
+  abandonedCartEmail,
+  customerLoginLinkEmail,
+  deliveryConfirmationEmail,
+  newSaleNoticeEmail,
+  orderCanceledEmail,
+  orderConfirmationEmail,
+  orderReceivedEmail,
+  orderRefundedEmail,
+  reviewRequestEmail,
+  shippingUpdateEmail,
+} from "./templates";
 
 type StoreTheme = { name: string; primaryColor: string; accentColor: string; logoUrl: string | null };
 
@@ -41,6 +52,111 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
   } catch (err) {
     console.error("[mail] falha na confirmação do pedido", orderId, err);
     await prisma.order.update({ where: { id: orderId }, data: { confirmationEmailSentAt: null } });
+  }
+}
+
+/** F5.4: pedido criado, aguardando confirmação de pagamento assíncrono (Pix/boleto no Stripe) */
+export async function sendOrderReceivedNotice(orderId: string): Promise<void> {
+  const { count } = await prisma.order.updateMany({
+    where: { id: orderId, receivedEmailSentAt: null, customerEmail: { not: null } },
+    data: { receivedEmailSentAt: new Date() },
+  });
+  if (count === 0) return;
+
+  const order = await loadOrder(orderId);
+  if (!order?.customerEmail) return;
+
+  try {
+    const mail = orderReceivedEmail({
+      store: order.store,
+      code: String(order.number),
+      customerName: order.customerName,
+      items: order.items,
+      totalInCents: order.totalInCents,
+      shippingAddress: order.shippingAddress,
+      orderUrl: orderTrackingUrl(order.store, order.publicToken),
+    });
+    const sent = await sendMail({ ...mail, to: order.customerEmail, fromName: order.store.name });
+    if (!sent) await prisma.order.update({ where: { id: orderId }, data: { receivedEmailSentAt: null } });
+  } catch (err) {
+    console.error("[mail] falha no aviso de pedido recebido", orderId, err);
+    await prisma.order.update({ where: { id: orderId }, data: { receivedEmailSentAt: null } });
+  }
+}
+
+/** F5.4: avisa o lojista (primeiro usuário da loja — ainda não existe Membership/equipe) de uma venda nova */
+export async function sendNewSaleNotice(orderId: string): Promise<void> {
+  const { count } = await prisma.order.updateMany({
+    where: { id: orderId, status: "PAID", merchantNotifiedAt: null },
+    data: { merchantNotifiedAt: new Date() },
+  });
+  if (count === 0) return;
+
+  const order = await loadOrder(orderId);
+  if (!order) return;
+  const merchant = await prisma.user.findFirst({ where: { storeId: order.storeId }, orderBy: { createdAt: "asc" } });
+  if (!merchant) return;
+
+  try {
+    const adminOrderUrl = `${process.env.ADMIN_URL ?? "http://localhost:3001"}/orders/${order.id}`;
+    const mail = newSaleNoticeEmail({ store: order.store, code: String(order.number), totalInCents: order.totalInCents, items: order.items, adminOrderUrl });
+    const sent = await sendMail({ ...mail, to: merchant.email, fromName: order.store.name });
+    if (!sent) await prisma.order.update({ where: { id: orderId }, data: { merchantNotifiedAt: null } });
+  } catch (err) {
+    console.error("[mail] falha no aviso de nova venda", orderId, err);
+    await prisma.order.update({ where: { id: orderId }, data: { merchantNotifiedAt: null } });
+  }
+}
+
+/** F5.4: cancelamento/reembolso — chamados pelo admin (merchant-iniciado); idempotência é a troca de status em si */
+export async function sendOrderCanceled(orderId: string): Promise<boolean> {
+  const order = await loadOrder(orderId);
+  if (!order?.customerEmail) return false;
+  try {
+    const mail = orderCanceledEmail({ store: order.store, code: String(order.number), orderUrl: orderTrackingUrl(order.store, order.publicToken) });
+    return await sendMail({ ...mail, to: order.customerEmail, fromName: order.store.name });
+  } catch (err) {
+    console.error("[mail] falha no aviso de cancelamento", orderId, err);
+    return false;
+  }
+}
+
+export async function sendOrderRefunded(orderId: string): Promise<boolean> {
+  const order = await loadOrder(orderId);
+  if (!order?.customerEmail) return false;
+  try {
+    const mail = orderRefundedEmail({
+      store: order.store,
+      code: String(order.number),
+      totalInCents: order.totalInCents,
+      orderUrl: orderTrackingUrl(order.store, order.publicToken),
+    });
+    return await sendMail({ ...mail, to: order.customerEmail, fromName: order.store.name });
+  } catch (err) {
+    console.error("[mail] falha no aviso de reembolso", orderId, err);
+    return false;
+  }
+}
+
+/** F5.4: confirma a entrega — o pedido de avaliação com link assinado continua só no cron de F3.6 */
+export async function sendDeliveryConfirmation(orderId: string): Promise<boolean> {
+  const { count } = await prisma.order.updateMany({
+    where: { id: orderId, deliveryEmailSentAt: null, customerEmail: { not: null } },
+    data: { deliveryEmailSentAt: new Date() },
+  });
+  if (count === 0) return false;
+
+  const order = await loadOrder(orderId);
+  if (!order?.customerEmail) return false;
+  try {
+    const mail = deliveryConfirmationEmail({ store: order.store, code: String(order.number), orderUrl: orderTrackingUrl(order.store, order.publicToken) });
+    const sent = await sendMail({ ...mail, to: order.customerEmail, fromName: order.store.name });
+    if (!sent) await prisma.order.update({ where: { id: orderId }, data: { deliveryEmailSentAt: null } });
+    return sent;
+  } catch (err) {
+    console.error("[mail] falha na confirmação de entrega", orderId, err);
+    await prisma.order.update({ where: { id: orderId }, data: { deliveryEmailSentAt: null } });
+    return false;
   }
 }
 

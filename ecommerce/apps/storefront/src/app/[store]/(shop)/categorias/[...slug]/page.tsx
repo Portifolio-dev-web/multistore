@@ -1,13 +1,34 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@repo/db";
 import { categoryAncestors, categoryDescendantIds } from "@repo/db/utils";
+import { storeUrl } from "@repo/db/urls";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
 import { withDefaultVariantPricing } from "@/lib/product-display";
 import { ProductCard } from "@/components/product-card";
+import { breadcrumbJsonLd, jsonLdScriptProps } from "@/lib/seo";
 
 type Props = { params: { store: string; slug: string[] } };
+
+async function findCategory(storeSlug: string, leafSlug: string | undefined) {
+  const store = await getStoreBySlug(storeSlug);
+  if (!store) return null;
+  const categories = await prisma.category.findMany({ where: { storeId: store.id } });
+  const category = categories.find((c) => c.slug === leafSlug);
+  return category ? { store, category } : null;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const found = await findCategory(params.store, params.slug.at(-1));
+  if (!found) return {};
+  const { store, category } = found;
+  const title = category.seoTitle || `${category.name} — ${store.name}`;
+  const description = category.seoDescription || category.description.slice(0, 160) || undefined;
+  const url = `${storeUrl(store)}/categorias/${params.slug.join("/")}`;
+  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url, type: "website" } };
+}
 
 export default async function CategoryPage({ params }: Props) {
   const store = await getStoreBySlug(params.store);
@@ -41,8 +62,18 @@ export default async function CategoryPage({ params }: Props) {
 
   const pathTo = (index: number) => storeHref(base, `/categorias/${breadcrumb.slice(0, index + 1).map((c) => c.slug).join("/")}`);
 
+  const breadcrumbLd = breadcrumbJsonLd([
+    { name: "Vitrine", url: storeUrl(store) },
+    ...breadcrumb.map((c, i) => ({
+      name: c.name,
+      url: `${storeUrl(store)}/categorias/${breadcrumb.slice(0, i + 1).map((a) => a.slug).join("/")}`,
+    })),
+  ]);
+
   return (
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script {...jsonLdScriptProps(breadcrumbLd)} />
       <nav className="flex flex-wrap items-center gap-1 text-sm text-ink/50" data-testid="category-breadcrumb">
         <Link href={base || "/"} className="hover:text-ink hover:underline">Vitrine</Link>
         {breadcrumb.map((c, i) => (

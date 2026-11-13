@@ -8,6 +8,7 @@ import { getStoreBase, storeHref } from "@/lib/paths";
 import { getStripe } from "@/lib/stripe";
 import { markOrderPaid } from "@/lib/orders";
 import { ClearCart } from "@/components/clear-cart";
+import { TrackPurchase } from "@/components/track-purchase";
 
 type Props = { params: { store: string }; searchParams: { session_id?: string } };
 
@@ -35,7 +36,17 @@ export default async function CheckoutSuccess({ params, searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-20 text-center sm:px-8">
-      {order.status === "PAID" && <ClearCart storeSlug={store.slug} />}
+      {order.status === "PAID" && (
+        <>
+          <ClearCart storeSlug={store.slug} />
+          <TrackPurchase
+            orderId={order.id}
+            totalInCents={order.totalInCents}
+            items={order.items.map((it) => ({ id: it.variantId ?? it.id, name: it.productName, priceInCents: it.unitPriceInCents, quantity: it.quantity }))}
+            currency={order.currency}
+          />
+        </>
+      )}
       <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent text-2xl text-ink">✓</span>
       <h1 className="mt-6 font-display text-4xl font-bold tracking-tight sm:text-5xl">Obrigado pela compra!</h1>
       <p className="mt-3 text-ink/60">

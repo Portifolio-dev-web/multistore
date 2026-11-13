@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { prisma } from "@repo/db";
 import { averageRating } from "@repo/db/utils";
+import { storeUrl } from "@repo/db/urls";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
 import { ProductVariantPicker } from "@/components/product-variant-picker";
@@ -9,8 +11,28 @@ import { Stars } from "@/components/stars";
 import { ReviewList } from "@/components/review-list";
 import { ReviewForm } from "@/components/review-form";
 import { verifyReviewToken } from "@/lib/review-token";
+import { breadcrumbJsonLd, jsonLdScriptProps, productJsonLd } from "@/lib/seo";
+import { TrackViewItem } from "@/components/track-view-item";
 
 type Props = { params: { store: string; slug: string }; searchParams: { order?: string; token?: string } };
+
+export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
+  const store = await getStoreBySlug(params.store);
+  if (!store) return {};
+  const product = await prisma.product.findFirst({ where: { slug: params.slug, storeId: store.id, active: true } });
+  if (!product) return {};
+
+  const title = product.seoTitle || `${product.name} — ${store.name}`;
+  const description = product.seoDescription || product.description.slice(0, 160) || undefined;
+  const url = `${storeUrl(store)}/produtos/${product.slug}`;
+  const image = product.images[0];
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: "website", images: image ? [{ url: image }] : undefined },
+  };
+}
 
 export default async function ProductPage({ params, searchParams }: Props) {
   const store = await getStoreBySlug(params.store);
@@ -54,8 +76,33 @@ export default async function ProductPage({ params, searchParams }: Props) {
       ? { orderId: searchParams.order, token: searchParams.token }
       : undefined;
 
+  const productUrl = `${storeUrl(store)}/produtos/${product.slug}`;
+  const ld = productJsonLd({
+    url: productUrl,
+    name: product.name,
+    description: product.description,
+    images: product.images,
+    priceInCents: product.priceInCents,
+    currency: store.currency,
+    inStock: product.variants.some((v) => v.stock > 0),
+    brand: product.brand,
+    gtin: product.gtin,
+    sku: product.variants[0]?.sku ?? null,
+    rating: avgRating !== null ? { value: avgRating, count: product.reviews.length } : null,
+  });
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Vitrine", url: storeUrl(store) },
+    ...(product.categories[0] ? [{ name: product.categories[0].name, url: `${storeUrl(store)}/categorias/${product.categories[0].slug}` }] : []),
+    { name: product.name, url: productUrl },
+  ]);
+
   return (
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script {...jsonLdScriptProps(ld)} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script {...jsonLdScriptProps(breadcrumb)} />
+      <TrackViewItem id={product.id} name={product.name} priceInCents={product.priceInCents} currency={store.currency} />
       <Link href={base || "/"} className="text-sm text-ink/50 hover:text-ink" data-testid="product-back-link">← Voltar à vitrine</Link>
       <div className="mt-8 grid gap-12 lg:grid-cols-2">
         <ProductVariantPicker

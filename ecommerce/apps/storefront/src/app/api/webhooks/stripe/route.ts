@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe, requireEnv } from "@/lib/stripe";
-import { markOrderPaid, setOrderStatus } from "@/lib/orders";
+import { notifyOrderReceived, markOrderPaid, setOrderStatus } from "@/lib/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +24,14 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      case "checkout.session.completed":
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        // Pix/boleto: a sessão "completa" mas o pagamento ainda está pendente (confirma depois,
+        // via checkout.session.async_payment_succeeded/failed) — avisa o cliente nesse meio-tempo.
+        if (session.payment_status === "paid") await markOrderPaid(session);
+        else await notifyOrderReceived(session);
+        break;
+      }
       case "checkout.session.async_payment_succeeded":
         await markOrderPaid(event.data.object);
         break;

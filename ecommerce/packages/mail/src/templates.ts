@@ -97,6 +97,54 @@ ${itemsTable(o.items, o.items.reduce((s, i) => s + i.unitPriceInCents * i.quanti
   return { subject: `Você esqueceu algo no carrinho — ${o.store.name}`, html: shell(o.store, "Seu carrinho ainda está aqui", body), text };
 }
 
+// F5.4: pedido criado, aguardando confirmação do pagamento (ex.: Pix/boleto assíncrono no Stripe —
+// cartão confirma rápido e vai direto para orderConfirmationEmail, sem passar por aqui)
+export function orderReceivedEmail(o: OrderMail) {
+  const hello = o.customerName ? `Olá, ${esc(o.customerName.split(" ")[0])}!` : "Olá!";
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Recebemos seu pedido</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">${hello} Seu pedido <strong>#${esc(o.code)}</strong> foi registrado e está aguardando a confirmação do pagamento. Avisaremos por e-mail assim que ele for aprovado.</p>
+${itemsTable(o.items, o.totalInCents)}
+<p style="margin:32px 0 0">${button(o.store, o.orderUrl, "Acompanhar pedido")}</p>`;
+  const text = `Pedido #${o.code} recebido — aguardando confirmação do pagamento.\n\n${o.items.map((i) => `${i.quantity}x ${i.productName} — ${formatBRL(i.unitPriceInCents * i.quantity)}`).join("\n")}\nTotal: ${formatBRL(o.totalInCents)}\n\nAcompanhe: ${o.orderUrl}`;
+  return { subject: `Pedido #${o.code} recebido — ${o.store.name}`, html: shell(o.store, `Pedido #${o.code} aguardando pagamento`, body), text };
+}
+
+// F5.4: aviso de nova venda pro lojista (mesmo "shell" com a marca da própria loja)
+export function newSaleNoticeEmail(o: { store: StoreTheme; code: string; totalInCents: number; items: Item[]; adminOrderUrl: string }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Nova venda! 🎉</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">O pedido <strong>#${esc(o.code)}</strong> acabou de ser pago.</p>
+${itemsTable(o.items, o.totalInCents)}
+<p style="margin:32px 0 0">${button(o.store, o.adminOrderUrl, "Ver pedido no painel")}</p>`;
+  const text = `Nova venda — pedido #${o.code}\n\n${o.items.map((i) => `${i.quantity}x ${i.productName}`).join("\n")}\nTotal: ${formatBRL(o.totalInCents)}\n\nVer no painel: ${o.adminOrderUrl}`;
+  return { subject: `Nova venda — pedido #${o.code}`, html: shell(o.store, `Pedido #${o.code} pago`, body), text };
+}
+
+export function orderCanceledEmail(o: { store: StoreTheme; code: string; orderUrl: string }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Pedido cancelado</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">O pedido <strong>#${esc(o.code)}</strong> foi cancelado. Se você não esperava por isso, entre em contato com a gente.</p>
+<p style="margin:32px 0 0">${button(o.store, o.orderUrl, "Ver detalhes do pedido")}</p>`;
+  const text = `Pedido #${o.code} cancelado.\n\nDetalhes: ${o.orderUrl}`;
+  return { subject: `Pedido #${o.code} cancelado — ${o.store.name}`, html: shell(o.store, `Pedido #${o.code} cancelado`, body), text };
+}
+
+export function orderRefundedEmail(o: { store: StoreTheme; code: string; totalInCents: number; orderUrl: string }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Reembolso realizado</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">O pedido <strong>#${esc(o.code)}</strong> foi reembolsado no valor de <strong>${formatBRL(o.totalInCents)}</strong>. O valor pode levar alguns dias úteis para aparecer na sua fatura.</p>
+<p style="margin:32px 0 0">${button(o.store, o.orderUrl, "Ver detalhes do pedido")}</p>`;
+  const text = `Pedido #${o.code} reembolsado — ${formatBRL(o.totalInCents)}.\n\nDetalhes: ${o.orderUrl}`;
+  return { subject: `Pedido #${o.code} reembolsado — ${o.store.name}`, html: shell(o.store, `Reembolso do pedido #${o.code}`, body), text };
+}
+
+// F5.4: confirma a entrega (o convite pra avaliar já é feito separadamente pelo cron de F3.6,
+// com o link assinado do produto — aqui fica só a confirmação, pra não duplicar o pedido de avaliação)
+export function deliveryConfirmationEmail(o: { store: StoreTheme; code: string; orderUrl: string }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Seu pedido chegou!</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">O pedido <strong>#${esc(o.code)}</strong> foi entregue. Esperamos que você aproveite a compra em <strong>${esc(o.store.name)}</strong>!</p>
+<p style="margin:32px 0 0">${button(o.store, o.orderUrl, "Ver pedido")}</p>`;
+  const text = `Pedido #${o.code} entregue!\n\nVer pedido: ${o.orderUrl}`;
+  return { subject: `Pedido #${o.code} entregue — ${o.store.name}`, html: shell(o.store, `Pedido #${o.code} entregue`, body), text };
+}
+
 // F3.6: pede avaliação alguns dias depois da entrega
 export function reviewRequestEmail(o: { store: StoreTheme; code: string; reviewUrl: string; productName: string }) {
   const body = `<h1 style="margin:0 0 8px;font-size:26px">O que você achou?</h1>

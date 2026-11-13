@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Font, FulfillmentStatus, Theme } from "@repo/db";
+import { Font, FulfillmentStatus, ProductCondition, Theme } from "@repo/db";
 import { homeSectionSchema } from "@repo/db/content";
 import { HEX_COLOR, HOSTNAME, onlyDigits, parseBRLToCents, SLUG, WHATSAPP_PHONE } from "@repo/db/utils";
 
@@ -62,6 +62,13 @@ export const productSchema = z.object({
     .optional()
     .transform((v) => (v ?? "").split("\n").map((s) => s.trim())),
   active: z.boolean(),
+  // F5.1: SEO técnico — em branco usa name/description como fallback na página
+  seoTitle: optionalText(70),
+  seoDescription: optionalText(160),
+  // F5.3: feeds de produtos (Google Merchant Center / catálogo da Meta)
+  brand: optionalText(70),
+  gtin: optionalText(40),
+  condition: z.nativeEnum(ProductCondition).default("NEW"),
 });
 
 export const categorySchema = z.object({
@@ -76,6 +83,8 @@ export const categorySchema = z.object({
     .pipe(z.string().url("URL inválida").nullable()),
   position: z.coerce.number({ invalid_type_error: "Posição inválida" }).int().min(0).max(100_000).default(0),
   parentId: optionalText(40),
+  seoTitle: optionalText(70),
+  seoDescription: optionalText(160),
 });
 
 const jsonArray = <T extends z.ZodTypeAny>(arraySchema: T) =>
@@ -150,6 +159,11 @@ export const storeSettingsSchema = z.object({
     .transform((v) => v || null)
     .pipe(z.string().url("URL inválida").nullable()),
   announcementBar: optionalText(140),
+  // F5.2: pixels/analytics — os scripts só carregam na vitrine depois do aceite no banner de cookies
+  gaId: optionalText(20),
+  gtmId: optionalText(20),
+  metaPixelId: optionalText(30),
+  tiktokPixelId: optionalText(30),
 });
 
 export const legalSettingsSchema = z
@@ -275,6 +289,8 @@ export const pageSchema = z.object({
   slug: optionalText(80),
   content: z.string().trim().max(20000).default(""),
   published: z.boolean(),
+  seoTitle: optionalText(70),
+  seoDescription: optionalText(160),
 });
 
 export function formToObject(formData: FormData): Record<string, string> {

@@ -7,6 +7,7 @@ const STYLES: Record<OrderStatus, string> = {
   FAILED: "bg-red-100 text-red-800",
   EXPIRED: "bg-stone-200 text-stone-700",
   CANCELED: "bg-stone-200 text-stone-700",
+  REFUNDED: "bg-orange-100 text-orange-900",
 };
 
 export function StatusBadge({ status, testId }: { status: OrderStatus; testId?: string }) {

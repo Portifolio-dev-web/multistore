@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCart, type CartItem } from "@/lib/cart-store";
+import { trackAddToCart } from "@/lib/analytics-events";
 import { useStoreContext } from "./store-context";
 
 type Props = { storeSlug: string; item: Omit<CartItem, "quantity"> };
@@ -16,6 +17,7 @@ export function AddToCart({ storeSlug, item }: Props) {
 
   const add = () => {
     addItem(storeSlug, item, qty);
+    trackAddToCart({ id: item.variantId, name: item.name, priceInCents: item.priceInCents, quantity: qty }, "BRL");
     setAdded(true);
   };
 

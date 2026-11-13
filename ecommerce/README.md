@@ -58,6 +58,7 @@ Cartão de teste: `4242 4242 4242 4242`, qualquer validade futura e qualquer CVC
 | `ANTHROPIC_MODEL`       | admin       | Modelo usado para gerar descrição de produto (padrão: `claude-haiku-5-5`) |
 | `CRON_SECRET`           | storefront  | Protege `/api/cron/*` (carrinho abandonado, pedido de avaliação); sem ela, os dois recusam a chamada |
 | `REVIEW_REQUEST_DAYS_AFTER_DELIVERY` | storefront | Dias após a entrega pra mandar o e-mail pedindo avaliação (padrão: 7) |
+| `ADMIN_URL`              | storefront  | URL do painel do lojista, usada no link do e-mail de aviso de nova venda (padrão: `http://localhost:3001`) |
 
 ## Desenvolvimento sem Docker
 

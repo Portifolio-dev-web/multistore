@@ -197,6 +197,44 @@ o cookie de acesso (`storefront/src/lib/maintenance.ts`) é só um HMAC do `stor
 boundary de segurança real, só evita pedir a senha de novo a cada página. Loja em construção some
 da lista pública de lojas em `/` (`maintenanceMode: false` no `where`).
 
+**SEO técnico.** `seoTitle`/`seoDescription` em `Product`, `Category` e `Page` (em branco usa
+nome/descrição como fallback) alimentam `generateMetadata` (título, descrição, `alternates.canonical`,
+Open Graph) nas 3 páginas públicas correspondentes. Canonical/OG sempre usam `storeUrl()`
+(`@repo/db/urls`) puro — nunca combinado com `getStoreBase()`, que já embute o `/{slug}` no modo de
+caminho principal (misturar os dois duplica o prefixo). `sitemap.xml`/`robots.txt` por loja
+(`apps/storefront/src/app/[store]/sitemap.xml/route.ts` e `.../robots.txt/route.ts`) são rotas
+comuns, não o arquivo especial `sitemap.ts`/`robots.ts` do Next — garante receber `params.store` e
+funciona igual nos 3 modos de domínio (o middleware já reescreve pra `/${slug}/...`); respeitam
+`maintenanceMode`. JSON-LD (`apps/storefront/src/lib/seo.ts`): `Organization` no layout da loja,
+`Product`+`BreadcrumbList` no produto, `BreadcrumbList` na categoria — serializado com escape de `<`
+pra nunca fechar a `<script>` cedo.
+
+**Pixels, analytics e eventos.** `Store.gaId`/`gtmId`/`metaPixelId`/`tiktokPixelId` (admin →
+Configurações) só carregam na vitrine depois que `CookieConsentBanner` registra "accepted" em
+`localStorage` (`lib/consent.ts`) — nunca é dado sensível, por isso não precisa de cookie/servidor.
+`AnalyticsScripts` escuta um evento customizado pra reagir à escolha sem recarregar a página.
+Eventos de e-commerce (`lib/analytics-events.ts`, no-op se nenhum pixel carregou): `view_item` na
+página de produto, `add_to_cart` no botão, `begin_checkout` ao entrar no checkout com itens,
+`purchase` na página de sucesso — este último deduplicado por `localStorage` por `orderId` pra nunca
+contar duas vezes num reload.
+
+**Feeds de produtos.** `Product.brand`/`gtin`/`condition` alimentam `/feeds/google.xml` e
+`/feeds/meta.xml` (`apps/storefront/src/lib/feed.ts`, `buildProductFeed()`) — mesmo RSS 2.0 com
+namespace `g:`, aceito pelos dois (por isso um só builder pras duas rotas). Um item por
+`ProductVariant` (preço/estoque são por variante), `g:item_group_id` = `productId` agrupando as
+variações do mesmo produto.
+
+**E-mails transacionais (F5.4).** Além da confirmação de pagamento e do aviso de envio (F1.x/F3.x),
+`@repo/mail` manda: "pedido recebido" (dispara no `checkout.session.completed` quando
+`payment_status` ainda não é "paid" — caso do Pix/boleto assíncrono no Stripe; cartão vai direto pra
+confirmação), aviso de nova venda pro lojista (primeiro `User` da loja — ainda não existe
+`Membership`/equipe, isso é F6.2), cancelamento e reembolso (ação do lojista no admin — pedido do
+pedido, `cancelOrder`/`refundOrder` em `apps/admin/src/actions/orders.ts`, devolvem o estoque via
+`releaseStock` e avisam o cliente) e confirmação de entrega (mesmo checkbox "avisar cliente" do
+envio). `OrderStatus.REFUNDED` é novo; `CANCELED` ganhou o primeiro gatilho real (antes só existia no
+tipo). Não há reembolso de verdade via API do Stripe — "marcar como reembolsado" só registra e avisa;
+o lojista reembolsa no Dashboard por fora.
+
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.
 - `@repo/db/utils`: funções puras (formatação BRL, labels de status, regex). Pode ir para Client Components.

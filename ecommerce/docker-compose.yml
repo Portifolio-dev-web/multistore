@@ -75,6 +75,7 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       CRON_SECRET: ${CRON_SECRET:-}
       REVIEW_REQUEST_DAYS_AFTER_DELIVERY: ${REVIEW_REQUEST_DAYS_AFTER_DELIVERY:-7}
+      ADMIN_URL: ${ADMIN_URL:-http://localhost:3001}
     ports:
       - "3000:3000"
     depends_on:

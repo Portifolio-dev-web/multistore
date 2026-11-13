@@ -22,6 +22,10 @@ type Props = {
     | "font"
     | "faviconUrl"
     | "announcementBar"
+    | "gaId"
+    | "gtmId"
+    | "metaPixelId"
+    | "tiktokPixelId"
   >;
 };
 
@@ -108,6 +112,32 @@ export function SettingsForm({ store }: Props) {
           <label className="label" htmlFor="announcementBar">Barra de aviso no topo (opcional)</label>
           <input id="announcementBar" name="announcementBar" defaultValue={store.announcementBar ?? ""} placeholder="Frete grátis acima de R$ 199" className="field" data-testid="settings-announcement-input" />
           <FieldError errors={e?.announcementBar} />
+        </div>
+        <div className="border-t border-line pt-5">
+          <p className="label">Pixels e analytics</p>
+          <p className="mt-1 text-xs text-ink/50">Só carregam na vitrine depois que o visitante aceita o banner de cookies.</p>
+          <div className="mt-3 grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="gaId">Google Analytics (GA4)</label>
+              <input id="gaId" name="gaId" defaultValue={store.gaId ?? ""} placeholder="G-XXXXXXX" className="field font-mono text-sm" data-testid="settings-ga-id-input" />
+              <FieldError errors={e?.gaId} />
+            </div>
+            <div>
+              <label className="label" htmlFor="gtmId">Google Tag Manager</label>
+              <input id="gtmId" name="gtmId" defaultValue={store.gtmId ?? ""} placeholder="GTM-XXXXXXX" className="field font-mono text-sm" data-testid="settings-gtm-id-input" />
+              <FieldError errors={e?.gtmId} />
+            </div>
+            <div>
+              <label className="label" htmlFor="metaPixelId">Meta Pixel</label>
+              <input id="metaPixelId" name="metaPixelId" defaultValue={store.metaPixelId ?? ""} placeholder="000000000000000" className="field font-mono text-sm" data-testid="settings-meta-pixel-input" />
+              <FieldError errors={e?.metaPixelId} />
+            </div>
+            <div>
+              <label className="label" htmlFor="tiktokPixelId">TikTok Pixel</label>
+              <input id="tiktokPixelId" name="tiktokPixelId" defaultValue={store.tiktokPixelId ?? ""} placeholder="XXXXXXXXXXXXXXXXXXXX" className="field font-mono text-sm" data-testid="settings-tiktok-pixel-input" />
+              <FieldError errors={e?.tiktokPixelId} />
+            </div>
+          </div>
         </div>
         <div className="flex justify-end border-t border-line pt-5">
           <SubmitButton testId="settings-submit-button">Salvar configurações</SubmitButton>
