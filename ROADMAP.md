@@ -227,7 +227,7 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - Testado num navegador real: card da vitrine linka pro slug, `/products/[id]` antigo redireciona,
     e renomear o slug pelo admin cria o `SlugRedirect` e o endereço antigo continua resolvendo.
 
-- [ ] **F2.2 Variações (tamanho, cor etc.)** **(grande)** · Depende de F1.2
+- [x] **F2.2 Variações (tamanho, cor etc.)** **(grande)** · Depende de F1.2
   - Models: `ProductOption` (`name`, `values[]`, `position`) e `ProductVariant` (`sku`, combinação
     de opções em JSON, `priceInCents` opcional que sobrescreve o do produto, `compareAtPriceInCents`,
     `stock`, peso opcional, imagem opcional).
@@ -252,8 +252,16 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     só perde o vínculo pelo `onDelete: SetNull`); grade com SKU, preço, preço "de" e estoque por
     linha, com "aplicar a todas" pra estoque e preço. `cartesianCombinations`/`combinationKey`
     novos em `@repo/db/utils`. O formulário principal de produto só edita o estoque direto quando
-    o produto tem uma variante só — com mais, vira um link pra grade. Falta: etapa 3 (seletor por
-    botões na vitrine, ligar carrinho/checkout à variante escolhida de verdade).
+    o produto tem uma variante só — com mais, vira um link pra grade.
+  - Progresso (etapa 3/3, 2026-11-12 — concluída): página de produto ganhou `ProductVariantPicker`
+    (botões por opção, combinação esgotada aparece riscada/desabilitada mantendo a seleção das
+    outras opções fixa); preço, selo de promoção, estoque e foto (via `ProductVariant.imageUrl`,
+    com fallback pras imagens do produto) trocam com a seleção. Carrinho e checkout já operavam por
+    `variantId` desde a etapa 1 — só precisavam que a vitrine passasse a variante certa, o que agora
+    acontece. Testado manualmente: produto com opção "Tamanho" (P/M/G, G sem estoque) — P vem
+    pré-selecionado (primeira variante com estoque), G aparece desabilitado, selecionar M troca
+    o preço/estoque exibidos e adiciona a variante M (não a padrão) ao carrinho, com o rótulo
+    "M" visível na linha do carrinho.
 
 - [x] **F2.3 Preço promocional ("de/por")**
   - `compareAtPriceInCents` no produto/variante; selo "-20%" no card; filtro "Em promoção".
@@ -521,3 +529,4 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-09 | F2.4 | "Posição" da categoria é um campo numérico no formulário, não arrastar-e-soltar | Atende ao aceite (ordenação) sem precisar de uma lib de drag-and-drop |
 | 2026-11-12 | F2.2 etapa 1 | `Product.priceInCents` continua sendo o preço base; `ProductVariant.priceInCents` é opcional e só sobrescreve quando preenchido | Já é literalmente o que o roadmap pede ("opcional que sobrescreve o do produto"); evita duplicar o preço em toda variante que não muda de preço |
 | 2026-11-12 | F2.2 etapa 1 | `Product.stock` foi removido (não ficou como fallback) — estoque mora só em `ProductVariant.stock` | Estoque é por natureza granular por combinação; manter os dois criaria duas fontes de verdade pra reconciliar |
+| 2026-11-12 | F2.2 etapa 3 | Botão de opção fica desabilitado quando a combinação com as *outras* opções já escolhidas fixas está esgotada — não recalcula a seleção inteira | Cobre o aceite ("combinações esgotadas desabilitadas") com uma checagem simples por botão; uma combinação ótima globalmente é um problema maior que o catálogo de hoje não pede |

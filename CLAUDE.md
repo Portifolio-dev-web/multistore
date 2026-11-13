@@ -97,6 +97,19 @@ muitos-para-muitos (m2m implícita do Prisma — sem model de junção explícit
 categorias de uma loja é pequena. A vitrine resolve `/categorias/[...slug]` pelo último segmento da
 URL (slug é único por loja), sem validar se os segmentos anteriores batem com a árvore de verdade.
 
+**Variações.** `Product` tem preço/preço "de" base; `ProductOption` (`name`, `values[]`) e
+`ProductVariant` (`combination` Json, `priceInCents`/`compareAtPriceInCents` opcionais — nulo herda
+do produto —, `stock`, `sku`, `imageUrl` opcional) ficam por baixo. Todo produto tem pelo menos uma
+variante (a "padrão", `combination: {}`, sem opções) — é nela, nunca em `Product`, que mora o
+estoque (`effectivePrice`/`effectiveCompareAtPrice` em `@repo/db/utils` resolvem o preço "efetivo").
+Admin: `/products/[id]/variants` — salvar as opções recalcula a grade via `cartesianCombinations`
+(cria a combinação nova, apaga a que não existe mais; pedido antigo mantém o nome/preço gravados no
+`OrderItem`, só perde o vínculo por `onDelete: SetNull`). Vitrine: `ProductVariantPicker` mostra um
+botão por valor de opção, desabilita a combinação esgotada (fixando as outras opções já escolhidas,
+sem recalcular a seleção inteira) e troca preço/estoque/foto com a escolha; carrinho e checkout
+(`reserveStock`/`releaseStock`, `pricing.ts`, `OrderItem.variantId`) operam por `variantId` desde a
+fundação, nunca por `productId`.
+
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.
 - `@repo/db/utils`: funções puras (formatação BRL, labels de status, regex). Pode ir para Client Components.

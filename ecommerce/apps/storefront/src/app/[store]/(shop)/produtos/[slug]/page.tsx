@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { prisma } from "@repo/db";
-import { effectiveCompareAtPrice, effectivePrice, formatBRL, isPromoActive, promoDiscountPercent, variantLabel } from "@repo/db/utils";
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
-import { AddToCart } from "@/components/add-to-cart";
-import { ProductGallery } from "@/components/product-gallery";
+import { ProductVariantPicker } from "@/components/product-variant-picker";
 
 type Props = { params: { store: string; slug: string } };
 
@@ -15,7 +13,11 @@ export default async function ProductPage({ params }: Props) {
 
   const product = await prisma.product.findFirst({
     where: { slug: params.slug, storeId: store.id, active: true },
-    include: { categories: { select: { name: true, slug: true } }, variants: { orderBy: { position: "asc" }, take: 1 } },
+    include: {
+      categories: { select: { name: true, slug: true } },
+      options: { orderBy: { position: "asc" } },
+      variants: { orderBy: { position: "asc" } },
+    },
   });
   if (!product) {
     // Slug antigo (produto renomeado)? Redireciona pro endereço atual.
@@ -29,68 +31,48 @@ export default async function ProductPage({ params }: Props) {
     notFound();
   }
 
-  // F2.2 etapa 1: produto tem uma variante só (a padrão) — é dela que vêm preço/estoque efetivos
-  const variant = product.variants[0];
-  const priceInCents = variant ? effectivePrice(variant, product) : product.priceInCents;
-  const compareAtPriceInCents = variant ? effectiveCompareAtPrice(variant, product) : product.compareAtPriceInCents;
-  const stock = variant?.stock ?? 0;
-  const onPromo = isPromoActive({ priceInCents, compareAtPriceInCents, promoStartsAt: product.promoStartsAt, promoEndsAt: product.promoEndsAt });
+  const base = getStoreBase(store.slug);
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
-      <Link href={getStoreBase(store.slug) || "/"} className="text-sm text-ink/50 hover:text-ink" data-testid="product-back-link">← Voltar à vitrine</Link>
+      <Link href={base || "/"} className="text-sm text-ink/50 hover:text-ink" data-testid="product-back-link">← Voltar à vitrine</Link>
       <div className="mt-8 grid gap-12 lg:grid-cols-2">
-        <ProductGallery images={product.images} name={product.name} />
-        <div className="animate-rise lg:pt-6">
-          {product.categories.length > 0 && (
-            <p className="label space-x-2">
-              {product.categories.map((c) => (
-                <Link key={c.slug} href={storeHref(getStoreBase(store.slug), `/categorias/${c.slug}`)} className="hover:underline" data-testid={`product-category-link-${c.slug}`}>
-                  {c.name}
-                </Link>
-              ))}
-            </p>
-          )}
-          <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl" data-testid="product-name">{product.name}</h1>
-          <div className="mt-5 flex items-center gap-3">
-            {onPromo && (
-              <span className="text-lg text-ink/40 line-through" data-testid="product-compare-price">
-                {formatBRL(compareAtPriceInCents!)}
-              </span>
-            )}
-            <p className="font-display text-3xl font-semibold" data-testid="product-price">{formatBRL(priceInCents)}</p>
-            {onPromo && (
-              <span className="rounded-full bg-brand px-3 py-1 text-xs font-semibold uppercase tracking-wider text-paper" data-testid="product-promo-badge">
-                -{promoDiscountPercent(compareAtPriceInCents!, priceInCents)}%
-              </span>
-            )}
-          </div>
-          <p className="mt-2 text-sm text-ink/50" data-testid="product-stock">
-            {stock > 0 ? `${stock} em estoque` : "Esgotado"}
-          </p>
-          {variant && (
-            <div className="mt-8">
-              <AddToCart
-                storeSlug={store.slug}
-                item={{
-                  variantId: variant.id,
-                  productId: product.id,
-                  variantLabel: variantLabel(variant.combination as Record<string, string>),
-                  name: product.name,
-                  priceInCents,
-                  image: product.images[0] ?? null,
-                  stock,
-                }}
-              />
-            </div>
-          )}
-          {product.description && (
-            <div className="mt-10 border-t border-ink/10 pt-8">
-              <p className="label">Descrição</p>
-              <p className="whitespace-pre-line text-base leading-relaxed text-ink/70" data-testid="product-description">{product.description}</p>
-            </div>
-          )}
-        </div>
+        <ProductVariantPicker
+          storeSlug={store.slug}
+          product={product}
+          options={product.options.map((o) => ({ name: o.name, values: o.values }))}
+          variants={product.variants.map((v) => ({
+            id: v.id,
+            combination: v.combination as Record<string, string>,
+            sku: v.sku,
+            priceInCents: v.priceInCents,
+            compareAtPriceInCents: v.compareAtPriceInCents,
+            stock: v.stock,
+            imageUrl: v.imageUrl,
+          }))}
+          header={
+            <>
+              {product.categories.length > 0 && (
+                <p className="label space-x-2">
+                  {product.categories.map((c) => (
+                    <Link key={c.slug} href={storeHref(base, `/categorias/${c.slug}`)} className="hover:underline" data-testid={`product-category-link-${c.slug}`}>
+                      {c.name}
+                    </Link>
+                  ))}
+                </p>
+              )}
+              <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl" data-testid="product-name">{product.name}</h1>
+            </>
+          }
+          footer={
+            product.description && (
+              <div className="mt-10 border-t border-ink/10 pt-8">
+                <p className="label">Descrição</p>
+                <p className="whitespace-pre-line text-base leading-relaxed text-ink/70" data-testid="product-description">{product.description}</p>
+              </div>
+            )
+          }
+        />
       </div>
     </div>
   );
