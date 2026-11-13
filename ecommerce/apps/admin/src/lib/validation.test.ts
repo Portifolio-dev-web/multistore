@@ -164,6 +164,8 @@ describe("storeSettingsSchema", () => {
     primaryColor: "#1f2937",
     accentColor: "#f59e0b",
     customDomain: undefined,
+    theme: "CLASSICO" as const,
+    font: "SANS" as const,
   };
 
   it("aceita configuração sem domínio próprio", () => {

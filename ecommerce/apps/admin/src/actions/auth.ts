@@ -2,7 +2,8 @@
 
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
-import { prisma } from "@repo/db";
+import { prisma, type Prisma } from "@repo/db";
+import { defaultHomeSections, defaultPages } from "@repo/db/content";
 import { createSession, deleteSession } from "@/lib/session";
 import { formToObject, loginSchema, registerSchema } from "@/lib/validation";
 import type { FormState } from "@/lib/form";
@@ -63,11 +64,15 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
   if (emailTaken) return { fieldErrors: { email: ["E-mail já cadastrado"] } };
   if (slugTaken) return { fieldErrors: { storeSlug: ["Endereço já em uso"] } };
 
+  const homeSections = defaultHomeSections() as unknown as Prisma.InputJsonValue;
   const store = await prisma.store.create({
     data: {
       name: storeName,
       slug: storeSlug,
+      homeSections,
+      homeSectionsDraft: homeSections,
       users: { create: { name, email, passwordHash: await bcrypt.hash(password, 12) } },
+      pages: { create: defaultPages() },
     },
     include: { users: true },
   });

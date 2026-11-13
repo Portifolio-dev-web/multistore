@@ -19,7 +19,7 @@ test.describe("admin", () => {
     await expect(page.getByTestId("products-table")).toContainText(productName);
 
     const storefront = await page.context().browser()!.newPage();
-    await storefront.goto(`${STOREFRONT_URL}/${STORE_SLUG}?q=${encodeURIComponent(productName)}`);
+    await storefront.goto(`${STOREFRONT_URL}/${STORE_SLUG}/busca?q=${encodeURIComponent(productName)}`);
     await expect(storefront.getByTestId("products-grid")).toContainText(productName);
     await storefront.close();
   });

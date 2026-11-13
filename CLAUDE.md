@@ -165,10 +165,45 @@ precisar de uma tabela nova — mandado só depois que o pedido tem `fulfillment
 flutuante da vitrine, o "Comprar pelo WhatsApp" na página do produto e o link `wa.me` no pedido (admin)
 e no carrinho abandonado — todos somem sem o número configurado (`waLink()` em `@repo/db/utils`).
 
+**Página inicial por seções.** `Store.homeSections` (publicado) e `Store.homeSectionsDraft`
+(rascunho) são `Json` validados por um union discriminado do Zod em `@repo/db/content`
+(`homeSectionSchema`: `hero`, `bannerCarousel`, `productShowcase`, `benefits`, `textImage`,
+`newsletter`). `parseHomeSections()` nunca lança — item inválido é descartado, nunca derruba a
+página (JSON malformado vira lista vazia). A home (`(shop)/page.tsx`) sempre lê `homeSections`
+publicado, a não ser com `?preview=1` (sem autenticação — o rascunho não tem nada sensível, só
+ainda não está no ar), que lê `homeSectionsDraft`. Admin (`/home`): edita só o rascunho; "Publicar"
+copia rascunho → publicado. O catálogo com busca/filtro/paginação que antes vivia na home
+(F0–F2.5) mudou para `/busca` — a home virou 100% seções configuráveis. Toda loja nova
+(seed e `register()`) já nasce com `defaultHomeSections()` (vitrine de novidades, benefícios,
+promoção, newsletter).
+
+**Menu, rodapé e páginas institucionais.** `Store.navigation` (Json, `parseNavigation()` —
+mesma defesa de JSON inválido) vira links no cabeçalho (`NavMenu`) e no rodapé, resolvendo
+`category`/`page`/`url` pro caminho certo. Rodapé mostra `Store.socialLinks` (Json,
+`parseSocialLinks()`) e os dados legais (`legalName`, `taxId`, `legalAddress` Json — exigidos pelo
+Decreto 7.962/2013); falta de `legalName`/`taxId` mostra aviso no admin (`/settings`), nunca na
+vitrine. `Page` (Markdown em `content`, renderizado por `@repo/db/markdown` — `renderSafeMarkdown`
+escapa `&`/`<`/`>` **antes** de qualquer transformação, então HTML/`<script>` colado nunca vira tag
+de verdade, só texto visível) fica em `/p/[slug]`; toda loja nova já nasce com as 4 páginas de
+`defaultPages()` (Sobre nós, Trocas e devoluções, Política de privacidade, Frete e entrega), com
+"Gerar com IA" reaproveitando o limite diário da F2.8 (`generatePageContent`).
+
+**Temas e loja em construção.** `Store.theme`/`Store.font` (enums) viram `data-theme`/`data-font`
+no layout (`[store]/layout.tsx`) — `globals.css` troca `--radius-card`/`--radius-btn`/`--radius-field`
+e as CSS vars de fonte (`--font-display`/`--font-sans`) por tema/fonte, sem precisar recarregar
+fonte nova do Google Fonts nem tocar em conteúdo/seção. `Store.maintenanceMode` bloqueia todo o
+`[store]/layout.tsx` (menos a própria tela de senha) atrás de `maintenancePasswordHash` (bcrypt);
+o cookie de acesso (`storefront/src/lib/maintenance.ts`) é só um HMAC do `storeId` — não é um
+boundary de segurança real, só evita pedir a senha de novo a cada página. Loja em construção some
+da lista pública de lojas em `/` (`maintenanceMode: false` no `where`).
+
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.
 - `@repo/db/utils`: funções puras (formatação BRL, labels de status, regex). Pode ir para Client Components.
 - `@repo/db/urls`: lê variáveis de ambiente. Só servidor.
+- `@repo/db/pricing`: cálculo de preço/desconto, puro. Pode ir para Client Components.
+- `@repo/db/content`: schemas Zod + parsers defensivos de seções/menu/redes sociais/páginas padrão. Pode ir para Client Components.
+- `@repo/db/markdown`: `renderSafeMarkdown`, puro. Pode ir para Client Components.
 - `@repo/mail`: envios únicos protegidos por um campo `*SentAt` gravado com `updateMany` atômico.
 
 **Upload.** `admin/src/actions/uploads.ts` valida a assinatura binária da imagem e grava em storage

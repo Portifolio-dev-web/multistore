@@ -7,13 +7,31 @@ import { contrastText } from "@repo/db/utils";
 import { updateStoreSettings } from "@/actions/settings";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
-type Props = { store: Pick<Store, "name" | "slug" | "description" | "logoUrl" | "primaryColor" | "accentColor" | "customDomain" | "whatsapp"> };
+type Props = {
+  store: Pick<
+    Store,
+    | "name"
+    | "slug"
+    | "description"
+    | "logoUrl"
+    | "primaryColor"
+    | "accentColor"
+    | "customDomain"
+    | "whatsapp"
+    | "theme"
+    | "font"
+    | "faviconUrl"
+    | "announcementBar"
+  >;
+};
 
 export function SettingsForm({ store }: Props) {
   const [state, action] = useFormState(updateStoreSettings, {});
   const [name, setName] = useState(store.name);
   const [primary, setPrimary] = useState(store.primaryColor);
   const [accent, setAccent] = useState(store.accentColor);
+  const [theme, setTheme] = useState(store.theme);
+  const [font, setFont] = useState(store.font);
   const e = state.fieldErrors;
 
   return (
@@ -63,11 +81,39 @@ export function SettingsForm({ store }: Props) {
           <ColorField name="primaryColor" label="Cor principal" value={primary} onChange={setPrimary} errors={e?.primaryColor} />
           <ColorField name="accentColor" label="Cor de destaque" value={accent} onChange={setAccent} errors={e?.accentColor} />
         </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="theme">Tema</label>
+            <select id="theme" name="theme" value={theme} onChange={(ev) => setTheme(ev.target.value as typeof theme)} className="field" data-testid="settings-theme-select">
+              <option value="CLASSICO">Clássico</option>
+              <option value="MODERNO">Moderno</option>
+              <option value="MINIMALISTA">Minimalista</option>
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="font">Fonte</label>
+            <select id="font" name="font" value={font} onChange={(ev) => setFont(ev.target.value as typeof font)} className="field" data-testid="settings-font-select">
+              <option value="SANS">Sem serifa</option>
+              <option value="SERIF">Serifada</option>
+              <option value="MONO">Monoespaçada</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="label" htmlFor="faviconUrl">Favicon (URL, opcional)</label>
+          <input id="faviconUrl" name="faviconUrl" defaultValue={store.faviconUrl ?? ""} placeholder="https://…/favicon.png" className="field font-mono text-xs" data-testid="settings-favicon-input" />
+          <FieldError errors={e?.faviconUrl} />
+        </div>
+        <div>
+          <label className="label" htmlFor="announcementBar">Barra de aviso no topo (opcional)</label>
+          <input id="announcementBar" name="announcementBar" defaultValue={store.announcementBar ?? ""} placeholder="Frete grátis acima de R$ 199" className="field" data-testid="settings-announcement-input" />
+          <FieldError errors={e?.announcementBar} />
+        </div>
         <div className="flex justify-end border-t border-line pt-5">
           <SubmitButton testId="settings-submit-button">Salvar configurações</SubmitButton>
         </div>
       </form>
-      <Preview name={name} primary={primary} accent={accent} />
+      <Preview name={name} primary={primary} accent={accent} theme={theme} font={font} />
     </div>
   );
 }
@@ -87,27 +133,41 @@ function ColorField({ name, label, value, onChange, errors }: ColorProps) {
   );
 }
 
-function Preview({ name, primary, accent }: { name: string; primary: string; accent: string }) {
+const THEME_RADIUS: Record<string, { card: string; btn: string }> = {
+  CLASSICO: { card: "1rem", btn: "9999px" },
+  MODERNO: { card: "0.5rem", btn: "0.5rem" },
+  MINIMALISTA: { card: "0", btn: "0" },
+};
+
+const FONT_FAMILY: Record<string, string> = {
+  SANS: "ui-sans-serif, system-ui, sans-serif",
+  SERIF: "Georgia, 'Times New Roman', serif",
+  MONO: "'Courier New', monospace",
+};
+
+function Preview({ name, primary, accent, theme, font }: { name: string; primary: string; accent: string; theme: string; font: string }) {
   const text = contrastText(primary);
+  const radius = THEME_RADIUS[theme] ?? THEME_RADIUS.CLASSICO;
+  const fontFamily = FONT_FAMILY[font] ?? FONT_FAMILY.SANS;
   return (
     <div className="card overflow-hidden xl:sticky xl:top-8 xl:self-start" data-testid="settings-preview">
       <p className="label border-b border-line px-5 py-3">Pré-visualização</p>
-      <div className="bg-[#f7f5f0] p-5">
+      <div className="bg-[#f7f5f0] p-5" style={{ fontFamily }}>
         <div className="flex items-center gap-2">
-          <span className="grid h-7 w-7 place-items-center rounded-full text-xs font-bold" style={{ background: primary, color: text }}>{name.slice(0, 1)}</span>
+          <span className="grid h-7 w-7 place-items-center text-xs font-bold" style={{ background: primary, color: text, borderRadius: radius.btn }}>{name.slice(0, 1)}</span>
           <span className="font-semibold">{name || "Sua loja"}</span>
         </div>
-        <span className="mt-6 block h-1 w-10 rounded-full" style={{ background: accent }} />
+        <span className="mt-6 block h-1 w-10" style={{ background: accent, borderRadius: radius.btn }} />
         <p className="mt-3 text-2xl font-bold leading-tight">{name || "Sua loja"}</p>
         <div className="mt-5 grid grid-cols-2 gap-3">
           {[0, 1].map((i) => (
             <div key={i}>
-              <div className="aspect-[4/5] rounded-xl" style={{ background: primary, opacity: 0.15 + i * 0.1 }} />
+              <div className="aspect-[4/5]" style={{ background: primary, opacity: 0.15 + i * 0.1, borderRadius: radius.card }} />
               <div className="mt-2 h-2 w-3/4 rounded bg-black/10" />
             </div>
           ))}
         </div>
-        <button type="button" className="mt-5 w-full rounded-full py-2.5 text-sm font-semibold" style={{ background: primary, color: text }}>
+        <button type="button" className="mt-5 w-full py-2.5 text-sm font-semibold" style={{ background: primary, color: text, borderRadius: radius.btn }}>
           Adicionar ao carrinho
         </button>
       </div>

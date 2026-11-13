@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { defaultHomeSections, defaultPages } from "../src/content";
 import { slugify } from "../src/utils";
 
 const prisma = new PrismaClient();
@@ -13,6 +14,7 @@ const IMG = {
 };
 
 async function main() {
+  const homeSections = defaultHomeSections();
   const store = await prisma.store.upsert({
     where: { slug: "loja-demo" },
     update: {},
@@ -23,6 +25,14 @@ async function main() {
       primaryColor: "#1f3a2e",
       accentColor: "#e8b04b",
       whatsapp: "5511999999999",
+      legalName: "Loja Demo Comércio Eletrônico LTDA",
+      taxId: "12.345.678/0001-90",
+      legalAddress: { zip: "01311-000", street: "Av. Paulista", number: "1000", district: "Bela Vista", city: "São Paulo", state: "SP" },
+      socialLinks: { instagram: "https://instagram.com/lojademo" },
+      announcementBar: "Frete grátis para compras acima de R$ 199",
+      homeSections,
+      homeSectionsDraft: homeSections,
+      pages: { create: defaultPages() },
     },
   });
 
@@ -38,6 +48,17 @@ async function main() {
       });
       categories[name] = category.id;
     }
+
+    await prisma.store.update({
+      where: { id: store.id },
+      data: {
+        navigation: [
+          { id: "n1", label: "Bem-estar", type: "category", value: "bem-estar" },
+          { id: "n2", label: "Utilidades", type: "category", value: "utilidades" },
+          { id: "n3", label: "Sobre nós", type: "page", value: "sobre-nos" },
+        ],
+      },
+    });
 
     const products = [
       { name: "Óleo Botânico 100ml", category: "Bem-estar", priceInCents: 8990, compareAtPriceInCents: 11990, stock: 25, images: [IMG.bottle], description: "Óleo vegetal prensado a frio, ideal para pele e cabelos." },

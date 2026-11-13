@@ -14,6 +14,9 @@ const NAV = [
   { href: "/promotions", label: "Promoções", id: "promotions" },
   { href: "/abandoned-carts", label: "Carrinhos abandonados", id: "abandoned-carts" },
   { href: "/reviews", label: "Avaliações", id: "reviews" },
+  { href: "/home", label: "Página inicial", id: "home" },
+  { href: "/menu", label: "Menu", id: "menu" },
+  { href: "/pages", label: "Páginas", id: "pages" },
   { href: "/settings", label: "Aparência", id: "settings" },
 ];
 

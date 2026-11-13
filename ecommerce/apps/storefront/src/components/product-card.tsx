@@ -22,7 +22,7 @@ export function ProductCard({ base, product }: Props) {
   const avgRating = averageRating(product.reviews.map((r) => r.rating));
   return (
     <Link href={`${base}/produtos/${product.slug}`} className="group block" data-testid={`product-card-${product.id}`}>
-      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-ink/5">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[var(--radius-card)] bg-ink/5">
         <ProductImage
           src={product.images[0]}
           alt={product.imageAlts[0] || product.name}

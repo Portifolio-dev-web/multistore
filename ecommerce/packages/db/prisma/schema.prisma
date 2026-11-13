@@ -33,6 +33,58 @@ model Store {
   promotions   Promotion[]
   abandonedCarts AbandonedCart[]
   reviews      Review[]
+  pages        Page[]
+
+  // F4.1: página inicial por seções — JSON validado em código (Zod), nunca no banco; uma store
+  // nova nasce com um layout padrão (ver seed.ts e actions/auth.ts). Rascunho nulo = sem rascunho
+  // pendente (a vitrine sempre lê `homeSections`, nunca o rascunho).
+  homeSections      Json    @default("[]")
+  homeSectionsDraft  Json?
+
+  // F4.2: menu configurável e rodapé (razão social/CNPJ/endereço exigidos pelo Decreto 7.962/2013)
+  navigation   Json      @default("[]")
+  socialLinks  Json      @default("{}")
+  legalName    String?
+  taxId        String?
+  legalAddress Json?
+
+  // F4.4: tema pronto + fonte, trocam só CSS (nunca exigem mudar conteúdo/seções)
+  theme Theme @default(CLASSICO)
+  font  Font  @default(SANS)
+
+  // F4.5: favicon por loja, aviso no topo, loja em construção com senha
+  faviconUrl              String?
+  announcementBar         String?
+  maintenanceMode         Boolean   @default(false)
+  maintenancePasswordHash String?
+}
+
+enum Theme {
+  CLASSICO
+  MODERNO
+  MINIMALISTA
+}
+
+enum Font {
+  SANS
+  SERIF
+  MONO
+}
+
+// F4.3: páginas institucionais (Sobre nós, Trocas e devoluções, etc.) — conteúdo em Markdown,
+// sanitizado na renderização (nunca confia em HTML colado, ver `@repo/db/markdown`).
+model Page {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  slug      String
+  title     String
+  content   String   @default("")
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, slug])
 }
 
 // F2.8: um registro por chamada à IA, só pra contar o limite diário por loja (sem TTL/reset —

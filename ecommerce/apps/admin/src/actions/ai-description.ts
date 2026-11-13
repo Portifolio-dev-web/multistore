@@ -53,3 +53,39 @@ export async function generateProductDescription(input: {
     return { error: "Falha ao gerar com IA. Tente novamente." };
   }
 }
+
+export type AiPageContentResult = { content: string } | { error: string };
+
+// F4.3: mesmo limite diário (tabela AiGeneration) da F2.8 — "geração por IA" é um recurso só, não um por tela.
+export async function generatePageContent(topic: string): Promise<AiPageContentResult> {
+  const { storeId } = await requireSession();
+  if (!process.env.ANTHROPIC_API_KEY) return { error: "Geração por IA não está configurada nesta loja." };
+  if (!topic.trim()) return { error: "Informe o assunto da página primeiro." };
+
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+  const usedToday = await prisma.aiGeneration.count({ where: { storeId, createdAt: { gte: since } } });
+  if (usedToday >= DAILY_LIMIT) return { error: `Limite diário de ${DAILY_LIMIT} gerações por IA atingido. Tente de novo amanhã.` };
+
+  try {
+    const client = new Anthropic();
+    const response = await client.messages.create({
+      model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5",
+      max_tokens: 1024,
+      system:
+        "Você escreve páginas institucionais pra uma loja virtual brasileira (ex.: Sobre nós, Trocas e devoluções, " +
+        "Política de privacidade, Frete e entrega). Responda só com o conteúdo em Markdown simples (títulos com #, " +
+        "negrito com **, listas com -), em português do Brasil, pronto pra o lojista revisar e editar. Sem comentários extras.",
+      messages: [{ role: "user", content: `Escreva o conteúdo da página: ${topic}` }],
+    });
+
+    const block = response.content.find((b) => b.type === "text");
+    if (!block || block.type !== "text") return { error: "A IA não devolveu texto." };
+
+    await prisma.aiGeneration.create({ data: { storeId } });
+    return { content: block.text.trim() };
+  } catch (err) {
+    console.error("[ai-description] page", err);
+    return { error: "Falha ao gerar com IA. Tente novamente." };
+  }
+}

@@ -445,7 +445,7 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
 
 ## Fase 4: Aparência personalizável
 
-- [ ] **F4.1 Página inicial por seções** **(grande)**
+- [x] **F4.1 Página inicial por seções** **(grande)**
   - `Store.homeSections` (JSON validado por união discriminada do Zod) com tipos: banner principal
     (imagem desktop e mobile, título, botão), carrossel de banners, vitrine de produtos (destaques,
     novidades, promoção ou categoria), faixa de benefícios, texto + imagem, newsletter.
@@ -453,30 +453,67 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
   - Admin: editor com adicionar, remover, reordenar e formulário por tipo; rascunho + "Publicar";
     link de pré-visualização do rascunho.
   - Aceite: loja nova já nasce com um layout padrão bonito; JSON inválido nunca quebra a vitrine.
+  - Resultado: feito numa sessão só (schema + editor + seções + rotas), não em etapas — pedido
+    explícito do usuário (igual F3). `@repo/db/content` tem o union discriminado
+    (`homeSectionSchema`) e `parseHomeSections()`, que nunca lança — item inválido é descartado,
+    nunca derruba a página. O catálogo com busca/filtro/paginação que vivia na home desde a F0
+    mudou pra `/busca` (a home virou só seções); cabeçalho ganhou busca própria (F4.2) e a home
+    sem seções mostra um fallback simples (nome da loja + botão "Ver produtos") em vez de ficar em
+    branco. Reordenar é por botões ↑/↓ (mesma lógica da "posição" da F2.4), não arrastar-e-soltar —
+    ver Decisões. Rascunho/publicação testados de ponta a ponta num navegador real: seção nova
+    aparece na pré-visualização (`?preview=1`, sem exigir login) e NÃO aparece no site publicado até
+    clicar "Publicar"; depois de publicar, aparece pros dois.
 
-- [ ] **F4.2 Cabeçalho, menu e rodapé**
+- [x] **F4.2 Cabeçalho, menu e rodapé**
   - Menu configurável (`Store.navigation`): links para categorias, páginas e URLs; menu mobile.
   - Busca no cabeçalho.
   - Rodapé com redes sociais, contato, meios de pagamento e **razão social, CNPJ/CPF e endereço**
     (exigidos pelo Decreto 7.962/2013 para lojas online).
   - Aceite: lojista sem CNPJ cadastrado recebe aviso no painel.
+  - Resultado: `Store.navigation` (Json, `parseNavigation()`) editado em `/menu`, resolve
+    categoria/página/URL pro link certo no cabeçalho (desktop) e num menu `<details>` nativo no
+    mobile (sem JS). Busca no cabeçalho envia pra `/busca?q=`. Rodapé: `Store.socialLinks`
+    (Instagram/Facebook/TikTok/YouTube), razão social/CNPJ-CPF/endereço (`legalName`/`taxId`/
+    `legalAddress`), aviso no admin (`/settings`) quando razão social ou CNPJ/CPF faltam. Testado
+    num navegador real: busca no cabeçalho leva pra `/busca` com o termo certo; rodapé mostra os
+    dados legais e o link do Instagram cadastrados no seed.
 
-- [ ] **F4.3 Páginas institucionais**
+- [x] **F4.3 Páginas institucionais**
   - Model `Page` (`slug`, `title`, conteúdo em Markdown sanitizado, publicada).
   - Loja nova já nasce com: Sobre nós, Trocas e devoluções, Política de privacidade, Frete e entrega.
   - Rota `/p/[slug]`; opção de gerar o texto inicial com IA (reaproveitar F2.8).
   - Aceite: HTML/script colado no conteúdo não é executado.
+  - Resultado: `@repo/db/markdown` (`renderSafeMarkdown`) escapa `&`/`<`/`>` **antes** de qualquer
+    transformação — HTML/`<script>` colado nunca vira tag de verdade, só aparece como texto visível
+    (sem dependência nova; suporta título, negrito, itálico, lista e link http(s)/relativo).
+    `register()` (cadastro de lojista) e o seed criam as 4 páginas padrão
+    (`defaultPages()` em `@repo/db/content`). Admin em `/pages`; "Gerar com IA" reusa o limite
+    diário da F2.8. Testado: página com `<script>alert(1)</script>` no conteúdo renderiza o texto
+    escapado, nunca executa.
 
-- [ ] **F4.4 Temas**
+- [x] **F4.4 Temas**
   - 3 temas prontos (ex.: clássico, moderno, minimalista) que mudam fonte, bordas, estilo do card e do
     cabeçalho via CSS variables e `data-theme`. Escolha de fonte entre algumas opções.
   - Pré-visualização no admin antes de aplicar.
   - Aceite: trocar o tema não exige mudar conteúdo nem seções.
+  - Resultado: `Store.theme`/`Store.font` (enums) viram `data-theme`/`data-font` no layout;
+    `globals.css` troca `--radius-card`/`--radius-btn`/`--radius-field` e as CSS vars de fonte
+    (sem carregar fonte nova do Google — "serifada"/"monoespaçada" usam pilhas de fontes do sistema,
+    ver Decisões). Pré-visualização ao vivo no formulário de aparência (mockup de card/botão já
+    existente, agora também reagindo ao tema/fonte escolhidos, antes de salvar). Testado: trocar
+    pra "Moderno" e salvar reflete `data-theme="moderno"` na vitrine sem tocar em nenhum conteúdo.
 
-- [ ] **F4.5 Detalhes de marca**
+- [x] **F4.5 Detalhes de marca**
   - Favicon por loja, barra de aviso no topo (ex.: "Frete grátis acima de R$ 199"), modo
     "loja em construção" com senha.
   - Aceite: loja em construção não aparece para visitantes nem no sitemap.
+  - Resultado: favicon via `generateMetadata` (`icons.icon`). `Store.maintenanceMode` bloqueia todo
+    o layout da loja (menos a tela de senha) atrás de `maintenancePasswordHash` (bcrypt); cookie de
+    acesso é um HMAC do `storeId` (`storefront/src/lib/maintenance.ts`) — não é um boundary de
+    segurança real, só evita pedir senha de novo a cada página. Loja em construção some da lista
+    pública de lojas em `/` (ainda não existe sitemap — isso é F5.1; quando existir, filtrar por
+    `maintenanceMode` lá também). Testado: visitante sem senha vê só o formulário; senha errada é
+    recusada; senha certa libera o site; loja some da lista pública enquanto o modo está ligado.
 
 ---
 
@@ -623,3 +660,10 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-13 | F3.4 | Model chamado `AbandonedCart`, não `Cart` como o roadmap sugeria; campo único `remindedAt` virou dois (`remindedAt1h`/`remindedAt24h`) | `Cart` colidiria conceitualmente com o carrinho do navegador (zustand); dois campos deixam explícito qual lembrete já foi mandado, sem precisar guardar "qual estágio" em outro lugar |
 | 2026-11-13 | F3.4/F3.6 | `/api/cron/abandoned-carts` e `/api/cron/review-requests` são chamados por um agendador externo (cron do host, GitHub Actions agendado, etc.), sem serviço novo no `docker-compose.yml` | O roadmap já aceitava as duas opções ("serviço no docker-compose ou agendador externo"); adicionar um serviço de cron ao compose só pra isso é mais peça de infraestrutura do que o catálogo de hoje precisa |
 | 2026-11-13 | F3.6 | "Compra verificada" usa um link assinado por HMAC (mesmo `AUTH_SECRET`), sem tabela nova ligando pedido+avaliação | Mais simples que uma tabela de "convites de avaliação"; o link já carrega tudo que precisa (`orderId`+`productId`) e a assinatura garante que não foi forjado |
+| 2026-11-13 | F4.1 | Toda a Fase 4 (incluindo a tarefa "(grande)") feita numa sessão só, em vez de uma etapa por sessão | Pedido explícito do usuário ("inicie a fase 4 completa"), mesmo padrão já autorizado na Fase 3 |
+| 2026-11-13 | F4.1 | O catálogo com busca/filtro/paginação (que vivia na home desde a F0) mudou de rota pra `/busca`; a home virou só seções configuráveis | É o que o próprio roadmap pede pra F4.1 (home vira seções); manter os dois no mesmo lugar não dava — mantendo a busca disponível em rota própria, linkada pelo cabeçalho (F4.2) |
+| 2026-11-13 | F4.1 | Reordenar seção é por botões ↑/↓, não arrastar-e-soltar | Mesma escolha já feita na F2.4 pra posição de categoria; atende ao aceite ("reordenar") sem precisar de uma lib de drag-and-drop |
+| 2026-11-13 | F4.1 | Publicar rascunho não tem confirmação extra nem histórico de versões — só copia rascunho → publicado | O roadmap pede rascunho + "Publicar" + pré-visualização, não versionamento; o lojista sempre pode editar de novo e publicar de novo |
+| 2026-11-13 | F4.4 | Fonte "serifada" e "monoespaçada" usam pilhas de fontes do sistema (Georgia, Courier New), não fontes novas carregadas do Google Fonts | A fonte "sem serifa" já usa Google Fonts carregadas desde o início do projeto (Bricolage Grotesque/Instrument Sans); trocar por completo pra cada opção exigiria carregar fontes novas só pra essa escolha — pilhas do sistema já diferenciam visualmente sem esse custo |
+| 2026-11-13 | F4.5 | Cookie de acesso da loja em construção é um HMAC simples do `storeId` (`storefront/src/lib/maintenance.ts`), não uma sessão JWT completa | Não protege dado sensível (a loja não tem nada atrás da senha além do próprio catálogo ainda não lançado); só evita pedir a senha nas próximas páginas |
+| 2026-11-13 | F4.5 | "Não aparece no sitemap" não foi implementado à parte — hoje não existe sitemap.xml (isso é F5.1) | Quando a F5.1 criar o sitemap, filtrar por `maintenanceMode` lá junto; não faz sentido um sitemap só pra essa exceção antes de o sitemap existir |

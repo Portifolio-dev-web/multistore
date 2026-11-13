@@ -8,7 +8,9 @@
     ".": "./src/index.ts",
     "./utils": "./src/utils.ts",
     "./urls": "./src/urls.ts",
-    "./pricing": "./src/pricing.ts"
+    "./pricing": "./src/pricing.ts",
+    "./content": "./src/content.ts",
+    "./markdown": "./src/markdown.ts"
   },
   "scripts": {
     "db:generate": "prisma generate",
@@ -23,7 +25,8 @@
   },
   "dependencies": {
     "@prisma/client": "^5.17.0",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

@@ -4,6 +4,7 @@ import { storeUrl } from "@repo/db/urls";
 
 export default async function StoresIndex() {
   const stores = await prisma.store.findMany({
+    where: { maintenanceMode: false },
     orderBy: { createdAt: "asc" },
     select: { slug: true, customDomain: true, name: true, description: true, primaryColor: true, accentColor: true, _count: { select: { products: { where: { active: true } } } } },
   });

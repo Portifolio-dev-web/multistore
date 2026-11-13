@@ -6,6 +6,32 @@
   --brand: #1f2937;
   --brand-contrast: #ffffff;
   --accent: #f59e0b;
+  /* F4.4: tema padrão (clássico) — trocado por data-theme, nunca exige mudar conteúdo/seções */
+  --radius-card: 1.5rem;
+  --radius-btn: 9999px;
+  --radius-field: 0.75rem;
+}
+
+/* F4.4: 3 temas prontos, só CSS */
+[data-theme="moderno"] {
+  --radius-card: 0.5rem;
+  --radius-btn: 0.5rem;
+  --radius-field: 0.5rem;
+}
+[data-theme="minimalista"] {
+  --radius-card: 0rem;
+  --radius-btn: 0rem;
+  --radius-field: 0rem;
+}
+
+/* F4.4: escolha de fonte — sobrescreve as CSS vars que o Tailwind já usa (sem carregar fonte nova) */
+[data-font="serif"] {
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-sans: Georgia, "Times New Roman", serif;
+}
+[data-font="mono"] {
+  --font-display: ui-monospace, "Courier New", monospace;
+  --font-sans: ui-monospace, "Courier New", monospace;
 }
 
 body {
@@ -19,15 +45,23 @@ body {
 
 @layer components {
   .btn-brand {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-contrast transition-[transform,opacity] duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-[var(--radius-btn)] bg-brand px-6 py-3 text-sm font-semibold text-brand-contrast transition-[transform,opacity] duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-full border border-ink/15 px-5 py-2.5 text-sm font-medium transition-colors hover:border-ink/40;
+    @apply inline-flex items-center justify-center rounded-[var(--radius-btn)] border border-ink/15 px-5 py-2.5 text-sm font-medium transition-colors hover:border-ink/40;
   }
   .field {
-    @apply w-full rounded-xl border border-ink/10 bg-white px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-ink/40;
+    @apply w-full rounded-[var(--radius-field)] border border-ink/10 bg-white px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-ink/40;
   }
   .label {
     @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/50;
   }
+
+  /* F4.3: conteúdo das páginas institucionais (renderSafeMarkdown só gera h1-h3/p/ul/li/strong/em/a) */
+  .markdown-content h1 { @apply font-display text-3xl font-bold tracking-tight mt-8 mb-3 first:mt-0; }
+  .markdown-content h2 { @apply font-display text-2xl font-bold tracking-tight mt-7 mb-3 first:mt-0; }
+  .markdown-content h3 { @apply font-display text-xl font-semibold tracking-tight mt-6 mb-2 first:mt-0; }
+  .markdown-content p { @apply mb-4 leading-relaxed text-ink/80; }
+  .markdown-content ul { @apply mb-4 list-disc space-y-1 pl-5 text-ink/80; }
+  .markdown-content a { @apply text-brand underline underline-offset-4; }
 }

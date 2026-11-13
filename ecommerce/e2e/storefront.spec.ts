@@ -3,7 +3,7 @@ import { STORE_SLUG } from "./env";
 
 test.describe("vitrine", () => {
   test("lista, filtra, abre produto, adiciona ao carrinho e altera quantidade", async ({ page }) => {
-    await page.goto(`/${STORE_SLUG}`);
+    await page.goto(`/${STORE_SLUG}/busca`);
     await expect(page.getByTestId("products-grid")).toBeVisible();
 
     // busca sem resultado

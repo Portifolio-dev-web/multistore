@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { FulfillmentStatus } from "@repo/db";
+import { Font, FulfillmentStatus, Theme } from "@repo/db";
+import { homeSectionSchema } from "@repo/db/content";
 import { HEX_COLOR, HOSTNAME, onlyDigits, parseBRLToCents, SLUG, WHATSAPP_PHONE } from "@repo/db/utils";
 
 const optionalText = (max: number) =>
@@ -140,7 +141,37 @@ export const storeSettingsSchema = z.object({
     .optional()
     .transform((v) => (v ? onlyDigits(v) : null))
     .pipe(z.string().regex(WHATSAPP_PHONE, "Número inválido (DDI+DDD+número, só dígitos)").nullable()),
+  theme: z.nativeEnum(Theme),
+  font: z.nativeEnum(Font),
+  faviconUrl: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || null)
+    .pipe(z.string().url("URL inválida").nullable()),
+  announcementBar: optionalText(140),
 });
+
+export const legalSettingsSchema = z
+  .object({
+    legalName: optionalText(160),
+    taxId: optionalText(20),
+    zip: z.string().trim().optional(),
+    street: z.string().trim().max(120).optional(),
+    number: z.string().trim().max(20).optional(),
+    complement: optionalText(60),
+    district: z.string().trim().max(80).optional(),
+    city: z.string().trim().max(80).optional(),
+    state: z.string().trim().max(2).optional(),
+  })
+  .transform((d) => ({
+    legalName: d.legalName,
+    taxId: d.taxId,
+    legalAddress:
+      d.zip && d.street && d.number && d.district && d.city && d.state
+        ? { zip: d.zip, street: d.street, number: d.number, complement: d.complement, district: d.district, city: d.city, state: d.state.toUpperCase() }
+        : null,
+  }));
 
 export const fulfillmentSchema = z
   .object({
@@ -209,6 +240,41 @@ export const promotionSchema = z.object({
 }).refine((d) => d.type !== "QUANTITY_DISCOUNT" || (d.minQuantity != null && d.percentOff != null), {
   path: ["minQuantity"],
   message: "Informe a quantidade mínima e o desconto",
+});
+
+export const maintenanceSchema = z.object({
+  maintenanceMode: z.boolean(),
+  // vazio = mantém a senha atual (nunca força redefinir toda vez que salva)
+  password: z
+    .string()
+    .trim()
+    .max(80)
+    .optional()
+    .transform((v) => v || undefined),
+});
+
+export const homeSectionsFormSchema = z.object({
+  sectionsJson: jsonArray(z.array(homeSectionSchema).max(20, "Máximo de 20 seções")),
+});
+
+export const navigationFormSchema = z.object({
+  navigationJson: jsonArray(
+    z.array(
+      z.object({
+        id: z.string(),
+        label: z.string().trim().min(1, "Informe um nome").max(40),
+        type: z.enum(["category", "page", "url"]),
+        value: z.string().trim().min(1, "Informe o destino").max(200),
+      }),
+    ).max(12, "Máximo de 12 itens"),
+  ),
+});
+
+export const pageSchema = z.object({
+  title: z.string().trim().min(2, "Nome muito curto").max(120),
+  slug: optionalText(80),
+  content: z.string().trim().max(20000).default(""),
+  published: z.boolean(),
 });
 
 export function formToObject(formData: FormData): Record<string, string> {
