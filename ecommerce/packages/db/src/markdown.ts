@@ -13,7 +13,8 @@ function renderInline(text: string): string {
   out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label: string, url: string) => {
     // só http(s) ou caminho relativo — nunca javascript:/data: etc.
     if (!/^(https?:\/\/|\/)/.test(url)) return label;
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    const safeUrl = url.replace(/"/g, "&quot;");
+    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${label}</a>`;
   });
   return out;
 }

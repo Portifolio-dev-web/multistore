@@ -34,6 +34,12 @@ describe("renderSafeMarkdown", () => {
     expect(renderSafeMarkdown("[clique](javascript:evil)")).toBe("<p>clique</p>");
   });
 
+  it("escapa aspas na URL do link — não escapa do atributo href", () => {
+    const html = renderSafeMarkdown('[x](http://a.com" onmouseover="alert(1))');
+    expect(html).not.toContain('" onmouseover="');
+    expect(html).toContain("&quot; onmouseover=&quot;");
+  });
+
   it("junta linhas de um parágrafo com <br>", () => {
     expect(renderSafeMarkdown("linha um\nlinha dois")).toBe("<p>linha um<br>linha dois</p>");
   });

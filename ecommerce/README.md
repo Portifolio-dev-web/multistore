@@ -1,21 +1,51 @@
 # Vitrine Commerce — e-commerce white-label (multi-loja)
 
-Monorepo **Turborepo** com duas aplicações Next.js 14 (App Router) isoladas e um pacote Prisma compartilhado.
+Monorepo **Turborepo** com duas aplicações Next.js 14 (App Router) isoladas e pacotes compartilhados (Prisma, e-mail). Cada loja (`Store`) tem seu próprio slug, tema e dados, servida a partir do mesmo deploy.
+
+## Stack
+
+- **Next.js 14** (App Router, Server Actions) + **React 18** + **TypeScript** — `apps/storefront` e `apps/admin`.
+- **Tailwind CSS 3** para estilo; tema por loja via CSS variables (`--brand`, `--accent`).
+- **Prisma 5** + **PostgreSQL 16** — `packages/db`, schema único compartilhado pelas duas apps.
+- **Stripe** (`stripe` SDK) — checkout da vitrine e webhooks (pagamento + Stripe Billing para assinatura dos lojistas).
+- **Nodemailer** — `packages/mail`, e-mails transacionais (SMTP, Mailpit em dev).
+- **Zod** — validação de input em Server Actions e rotas de API.
+- **Zustand** — carrinho do storefront (persistido em localStorage, por loja).
+- **Turborepo** + **Yarn Classic (workspaces)** — build/cache incremental do monorepo.
+- **Playwright** — testes E2E (`e2e/`); **Vitest** — testes unitários por workspace.
+- **Docker** / **docker-compose** — Postgres, storage S3-compatível (RustFS), Mailpit, Stripe CLI e as duas apps.
+- **AWS SDK (S3)** — upload de imagens de produto (compatível com S3, R2, RustFS).
+- **Anthropic SDK** — geração assistida de descrição de produto no admin (opcional).
+
+## Estrutura do repositório
 
 ```
 .
 ├── apps/
-│   ├── storefront/      # Área do cliente (porta 3000)
-│   └── admin/           # Painel do lojista (porta 3001)
+│   ├── storefront/      # Área do cliente (porta 3000) — vitrine, carrinho, checkout, webhooks Stripe
+│   └── admin/           # Painel do lojista (porta 3001) — catálogo, pedidos, equipe, planos, domínio
 ├── packages/
-│   └── db/              # Prisma schema + client + utils compartilhados
-│       ├── prisma/schema.prisma
-│       └── prisma/seed.ts
-├── scripts/test-webhook.mjs
+│   ├── db/              # Prisma schema + client + utils compartilhados (preços, permissões, planos)
+│   │   ├── prisma/schema.prisma
+│   │   └── prisma/seed.ts
+│   └── mail/            # Envio de e-mail transacional (nodemailer) usado por admin e storefront
+├── e2e/                 # Suíte Playwright (admin, storefront, webhook, reserva de estoque)
+├── scripts/             # test-webhook.mjs, backup-db.sh, restore-db.sh, storage-init.mjs
 ├── Dockerfile           # único, parametrizado por --build-arg APP
 ├── docker-compose.yml
 └── .env.example
 ```
+
+## Pré-requisitos
+
+| Ferramenta | Versão recomendada | Observação |
+|---|---|---|
+| Node.js | 20.x (LTS) | mesma versão usada no CI (`.github/workflows/ci.yml`) |
+| Yarn | Classic 1.22.x | `packageManager` fixado em `package.json`; não usar Yarn Berry |
+| Docker / Docker Compose | recente (v2) | para Postgres, storage S3 e Mailpit locais |
+| PostgreSQL | 16 | via Docker (`postgres:16-alpine`) ou instância própria |
+| Conta Stripe | — | modo teste é suficiente; chave `sk_test_...` e Stripe CLI para webhooks locais |
+| Playwright browsers | — | `npx playwright install chromium`, uma vez por máquina |
 
 ## Subindo com Docker
 
@@ -140,4 +170,51 @@ DATABASE_URL=... STRIPE_WEBHOOK_SECRET=whsec_... WEBHOOK_URL=http://localhost:30
 
 - O schema é aplicado só por migrations: `yarn db:deploy` (`prisma migrate deploy`). Nunca use `db push` em produção.
 - Nova alteração de schema em dev: `yarn db:migrate` (cria e aplica a migration), commitar a pasta `packages/db/prisma/migrations/`.
-- As imagens dos produtos são URLs. Para upload, conecte um storage (S3, R2 etc.).
+- Upload de imagem de produto usa um storage S3-compatível (`S3_*` no `.env`); em dev é o RustFS do `docker-compose.yml`, em produção troque por S3/R2 só mudando as variáveis.
+
+### Build
+
+```bash
+yarn build   # turbo run build — builda @repo/db, @repo/mail, depois admin e storefront, com cache incremental
+```
+
+Cada app Next.js usa `output: "standalone"`: o build gera um `server.js` autocontido com apenas as dependências realmente usadas, o que é o que o `Dockerfile` copia.
+
+### Deploy e Docker
+
+O `Dockerfile` é único e parametrizado por `--build-arg APP=storefront|admin`; o `docker-compose.yml` já builda as duas imagens. Para gerar e publicar uma imagem isolada (ex. registry):
+
+```bash
+docker build --build-arg APP=storefront -t registry.exemplo.com/vitrine-storefront:latest .
+docker build --build-arg APP=admin      -t registry.exemplo.com/vitrine-admin:latest .
+docker push registry.exemplo.com/vitrine-storefront:latest
+docker push registry.exemplo.com/vitrine-admin:latest
+```
+
+O `.dockerignore` mantém o contexto de build pequeno (sem `node_modules`, `.next`, `.turbo`, `.env`), e o healthcheck da imagem usa `GET /api/health` de cada app.
+
+### Escalabilidade
+
+- **Apps stateless**: sessão é um JWT em cookie (`jose`), não há estado em memória entre requisições (exceto o rate-limit de login, por instância) — storefront e admin podem rodar com múltiplas réplicas atrás de um load balancer sem sticky session.
+- **Estáticos e CDN**: sirva `.next/static` e `public/` por CDN (ou deixe a plataforma de deploy fazer isso); reduz carga nas réplicas da aplicação e latência para o cliente final.
+- **Banco de dados**: Postgres com réplica de leitura para consultas pesadas (relatórios, listagens do admin) conforme o tráfego crescer; o pool de conexões do Prisma deve ser dimensionado por réplica (ou usar um pooler como PgBouncer) para não esgotar `max_connections`.
+- **E-mails**: `packages/mail` hoje envia direto via SMTP na mesma request/cron; em alto volume, isole esse envio num worker/fila (ex. BullMQ + Redis, ou um serviço de fila gerenciado) para não bloquear requests do storefront/admin.
+- **Cron jobs** (`/api/cron/*`, protegidos por `CRON_SECRET`): em múltiplas réplicas, garanta que o agendador externo (GitHub Actions, cron do host, cron da plataforma) dispare uma única vez por execução, não uma vez por réplica.
+- **Storage de imagens**: já é S3-compatível e desacoplado da aplicação, então escala independente das réplicas de app.
+
+### CI/CD
+
+`.github/workflows/ci.yml` roda em PRs e push na `main`, com dois jobs:
+
+1. **build**: `yarn install --frozen-lockfile` → `db:generate` → `typecheck` → `lint` → `test` → `build`. Garante que o monorepo inteiro compila e builda antes de mergear.
+2. **e2e**: sobe um serviço Postgres, instala o Chromium do Playwright e roda `yarn e2e` contra as apps reais.
+
+Um deploy automatizado (CD) entraria como um step adicional após o job `build` passar na `main`: build das imagens Docker (`--build-arg APP=...`), push para o registry e rollout (ex. `docker compose pull && up -d`, ou o deploy nativo da plataforma de hospedagem).
+
+### Webhooks (Stripe)
+
+- **Assinatura verificada com o corpo cru**: `apps/storefront/src/app/api/webhooks/stripe/route.ts` valida `Stripe-Signature` com `STRIPE_WEBHOOK_SECRET` antes de processar qualquer evento — payloads sem assinatura válida são rejeitados.
+- **Idempotência**: a baixa de estoque e a marcação do pedido como `PAID` rodam numa transação idempotente, então reenvios do Stripe (retries automáticos em caso de timeout/erro 5xx) não duplicam efeito.
+- **Fallback sem depender do webhook**: a página de sucesso do checkout também consulta a Stripe Checkout Session diretamente, cobrindo o caso de o webhook atrasar ou falhar temporariamente.
+- **Dois endpoints separados**: `/api/webhooks/stripe` (pagamento da vitrine) e `/api/webhooks/stripe-billing` (assinatura do lojista, F6.3) usam segredos distintos — um incidente num não expõe o outro.
+- **Em produção**: cadastre os endpoints com HTTPS no Dashboard do Stripe, monitore a aba de webhooks por falhas de entrega, e trate HTTP 5xx do endpoint como o único caso em que o Stripe deve reentregar (sempre responda 2xx depois de processar, mesmo para eventos já conhecidos/duplicados).
