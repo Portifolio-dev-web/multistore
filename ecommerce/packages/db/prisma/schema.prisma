@@ -318,6 +318,9 @@ model UserToken {
   userId    String
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   purpose   UserTokenPurpose
+  // Só preenchido para TEAM_INVITE: vincula o token à loja/membership específica do convite,
+  // pra aceitar um convite nunca ativar a loja errada (ver acceptInvite).
+  storeId   String?
   tokenHash String           @unique
   expiresAt DateTime
   usedAt    DateTime?

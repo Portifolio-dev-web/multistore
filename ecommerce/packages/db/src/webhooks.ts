@@ -1,8 +1,46 @@
 import crypto from "node:crypto";
+import dns from "node:dns";
+import { isIP } from "node:net";
 import { prisma } from "./client";
 
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [5_000, 15_000];
+
+/** IPv4/IPv6 privados, loopback, link-local (inclui metadata 169.254.169.254) e reservados. */
+function isPrivateOrReservedIp(ip: string): boolean {
+  if (isIP(ip) === 4) {
+    const [a, b] = ip.split(".").map(Number);
+    return a === 127 || a === 10 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  }
+  if (isIP(ip) === 6) {
+    const norm = ip.toLowerCase();
+    return norm === "::1" || norm === "::" || norm.startsWith("fe80:") || norm.startsWith("fc") || norm.startsWith("fd") || norm.startsWith("::ffff:127.");
+  }
+  return true; // não reconhecido como IP válido — trata como inseguro
+}
+
+/**
+ * F6.8 (SSRF): só permite webhook para host público. Resolve o DNS e recusa qualquer endereço
+ * privado/loopback/link-local/metadata — chamado tanto na validação do cadastro quanto
+ * de novo bem antes de cada fetch em deliver() (reduz a janela de DNS rebinding/TOCTOU).
+ */
+export async function isSafeWebhookUrl(rawUrl: string): Promise<boolean> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  if (url.hostname === "localhost") return false;
+
+  try {
+    const addresses = await dns.promises.lookup(url.hostname, { all: true, verbatim: true });
+    return addresses.length > 0 && addresses.every((a) => !isPrivateOrReservedIp(a.address));
+  } catch {
+    return false;
+  }
+}
 
 /**
  * F6.8: entrega assinada (HMAC-SHA256 do corpo, no header `X-Webhook-Signature`) com novas
@@ -29,10 +67,12 @@ async function deliver(
   let status: "SUCCESS" | "FAILED" = "FAILED";
   let responseStatus: number | null = null;
   try {
+    if (!(await isSafeWebhookUrl(endpoint.url))) throw new Error("URL do webhook não é mais segura (host privado/interno)");
     const res = await fetch(endpoint.url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Webhook-Event": event, "X-Webhook-Signature": signature },
       body,
+      redirect: "manual", // nunca segue redirect — evita contornar a checagem de SSRF via 302 pra host interno
     });
     responseStatus = res.status;
     if (res.ok) status = "SUCCESS";

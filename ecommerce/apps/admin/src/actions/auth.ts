@@ -206,13 +206,15 @@ export async function acceptInvite(rawToken: string, _prev: FormState, formData:
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 
   const token = await consumeUserToken(rawToken, "TEAM_INVITE");
-  if (!token) return { error: "Convite inválido ou expirado." };
+  if (!token || !token.storeId) return { error: "Convite inválido ou expirado." };
 
   const user = await prisma.user.update({
     where: { id: token.userId },
     data: { passwordHash: await bcrypt.hash(parsed.data.password, 12), emailVerifiedAt: new Date() },
   });
-  const membership = await prisma.membership.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
+  // Ativa a loja do próprio token consumido — nunca "a membership mais recente" (evita um
+  // segundo convite, a outra loja, feito antes da aceitação, roubar a ativação deste link).
+  const membership = await prisma.membership.findUnique({ where: { userId_storeId: { userId: user.id, storeId: token.storeId } } });
   if (!membership) return { error: "Convite não está mais vinculado a nenhuma loja." };
 
   await createSession({ userId: user.id, storeId: membership.storeId, email: user.email, sessionVersion: user.sessionVersion });

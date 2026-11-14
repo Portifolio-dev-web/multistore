@@ -256,7 +256,9 @@ export function averageRating(ratings: number[]): number | null {
 const CSV_DELIMITER = ";";
 
 export function csvEscape(value: string): string {
-  return /[;"\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  // Neutraliza fórmula (CSV injection): = + - @ e tab no início da célula abrem fórmula no Excel/Sheets.
+  const safe = /^[=+\-@\t]/.test(value) ? `'${value}` : value;
+  return /[;"\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 export function buildCsv(rows: string[][]): string {

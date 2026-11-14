@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { dispatchWebhook, newWebhookSecret, prisma } from "@repo/db";
+import { dispatchWebhook, isSafeWebhookUrl, newWebhookSecret, prisma } from "@repo/db";
 import { requireSession } from "@/lib/session";
 import { formToObject } from "@/lib/validation";
 import type { FormState } from "@/lib/form";
@@ -18,6 +18,9 @@ export async function createWebhookEndpoint(_prev: FormState, formData: FormData
   const { storeId } = await requireSession("settings");
   const parsed = webhookSchema.safeParse({ ...formToObject(formData), events: formData.getAll("events") });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+  if (!(await isSafeWebhookUrl(parsed.data.url))) {
+    return { fieldErrors: { url: ["URL aponta para um host privado/interno — não permitido"] } };
+  }
 
   await prisma.webhookEndpoint.create({
     data: { storeId, url: parsed.data.url, events: parsed.data.events, secret: newWebhookSecret() },

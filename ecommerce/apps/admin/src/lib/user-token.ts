@@ -3,10 +3,15 @@ import { prisma, type UserTokenPurpose } from "@repo/db";
 
 /** Mesmo padrão de CustomerLoginToken (storefront): token aleatório só existe em texto puro no
  * e-mail; o banco guarda só o hash. */
-export async function createUserToken(userId: string, purpose: UserTokenPurpose, ttlMs: number): Promise<string> {
+export async function createUserToken(
+  userId: string,
+  purpose: UserTokenPurpose,
+  ttlMs: number,
+  storeId?: string,
+): Promise<string> {
   const rawToken = crypto.randomBytes(32).toString("hex");
   const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-  await prisma.userToken.create({ data: { userId, purpose, tokenHash, expiresAt: new Date(Date.now() + ttlMs) } });
+  await prisma.userToken.create({ data: { userId, purpose, storeId, tokenHash, expiresAt: new Date(Date.now() + ttlMs) } });
   return rawToken;
 }
 

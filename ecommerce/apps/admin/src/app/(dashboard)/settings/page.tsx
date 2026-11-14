@@ -10,7 +10,7 @@ import { LegalSettingsForm } from "@/components/legal-settings-form";
 import { MaintenanceForm } from "@/components/maintenance-form";
 
 export default async function SettingsPage() {
-  const { storeId } = await requireSession();
+  const { storeId } = await requireSession("settings");
   const store = await prisma.store.findUnique({ where: { id: storeId } });
   if (!store) notFound();
 

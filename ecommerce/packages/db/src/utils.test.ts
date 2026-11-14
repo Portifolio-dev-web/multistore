@@ -279,6 +279,14 @@ describe("buildCsv / parseCsv", () => {
   it("ignora linhas em branco no fim", () => {
     expect(parseCsv("a;b\n1;2\n")).toEqual([["a", "b"], ["1", "2"]]);
   });
+
+  it("neutraliza fórmula (CSV injection) em célula que começa com = + - @", () => {
+    const csv = buildCsv([['=HYPERLINK("http://evil","x")', "+1+1", "-1-1", "@SUM(1,1)"]]);
+    const [row] = parseCsv(csv);
+    for (const cell of row) {
+      expect(cell.startsWith("'")).toBe(true);
+    }
+  });
 });
 
 describe("formatAddress", () => {

@@ -41,7 +41,7 @@ export async function inviteTeamMember(_prev: FormState, formData: FormData): Pr
   } else {
     user = await prisma.user.create({ data: { email, passwordHash: UNUSABLE_HASH } });
     await prisma.membership.create({ data: { userId: user.id, storeId, role } });
-    const rawToken = await createUserToken(user.id, "TEAM_INVITE", INVITE_TTL_MS);
+    const rawToken = await createUserToken(user.id, "TEAM_INVITE", INVITE_TTL_MS, storeId);
     await sendTeamInvite(store, user.email, ROLE_LABEL[role], `${process.env.ADMIN_URL ?? "http://localhost:3001"}/accept-invite/${rawToken}`);
   }
 
