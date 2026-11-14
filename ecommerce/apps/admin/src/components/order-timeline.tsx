@@ -20,9 +20,10 @@ export function OrderTimeline({ events, addNoteAction }: Props) {
   return (
     <section className="card space-y-4 p-5" data-testid="order-timeline">
       <h2 className="font-semibold">Linha do tempo</h2>
-      <ul className="space-y-3">
+      <ul className="relative space-y-3 before:absolute before:bottom-1 before:left-[5px] before:top-1 before:w-px before:bg-line">
         {events.map((e) => (
-          <li key={e.id} className="text-sm" data-testid={`order-event-${e.id}`}>
+          <li key={e.id} className="relative pl-5 text-sm" data-testid={`order-event-${e.id}`}>
+            <span className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-ink" />
             <p className={e.type === "NOTE" ? "italic text-ink/80" : ""}>{e.message}</p>
             <p className="font-mono text-[11px] text-ink/40">
               {dateFmt.format(e.createdAt)} · {ACTOR_LABEL[e.actor]}
