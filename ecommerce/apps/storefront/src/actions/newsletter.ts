@@ -16,10 +16,11 @@ export async function subscribeNewsletter(storeSlug: string, _prev: NewsletterSt
   const store = await getStoreBySlug(storeSlug);
   if (!store) return { error: "Loja não encontrada." };
 
+  // F6.11: marca quando o consentimento de marketing foi dado, não só o booleano
   await prisma.customer.upsert({
     where: { storeId_email: { storeId: store.id, email: parsed.data } },
-    update: { acceptsMarketing: true },
-    create: { storeId: store.id, email: parsed.data, acceptsMarketing: true },
+    update: { acceptsMarketing: true, marketingConsentAt: new Date() },
+    create: { storeId: store.id, email: parsed.data, acceptsMarketing: true, marketingConsentAt: new Date() },
   });
 
   return { success: true };

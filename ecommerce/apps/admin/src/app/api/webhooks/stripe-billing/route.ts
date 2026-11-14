@@ -5,6 +5,7 @@ import { prisma } from "@repo/db";
 import { PLAN_LABEL, type PlanKey } from "@repo/db/plans";
 import { sendPlanPastDue } from "@repo/mail";
 import { getStripe, requireEnv } from "@/lib/stripe";
+import { captureError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,7 +82,8 @@ export async function POST(req: Request) {
         break;
     }
   } catch (err) {
-    console.error(`[webhook-billing] erro ao processar ${event.type}`, err);
+    const subscription = event.data.object as Stripe.Subscription;
+    captureError(err, { source: "webhooks/stripe-billing", eventType: event.type, storeId: subscription.metadata?.storeId });
     return NextResponse.json({ error: "Erro ao processar" }, { status: 500 });
   }
 

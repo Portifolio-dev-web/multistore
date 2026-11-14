@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe, requireEnv } from "@/lib/stripe";
 import { notifyOrderReceived, markOrderPaid, setOrderStatus } from "@/lib/orders";
+import { captureError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,7 +44,8 @@ export async function POST(req: Request) {
         break;
     }
   } catch (err) {
-    console.error(`[webhook] erro ao processar ${event.type}`, err);
+    const session = event.data.object as Stripe.Checkout.Session;
+    captureError(err, { source: "webhooks/stripe", eventType: event.type, storeId: session.metadata?.storeId });
     return NextResponse.json({ error: "Erro ao processar" }, { status: 500 });
   }
 

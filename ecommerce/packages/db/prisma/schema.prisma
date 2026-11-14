@@ -34,6 +34,9 @@ model Store {
   abandonedCarts AbandonedCart[]
   reviews      Review[]
   pages        Page[]
+  apiKeys          ApiKey[]
+  webhookEndpoints WebhookEndpoint[]
+  cookieConsentLogs CookieConsentLog[]
 
   // F4.1: página inicial por seções — JSON validado em código (Zod), nunca no banco; uma store
   // nova nasce com um layout padrão (ver seed.ts e actions/auth.ts). Rascunho nulo = sem rascunho
@@ -79,6 +82,73 @@ model Store {
 
   // F6.7: dispensa o checklist de primeiros passos no painel
   onboardingDismissedAt DateTime?
+}
+
+// F6.8: chave de API pública (REST /api/v1) — hash guardado, a chave em texto puro só existe uma
+// vez, na hora da criação (mesmo padrão de token de uso único, mas sem expiração: fica até revogar)
+model ApiKey {
+  id         String    @id @default(cuid())
+  storeId    String
+  store      Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name       String
+  keyHash    String    @unique
+  prefix     String
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([storeId])
+}
+
+// F6.8: webhook de saída — `secret` assina o corpo (HMAC-SHA256) pra quem recebe confirmar a origem
+model WebhookEndpoint {
+  id         String            @id @default(cuid())
+  storeId    String
+  store      Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  url        String
+  secret     String
+  events     String[]
+  active     Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+  deliveries WebhookDelivery[]
+
+  @@index([storeId])
+}
+
+enum WebhookDeliveryStatus {
+  SUCCESS
+  FAILED
+}
+
+// F6.8: uma linha por TENTATIVA de entrega (histórico completo, não só o resultado final)
+model WebhookDelivery {
+  id                String                @id @default(cuid())
+  webhookEndpointId String
+  webhookEndpoint   WebhookEndpoint       @relation(fields: [webhookEndpointId], references: [id], onDelete: Cascade)
+  event             String
+  status            WebhookDeliveryStatus
+  attempt           Int
+  responseStatus    Int?
+  createdAt         DateTime              @default(now())
+
+  @@index([webhookEndpointId, createdAt])
+}
+
+enum CookieConsentDecision {
+  ACCEPTED
+  REJECTED
+}
+
+// F6.11: registro de auditoria do banner de cookies — deliberadamente SEM nada que identifique o
+// visitante (nem IP, nem cookie id); só prova que o mecanismo de consentimento existiu e funcionou
+model CookieConsentLog {
+  id        String                 @id @default(cuid())
+  storeId   String
+  store     Store                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  decision  CookieConsentDecision
+  createdAt DateTime               @default(now())
+
+  @@index([storeId, createdAt])
 }
 
 enum Plan {
@@ -158,6 +228,11 @@ model Customer {
   addresses        CustomerAddress[]
   loginTokens      CustomerLoginToken[]
   reviews          Review[]
+
+  // F6.11: LGPD — quando aceitou receber marketing (não só o booleano) e, se anonimizado a
+  // pedido, quando isso aconteceu (nome/e-mail/telefone/documento já viraram placeholders)
+  marketingConsentAt DateTime?
+  anonymizedAt        DateTime?
 
   @@unique([storeId, email])
 }

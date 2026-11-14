@@ -69,6 +69,7 @@ Em dev: `stripe listen --forward-to localhost:3001/api/webhooks/stripe-billing`.
 | `STRIPE_PRICE_ESSENCIAL` / `STRIPE_PRICE_PRO` | admin | IDs de preço recorrente do Stripe Billing para os planos pagos (F6.3); sem eles, o upgrade mostra um aviso |
 | `STRIPE_BILLING_WEBHOOK_SECRET` | admin | Segredo do webhook de assinatura (`/api/webhooks/stripe-billing`) — endpoint separado do checkout da vitrine |
 | `VERCEL_API_TOKEN` / `VERCEL_PROJECT_ID` / `VERCEL_TEAM_ID` | admin | API de domínios da hospedagem (F6.5) — sem elas, verificar um domínio só marca como verificado no banco, sem adicioná-lo a nenhum projeto |
+| `SENTRY_DSN`            | admin/storefront | Captura de erros (F6.10) — sem ela, erros só vão pro console estruturado |
 
 ## Desenvolvimento sem Docker
 
@@ -123,6 +124,17 @@ DATABASE_URL=... STRIPE_WEBHOOK_SECRET=whsec_... WEBHOOK_URL=http://localhost:30
   node scripts/test-webhook.mjs
 # envio 1: HTTP 200 / envio 2: HTTP 200 / status=PAID ... estoque N -> N-1
 ```
+
+## Operação (F6.10)
+
+- **Erros**: `lib/error-reporting.ts` (admin e storefront) loga estruturado no console sempre e, se
+  `SENTRY_DSN` estiver definido, também envia pro Sentry (ou outro servidor compatível, ex.
+  GlitchTip) via POST direto no envelope HTTP — sem o SDK `@sentry/nextjs` nem passo de build.
+- **Health check**: `GET /api/health` em cada app confere a conexão com o Postgres (`SELECT 1`) e
+  responde `503` se o banco estiver fora.
+- **Backup**: `./scripts/backup-db.sh` gera um dump comprimido (`pg_dump` via `docker compose exec`)
+  e mantém os 7 mais recentes; agende por fora (cron do host, GitHub Actions agendado), mesmo padrão
+  dos jobs de F3.4/F3.6. Restaurar: `./scripts/restore-db.sh backups/vitrine-XXXX.sql.gz`.
 
 ## Produção
 

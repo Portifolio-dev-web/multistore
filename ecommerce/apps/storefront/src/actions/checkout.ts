@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { nextOrderNumber, OutOfStockError, prisma, releaseStock, reserveStock, type Prisma } from "@repo/db";
+import { dispatchWebhook, nextOrderNumber, OutOfStockError, prisma, releaseStock, reserveStock, type Prisma } from "@repo/db";
 import {
   applyDiscounts,
   calculateOrderPricing,
@@ -238,6 +238,11 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<Check
     }
     throw err;
   }
+
+  // F6.8: falha no webhook nunca derruba o checkout
+  dispatchWebhook(store.id, "order.created", { id: order.id, number: order.number, totalInCents: order.totalInCents, status: order.status }).catch(
+    (err) => console.error("[webhooks]", err),
+  );
 
   const baseUrl = storeUrl(store);
   // Stripe não aceita unit_amount negativo nem desconto por linha nativo sem um Coupon seu —

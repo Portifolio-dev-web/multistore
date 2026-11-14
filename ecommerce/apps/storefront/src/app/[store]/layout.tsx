@@ -50,7 +50,7 @@ export default async function StoreLayout({ children, params }: Props) {
         {children}
       </div>
       <AnalyticsScripts gaId={store.gaId} gtmId={store.gtmId} metaPixelId={store.metaPixelId} tiktokPixelId={store.tiktokPixelId} />
-      <CookieConsentBanner />
+      <CookieConsentBanner storeSlug={store.slug} />
     </StoreProvider>
   );
 }

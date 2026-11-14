@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { getConsent, setConsent } from "@/lib/consent";
+import { logCookieConsent } from "@/actions/cookie-consent";
 
-// F5.2: banner de consentimento (LGPD) — enquanto não decide, nenhum pixel de marketing carrega.
-export function CookieConsentBanner() {
+// F5.2/F6.11: banner de consentimento (LGPD) — enquanto não decide, nenhum pixel de marketing
+// carrega; a decisão também gera um registro de auditoria anônimo (ver actions/cookie-consent.ts).
+export function CookieConsentBanner({ storeSlug }: { storeSlug: string }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -16,6 +18,7 @@ export function CookieConsentBanner() {
   const decide = (accepted: boolean) => {
     setConsent(accepted ? "accepted" : "rejected");
     setVisible(false);
+    logCookieConsent(storeSlug, accepted ? "ACCEPTED" : "REJECTED").catch(() => {});
   };
 
   return (

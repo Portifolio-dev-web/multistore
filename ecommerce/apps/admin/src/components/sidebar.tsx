@@ -25,6 +25,7 @@ const NAV: NavItem[] = [
   { href: "/settings", label: "Aparência", id: "settings", permission: "settings" },
   { href: "/team", label: "Equipe", id: "team", permission: "team" },
   { href: "/billing", label: "Cobrança", id: "billing", permission: "billing" },
+  { href: "/developers", label: "Desenvolvedores", id: "developers", permission: "settings" },
 ];
 
 type Props = {

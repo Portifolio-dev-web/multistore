@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { prisma, releaseStock, type OrderStatus, type Prisma } from "@repo/db";
+import { dispatchWebhook, prisma, releaseStock, type OrderStatus, type Prisma } from "@repo/db";
 import { sendNewSaleNotice, sendOrderConfirmation, sendOrderReceivedNotice } from "@repo/mail";
 
 // setOrderStatus só é chamado com FAILED/EXPIRED na prática (o resto entra no tipo porque o
@@ -52,10 +52,16 @@ export async function markOrderPaid(session: Stripe.Checkout.Session): Promise<v
     return result;
   });
 
-  // Falha de e-mail nunca derruba o webhook
+  // Falha de e-mail/webhook nunca derruba o webhook do Stripe
   if (count > 0) {
     await sendOrderConfirmation(orderId).catch((err) => console.error("[mail]", err));
     await sendNewSaleNotice(orderId).catch((err) => console.error("[mail]", err));
+    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { storeId: true, number: true, totalInCents: true, status: true } });
+    if (order) {
+      await dispatchWebhook(order.storeId, "order.paid", { id: orderId, number: order.number, totalInCents: order.totalInCents, status: order.status }).catch(
+        (err) => console.error("[webhooks]", err),
+      );
+    }
   }
 }
 

@@ -681,27 +681,54 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
     quando os 3 estão completos. "Conectar pagamento" e "configurar frete" ficaram de fora — ver
     Decisões.
 
-- [ ] **F6.8 API pública e webhooks** **(grande)**
+- [x] **F6.8 API pública e webhooks** **(grande)**
   - Chaves de API por loja (guardadas com hash), REST `/api/v1` para produtos, estoque e pedidos,
     com limite de requisições.
   - Webhooks de saída (`order.created`, `order.paid`, `product.updated`…) assinados com HMAC, com
     novas tentativas e histórico de entregas.
   - Aceite: documentação simples em `/docs/api` e um exemplo de integração funcionando.
+  - Resultado: `ApiKey` (hash da chave, mostrada em texto puro só na criação — mesmo padrão de token
+    de uso único) autentica `GET/PATCH /api/v1/products`, `GET /api/v1/products/:id` (PATCH só move
+    estoque) e `GET /api/v1/orders[/:id]` via `Authorization: Bearer`, com limite de 60 req/min por
+    chave (em memória — ver Decisões). `WebhookEndpoint`+`WebhookDelivery` (`@repo/db/webhooks`,
+    `dispatchWebhook()`) assinam o corpo com HMAC-SHA256 (`X-Webhook-Signature`), com até 3
+    tentativas (backoff simples via `setTimeout`) e uma linha de histórico por tentativa. Disparado
+    em `createCheckoutSession` (order.created), `markOrderPaid` (order.paid) e
+    `createProduct`/`updateProduct` (product.updated). `/developers` (admin, permissão `settings`)
+    gerencia chaves e webhooks, com botão de "testar envio". Documentação em `/docs/api` na vitrine.
 
 - [ ] **F6.9 Integração com ERP (Bling)** · Depende de F6.8 · **Decisão**
   - Conexão OAuth com a API do Bling: enviar pedidos pagos (para emissão de NF-e), sincronizar estoque.
   - Guardar número e link da nota no pedido.
   - Aceite: pedido pago aparece no Bling e a nota emitida aparece no admin.
+  - Pendente: depende de uma conta/app OAuth real no Bling (credenciais do usuário) — ver Decisões.
 
-- [ ] **F6.10 Operação e observabilidade**
+- [x] **F6.10 Operação e observabilidade**
   - Captura de erros (ex.: Sentry) nas duas apps; logs estruturados; endpoint de health check.
   - Backup diário do Postgres e procedimento de restauração testado.
   - Aceite: erro forçado aparece no painel de erros com a loja identificada.
+  - Resultado: `lib/error-reporting.ts` (duplicado nas duas apps, ~40 linhas) sempre loga
+    estruturado (JSON) no console e, com `SENTRY_DSN` configurado, também envia pro Sentry via POST
+    direto no envelope HTTP — sem o SDK `@sentry/nextjs` nem passo de build com
+    `SENTRY_AUTH_TOKEN`. Ligado em `app/global-error.tsx` (erro não tratado de render) e nos dois
+    webhooks do Stripe (checkout e billing), com `storeId` como tag quando disponível.
+    `GET /api/health` agora confere a conexão com o Postgres (`SELECT 1`), não só responde `{ok:true}`
+    fixo. Backup: `scripts/backup-db.sh`/`restore-db.sh` (dump via `pg_dump`, mantém os 7 mais
+    recentes) — testado manualmente (dump + restauração completos sem erro).
 
-- [ ] **F6.11 LGPD**
+- [x] **F6.11 LGPD**
   - Exportar e apagar (anonimizar) os dados de um cliente a pedido, mantendo os pedidos para fins fiscais.
   - Registro do consentimento de marketing e de cookies.
   - Aceite: cliente anonimizado some das buscas e e-mails, mas os totais de vendas continuam corretos.
+  - Resultado: "Exportar dados (LGPD)" na página do cliente baixa um JSON com tudo que a loja guarda
+    sobre ele (endereços, pedidos, avaliações). "Anonimizar (LGPD)" zera nome/e-mail/telefone/
+    documento (e-mail vira `anon-<id>@anonimizado.local`, único e nunca reaproveitável), apaga
+    endereços e tokens de login, troca os mesmos dados nos `Order` (mantendo `totalInCents`/itens/
+    datas intactos) e marca `Review.authorName` como "Cliente anônimo" — `Customer.anonymizedAt`
+    registra quando. `Customer.marketingConsentAt` grava quando o consentimento de marketing foi
+    dado (não só o booleano `acceptsMarketing`). `CookieConsentLog` é um registro de auditoria do
+    banner (F5.2) deliberadamente anônimo — sem nada que identifique o visitante, só prova que o
+    mecanismo existiu e funcionou.
 
 ---
 
@@ -776,3 +803,12 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-14 | F6.5 | `lib/hosting.ts` (API da Vercel) é um no-op documentado quando `VERCEL_API_TOKEN`/`VERCEL_PROJECT_ID` não estão configurados, nunca lança erro | O docker-compose de desenvolvimento deste projeto não roda na Vercel; exigir essas variáveis pra sempre tornaria o fluxo de domínio inutilizável em dev/self-host — verificar o TXT e marcar `VERIFIED` já cumpre o aceite ("a vitrine só responde a domínios verificados"), a chamada à hospedagem é um passo extra de automação |
 | 2026-11-14 | F6.6 | "Vendas por meio de pagamento" mostra só "Cartão · 100%" fixo | Mesma limitação já registrada na Decisão da F2.5 — hoje existe um único meio de pagamento (Stripe/cartão, com Pix/boleto possível mas não um campo distinto no pedido); um relatório por meio de pagamento com uma opção só não ajuda ninguém |
 | 2026-11-14 | F6.7 | "Conectar pagamento" não entra no checklist (fica implicitamente "já feito") e "configurar frete" foi removido por completo | Pagamento é uma conta Stripe global da plataforma (F1.4), não algo que o lojista "conecta" por loja — não há ação real pra marcar; frete (F1.6) ainda não existe no catálogo, então o item apontaria pra uma tela inexistente |
+| 2026-11-14 | F6.8-F6.11 | Continuar a Fase 6 além da F6.7 (F6.8, F6.10, F6.11), pulando só a F6.9 (Bling) | Pedido explícito do usuário depois que a F6.8-F6.11 apareceu no roadmap sem eu ter visto antes de começar a sessão; F6.9 tem uma **Decisão** e depende de credenciais reais de uma conta Bling que só o usuário tem — as outras três não dependem de nenhuma conta externa real pra funcionar (Sentry/Vercel já entram como no-op documentado sem credenciais) |
+| 2026-11-14 | F6.8 | Limite de requisições da API pública é em memória (`Map`), não em banco | Diferente do `LoginAttempt` (F6.1), que protege contra força bruta de senha e por isso precisa sobreviver a reinício, este limite é só proteção contra abuso/uso excessivo acidental — resetar num deploy é uma regressão aceitável, não um buraco de segurança |
+| 2026-11-14 | F6.8 | Retentativa de webhook é em processo (`setTimeout`, até 3 tentativas), não uma fila durável (Redis/BullMQ etc.) | Uma fila de verdade é infraestrutura nova (serviço + broker) só para um "v1" de webhooks; se o servidor reiniciar entre tentativas, a pendente se perde — aceitável pra uma primeira versão, documentado explicitamente em vez de fingir que é durável |
+| 2026-11-14 | F6.8 | `PATCH /api/v1/products/:id` só move estoque de uma variante — não edita preço, nome nem outros campos do catálogo | O aceite fala de "produtos, estoque e pedidos"; deixar a API externa reescrever qualquer campo do catálogo (incluindo publicar/despublicar, mudar preço) é superfície de risco maior do que o pedido descreve — estoque é o caso de uso real de integração com ERP/planilha |
+| 2026-11-14 | F6.10 | Captura de erro é uma implementação própria do envelope HTTP do Sentry (POST direto), não o SDK oficial `@sentry/nextjs` | O SDK oficial embute um plugin de build que normalmente espera `SENTRY_AUTH_TOKEN`/org/projeto pra upload de source maps — arriscava quebrar `next build` num ambiente sem essas variáveis; um POST direto no formato de envelope documentado publicamente funciona com Sentry SaaS e com servidores compatíveis (ex. GlitchTip) sem exigir nada no passo de build |
+| 2026-11-14 | F6.10 | "Logs estruturados" ficou só na camada de captura de erro (`error-reporting.ts`), não um `console.log` → JSON em todo o código existente | Reescrever cada `console.log`/`console.error` já existente no projeto pra um formato estruturado é um diff enorme e mecânico sem ganho proporcional; a captura de erro (onde há `storeId`/contexto relevante pra debugar) é o ponto de real valor pra estruturar |
+| 2026-11-14 | F6.10 | Backup é dois scripts de shell (`pg_dump`/`psql` via `docker compose exec`) agendados por fora, não um serviço novo no `docker-compose.yml` | Mesmo padrão já decidido nos jobs de F3.4/F3.6 — rodar em produção depende de onde o Postgres realmente mora (RDS, Supabase, etc. já têm backup próprio); um serviço de backup no compose de desenvolvimento não serve pra produção de verdade |
+| 2026-11-14 | F6.11 | Anonimizar não apaga a linha do `Customer` nem dos `Order` — só troca os campos que identificam a pessoa por placeholders | O aceite pede "manter os pedidos para fins fiscais"; apagar a linha do `Order` quebraria isso, e apagar a linha do `Customer` quebraria a referência (`onDelete` em cascata apagaria os pedidos também) — trocar os campos identificáveis por um placeholder satisfaz "anonimizar" sem destruir o registro fiscal |
+| 2026-11-14 | F6.11 | `CookieConsentLog` não guarda IP, user-agent nem nenhum identificador do visitante | O objetivo de um registro de consentimento de cookies é auditar que o mecanismo existe e funciona, não rastrear quem decidiu o quê — guardar um identificador do visitante nesse log criaria exatamente o tipo de rastreamento que o banner existe para dar controle sobre |

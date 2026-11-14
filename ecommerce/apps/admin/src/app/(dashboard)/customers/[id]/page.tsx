@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@repo/db";
 import { formatBRL, ORDER_STATUS_LABEL, waLink } from "@repo/db/utils";
 import { requireSession } from "@/lib/session";
+import { anonymizeCustomer } from "@/actions/customers";
 import { PageHeader } from "@/components/page-header";
+import { DeleteButton } from "@/components/delete-button";
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 
@@ -24,11 +26,22 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
         title={customer.name || customer.email}
         subtitle={customer.email}
         action={
-          customer.phone && (
-            <a href={waLink(customer.phone, whatsappMessage)} target="_blank" rel="noreferrer" className="btn-ghost" data-testid="customer-whatsapp-link">
-              Falar no WhatsApp
-            </a>
-          )
+          <div className="flex items-center gap-2">
+            {customer.phone && (
+              <a href={waLink(customer.phone, whatsappMessage)} target="_blank" rel="noreferrer" className="btn-ghost" data-testid="customer-whatsapp-link">
+                Falar no WhatsApp
+              </a>
+            )}
+            <a href={`/api/customers/${customer.id}/export`} className="btn-outline" data-testid="customer-export-link">Exportar dados (LGPD)</a>
+            {!customer.anonymizedAt && (
+              <DeleteButton
+                action={anonymizeCustomer.bind(null, customer.id)}
+                confirmMessage="Anonimizar este cliente? Nome, e-mail, telefone e endereços são apagados — os pedidos ficam, mas sem identificar a pessoa. Não pode ser desfeito."
+                label="Anonimizar (LGPD)"
+                testId="customer-anonymize-button"
+              />
+            )}
+          </div>
         }
       />
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">

@@ -23,7 +23,8 @@
     "STRIPE_BILLING_WEBHOOK_SECRET",
     "VERCEL_API_TOKEN",
     "VERCEL_PROJECT_ID",
-    "VERCEL_TEAM_ID"
+    "VERCEL_TEAM_ID",
+    "SENTRY_DSN"
   ],
   "tasks": {
     "build": {

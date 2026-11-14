@@ -273,6 +273,31 @@ configuradas, é um no-op documentado). A vitrine (`/api/domains/resolve`) só r
 `VERIFIED`. Reivindicação `PENDING` nunca verificada expira em 48h antes de liberar pra outro
 lojista tentar o mesmo domínio.
 
+**API pública e webhooks (F6.8).** `ApiKey` (hash da chave; a chave em texto puro só existe uma vez,
+na criação) autentica `Authorization: Bearer` em `/api/v1/products[/:id]` e `/api/v1/orders[/:id]`
+na vitrine (`lib/api-auth.ts`), com 60 req/min por chave (limite em memória, reseta em deploy — ver
+Decisões). `dispatchWebhook()` (`@repo/db/webhooks`) assina o corpo com HMAC-SHA256
+(`X-Webhook-Signature`) e tenta até 3 vezes (backoff em processo via `setTimeout`, não é fila
+durável), gravando uma linha por tentativa em `WebhookDelivery`. Disparado em
+`createCheckoutSession` (`order.created`), `markOrderPaid` (`order.paid`) e
+`createProduct`/`updateProduct` (`product.updated`). `/developers` (admin) gerencia chaves e
+webhooks; `/docs/api` (vitrine) documenta.
+
+**Observabilidade (F6.10).** `lib/error-reporting.ts` (duplicado nas duas apps) sempre loga
+estruturado no console e, com `SENTRY_DSN`, envia um POST direto no formato de envelope do Sentry
+(sem o SDK `@sentry/nextjs`, que tem um passo de build que normalmente espera
+`SENTRY_AUTH_TOKEN`) — ligado em `app/global-error.tsx` e nos webhooks do Stripe, com `storeId`
+como tag quando disponível. `GET /api/health` confere a conexão com o Postgres. Backup/restore:
+`scripts/backup-db.sh`/`restore-db.sh` (agendado por fora, mesmo padrão dos cron jobs de F3.4/F3.6).
+
+**LGPD (F6.11).** "Exportar dados" na página do cliente baixa um JSON com tudo que a loja guarda
+sobre ele. "Anonimizar" (`actions/customers.ts`) nunca apaga a linha do `Customer` nem dos `Order`
+(obrigação fiscal) — troca nome/e-mail/telefone/documento por placeholders (e-mail vira
+`anon-<id>@anonimizado.local`), apaga endereços/tokens de login, e troca os mesmos campos nos
+`Order` do cliente (mantendo total/itens/datas). `Customer.marketingConsentAt` grava quando o
+consentimento foi dado, não só o booleano. `CookieConsentLog` é um registro de auditoria do banner
+(F5.2) deliberadamente anônimo — nunca guarda nada que identifique o visitante.
+
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.
 - `@repo/db/utils`: funções puras (formatação BRL, labels de status, regex). Pode ir para Client Components.
@@ -282,6 +307,7 @@ lojista tentar o mesmo domínio.
 - `@repo/db/markdown`: `renderSafeMarkdown`, puro. Pode ir para Client Components.
 - `@repo/db/plans`: limites e preço por plano, puro. Pode ir para Client Components.
 - `@repo/db/permissions`: `hasPermission(role, permission)`, puro. Pode ir para Client Components.
+- `@repo/db/webhooks`: `dispatchWebhook()`, `newWebhookSecret()`. Só servidor (usa `fetch`+Prisma).
 - `@repo/mail`: envios únicos protegidos por um campo `*SentAt` gravado com `updateMany` atômico.
 
 **Upload.** `admin/src/actions/uploads.ts` valida a assinatura binária da imagem e grava em storage

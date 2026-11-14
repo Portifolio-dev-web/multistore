@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { prisma } from "@repo/db";
+import { dispatchWebhook, prisma } from "@repo/db";
 import { slugify } from "@repo/db/utils";
 import { withinProductLimit } from "@repo/db/plans";
 import { requireSession } from "@/lib/session";
@@ -53,15 +53,19 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
 
   const slug = await resolveUniqueSlug(storeId, slugify(rawSlug || data.name));
 
-  await prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     // Nunca confia em categoryIds vindo do formulário: só conecta categorias da própria loja
     const categories = await tx.category.findMany({ where: { id: { in: categoryIds }, storeId }, select: { id: true } });
     // F2.2 etapa 1: produto ainda tem uma variante só (a padrão) — é nela que o estoque mora
-    await tx.product.create({
+    const product = await tx.product.create({
       data: { ...data, slug, storeId, categories: { connect: categories }, variants: { create: { stock } } },
     });
     await tx.slugRedirect.deleteMany({ where: { storeId, fromSlug: slug } });
+    return product;
   });
+  dispatchWebhook(storeId, "product.updated", { id: created.id, name: created.name, slug: created.slug, priceInCents: created.priceInCents }).catch(
+    (err) => console.error("[webhooks]", err),
+  );
   revalidatePath("/products");
   redirect("/products");
 }
@@ -100,6 +104,9 @@ export async function updateProduct(productId: string, _prev: FormState, formDat
     }
   });
 
+  dispatchWebhook(storeId, "product.updated", { id: productId, name: data.name, slug, priceInCents: data.priceInCents }).catch((err) =>
+    console.error("[webhooks]", err),
+  );
   revalidatePath("/products");
   revalidatePath(`/products/${productId}`);
   return { success: "Produto atualizado." };
