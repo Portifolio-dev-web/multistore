@@ -3,7 +3,7 @@ import { prisma, type Prisma } from "@repo/db";
 import { formatBRL } from "@repo/db/utils";
 import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/page-header";
-import { Pagination } from "@/components/pagination";
+import { Pagination } from "@repo/ui";
 
 const PAGE_SIZE = 20;
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });

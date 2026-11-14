@@ -4,7 +4,7 @@ import { formatBRL, FULFILLMENT_LABEL, ORDER_STATUS_LABEL } from "@repo/db/utils
 import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { Pagination } from "@/components/pagination";
+import { Pagination } from "@repo/ui";
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 const PAGE_SIZE = 20;

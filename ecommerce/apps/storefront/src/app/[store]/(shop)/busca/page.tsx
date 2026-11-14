@@ -6,7 +6,7 @@ import { getStoreBase, storeHref } from "@/lib/paths";
 import { withDefaultVariantPricing } from "@/lib/product-display";
 import { ProductCard } from "@/components/product-card";
 import { ProductFilters, type FilterValues } from "@/components/product-filters";
-import { Pagination } from "@/components/pagination";
+import { Pagination } from "@repo/ui";
 
 type Props = { params: { store: string }; searchParams: Record<string, string | undefined> };
 
@@ -123,7 +123,13 @@ export default async function BuscaPage({ params, searchParams }: Props) {
               ))}
             </ul>
           )}
-          <Pagination page={page} totalPages={totalPages} buildHref={buildPageHref} />
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            buildHref={buildPageHref}
+            className="mt-10 flex items-center justify-center gap-3"
+            linkClassName="btn-ghost"
+          />
         </section>
       </div>
     </div>
