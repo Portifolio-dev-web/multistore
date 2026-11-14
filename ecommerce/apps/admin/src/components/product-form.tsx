@@ -162,8 +162,8 @@ export function ProductForm({ action, product, categories, variantCount, aiEnabl
         Visível na vitrine
       </label>
 
-      <div className="border-t border-line pt-5">
-        <p className="label">SEO</p>
+      <details className="border-t border-line pt-5" open={!!(product?.seoTitle || product?.seoDescription)} data-testid="product-seo-details">
+        <summary className="label cursor-pointer">SEO</summary>
         <div className="mt-3 space-y-4">
           <div>
             <label className="label" htmlFor="seoTitle">Título para buscadores (opcional)</label>
@@ -176,10 +176,10 @@ export function ProductForm({ action, product, categories, variantCount, aiEnabl
             <FieldError errors={e?.seoDescription} />
           </div>
         </div>
-      </div>
+      </details>
 
-      <div className="border-t border-line pt-5">
-        <p className="label">Feed de produtos (Google/Meta)</p>
+      <details className="border-t border-line pt-5" open={!!(product?.brand || product?.gtin)} data-testid="product-feed-details">
+        <summary className="label cursor-pointer">Feed de produtos (Google/Meta)</summary>
         <div className="mt-3 grid gap-5 sm:grid-cols-3">
           <div>
             <label className="label" htmlFor="brand">Marca (opcional)</label>
@@ -201,7 +201,7 @@ export function ProductForm({ action, product, categories, variantCount, aiEnabl
             <FieldError errors={e?.condition} />
           </div>
         </div>
-      </div>
+      </details>
 
       <div className="flex justify-end border-t border-line pt-5">
         <SubmitButton testId="product-submit-button">{submitLabel}</SubmitButton>
