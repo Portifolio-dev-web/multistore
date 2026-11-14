@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Font, FulfillmentStatus, ProductCondition, Theme } from "@repo/db";
+import { Font, FulfillmentStatus, ProductCondition, Role, Theme } from "@repo/db";
 import { homeSectionSchema } from "@repo/db/content";
 import { HEX_COLOR, HOSTNAME, onlyDigits, parseBRLToCents, SLUG, WHATSAPP_PHONE } from "@repo/db/utils";
 
@@ -22,6 +22,30 @@ export const registerSchema = z.object({
   password: z.string().min(8, "Mínimo de 8 caracteres").max(128),
   storeName: z.string().trim().min(2, "Informe o nome da loja").max(80),
   storeSlug: z.string().trim().toLowerCase().regex(SLUG, "Use apenas letras minúsculas, números e hífens").max(48),
+});
+
+// F6.1: segurança da conta
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email("E-mail inválido"),
+});
+
+export const resetPasswordSchema = z.object({
+  password: z.string().min(8, "Mínimo de 8 caracteres").max(128),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Informe a senha atual"),
+  newPassword: z.string().min(8, "Mínimo de 8 caracteres").max(128),
+});
+
+// F6.2: equipe
+export const inviteSchema = z.object({
+  email: z.string().trim().toLowerCase().email("E-mail inválido"),
+  role: z.nativeEnum(Role),
+});
+
+export const acceptInviteSchema = z.object({
+  password: z.string().min(8, "Mínimo de 8 caracteres").max(128),
 });
 
 export const productSchema = z.object({

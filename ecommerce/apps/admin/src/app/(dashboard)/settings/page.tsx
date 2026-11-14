@@ -25,6 +25,8 @@ export default async function SettingsPage() {
         liveUrl={storeUrl(store)}
         subdomainUrl={root ? storeUrl({ slug: store.slug, customDomain: null }) : null}
         customDomain={store.customDomain}
+        domainStatus={store.domainStatus}
+        domainVerificationToken={store.domainVerificationToken}
         cnameTarget={root ?? mainHost}
       />
       <div className="mt-8">

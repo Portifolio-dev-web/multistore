@@ -10,7 +10,9 @@
     "./urls": "./src/urls.ts",
     "./pricing": "./src/pricing.ts",
     "./content": "./src/content.ts",
-    "./markdown": "./src/markdown.ts"
+    "./markdown": "./src/markdown.ts",
+    "./plans": "./src/plans.ts",
+    "./permissions": "./src/permissions.ts"
   },
   "scripts": {
     "db:generate": "prisma generate",

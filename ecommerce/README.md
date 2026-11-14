@@ -43,6 +43,13 @@ Em produção: crie o endpoint `https://SEU_DOMINIO/api/webhooks/stripe` no Dash
 
 Cartão de teste: `4242 4242 4242 4242`, qualquer validade futura e qualquer CVC.
 
+### Stripe Billing (assinatura dos lojistas — F6.3, opcional)
+
+Produto separado dentro da mesma conta Stripe: crie dois preços recorrentes (Essencial/Pro) e um
+endpoint de webhook próprio `https://SEU_DOMINIO_ADMIN/api/webhooks/stripe-billing` com os eventos
+`checkout.session.completed`, `customer.subscription.updated` e `customer.subscription.deleted`.
+Em dev: `stripe listen --forward-to localhost:3001/api/webhooks/stripe-billing`.
+
 ## Variáveis de ambiente
 
 | Variável                | App         | Descrição |
@@ -58,7 +65,10 @@ Cartão de teste: `4242 4242 4242 4242`, qualquer validade futura e qualquer CVC
 | `ANTHROPIC_MODEL`       | admin       | Modelo usado para gerar descrição de produto (padrão: `claude-haiku-5-5`) |
 | `CRON_SECRET`           | storefront  | Protege `/api/cron/*` (carrinho abandonado, pedido de avaliação); sem ela, os dois recusam a chamada |
 | `REVIEW_REQUEST_DAYS_AFTER_DELIVERY` | storefront | Dias após a entrega pra mandar o e-mail pedindo avaliação (padrão: 7) |
-| `ADMIN_URL`              | storefront  | URL do painel do lojista, usada no link do e-mail de aviso de nova venda (padrão: `http://localhost:3001`) |
+| `ADMIN_URL`              | storefront/admin | URL do painel do lojista — link do e-mail de aviso de nova venda (storefront) e links dos próprios e-mails do admin: redefinir senha, verificar e-mail, convite de equipe (padrão: `http://localhost:3001`) |
+| `STRIPE_PRICE_ESSENCIAL` / `STRIPE_PRICE_PRO` | admin | IDs de preço recorrente do Stripe Billing para os planos pagos (F6.3); sem eles, o upgrade mostra um aviso |
+| `STRIPE_BILLING_WEBHOOK_SECRET` | admin | Segredo do webhook de assinatura (`/api/webhooks/stripe-billing`) — endpoint separado do checkout da vitrine |
+| `VERCEL_API_TOKEN` / `VERCEL_PROJECT_ID` / `VERCEL_TEAM_ID` | admin | API de domínios da hospedagem (F6.5) — sem elas, verificar um domínio só marca como verificado no banco, sem adicioná-lo a nenhum projeto |
 
 ## Desenvolvimento sem Docker
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@repo/db";
 import { slugify } from "@repo/db/utils";
+import { withinProductLimit } from "@repo/db/plans";
 import { requireSession } from "@/lib/session";
 import { formToObject, productSchema } from "@/lib/validation";
 import type { FormState } from "@/lib/form";
@@ -36,6 +37,19 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
   const parsed = parseProduct(formData);
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
   const { slug: rawSlug, categoryIds, stock, ...data } = parsed.data;
+
+  // F6.3: limite de produtos por plano (checado também aqui, não só na interface)
+  const store = await prisma.store.findUnique({ where: { id: storeId }, select: { plan: true, planStatus: true } });
+  if (!store) return { error: "Loja não encontrada." };
+  const productCount = await prisma.product.count({ where: { storeId } });
+  if (!withinProductLimit(store.plan, productCount)) {
+    return { error: "Limite de produtos do plano atual atingido. Faça upgrade em Cobrança para adicionar mais." };
+  }
+  // F6.3: "bloqueio suave" — assinatura com cobrança atrasada não cria produto novo, mas continua
+  // gerenciando os existentes e os pedidos normalmente
+  if (store.planStatus === "PAST_DUE") {
+    return { error: "A cobrança da sua assinatura está atrasada. Atualize o pagamento em Cobrança para voltar a criar produtos." };
+  }
 
   const slug = await resolveUniqueSlug(storeId, slugify(rawSlug || data.name));
 

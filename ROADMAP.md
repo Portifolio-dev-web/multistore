@@ -592,49 +592,94 @@ O mínimo para uma loja receber dinheiro na conta certa, com Pix e frete cobrado
 
 ## Fase 6: Plataforma (SaaS) e gestão
 
-- [ ] **F6.1 Segurança da conta do lojista**
+- [x] **F6.1 Segurança da conta do lojista**
   - "Esqueci minha senha" com token por e-mail; verificação de e-mail no cadastro; troca de senha.
   - `sessionVersion` no usuário e no JWT para "sair de todos os dispositivos".
   - Limite de tentativas de login no banco (ou Redis), em vez de memória.
   - Aceite: token de redefinição é de uso único e expira; trocar a senha derruba as outras sessões.
+  - Resultado: `User.sessionVersion` viaja no próprio JWT (`lib/jwt.ts`) — `requireSession()` rejeita
+    qualquer token cuja versão não bata com a do banco, mesmo antes de expirar; trocar a senha
+    (`changePassword`) ou redefinir (`resetPassword`) incrementa a versão, derrubando as outras
+    sessões na hora. `UserToken` (purpose `PASSWORD_RESET`/`EMAIL_VERIFY`/`TEAM_INVITE`) é um único
+    model reaproveitado nos três fluxos, mesmo padrão de hash de `CustomerLoginToken`. `LoginAttempt`
+    troca o `Map` em memória por linhas no banco (sobrevive a reinício/múltiplas instâncias).
+    Verificação de e-mail não bloqueia login — só mostra aviso em "Minha conta" com botão de reenvio.
 
-- [ ] **F6.2 Equipe e permissões** **(grande)**
+- [x] **F6.2 Equipe e permissões** **(grande)**
   - Model `Membership` (`userId`, `storeId`, `role`: OWNER, ADMIN, OPERADOR) no lugar de `User.storeId`;
     um usuário pode ter várias lojas, com seletor de loja no painel.
   - Convite por e-mail; `requireSession(permission)` checa o papel.
   - Aceite: operador não acessa pagamentos, equipe nem configurações.
+  - Resultado: `requireSession(permission?)` manteve o retorno `{ userId, storeId, email, ... }` —
+    todos os ~40 call sites existentes que só liam `{ storeId }` continuaram funcionando sem
+    alteração; a validação virou "o usuário tem `Membership` nesta loja?" em vez de
+    "`User.storeId` bate?", e um `role` extra vem no retorno pra quem precisar. Seletor de loja no
+    painel (sidebar vira `<select>` quando há mais de uma loja) chama `switchStore()`, que reemite a
+    sessão com outro `storeId` (só se existir `Membership`). Convite: se o e-mail já tem conta,
+    ganha `Membership` na hora + aviso por e-mail; se não, cria `User` com senha inutilizável +
+    `UserToken` de convite, aceito em `/accept-invite/[token]`. `/team` lista a equipe com troca de
+    papel inline e remoção (nunca removendo o último OWNER).
 
-- [ ] **F6.3 Planos e cobrança dos lojistas** **(grande)** · **Decisão**
+- [x] **F6.3 Planos e cobrança dos lojistas** **(grande)** · **Decisão**
   - Planos (ex.: Grátis, Essencial, Pro) com limites: produtos, usuários, domínio próprio, taxa por venda.
   - Assinatura recorrente: **Decisão** entre Stripe Billing (conta da plataforma), Asaas ou Mercado Pago.
   - Webhook atualiza `Store.planStatus`; período de teste; aviso e bloqueio suave em caso de atraso.
   - Limites aplicados nas Server Actions, não só na interface.
   - Aceite: loja no plano Grátis não consegue passar do limite de produtos nem por chamada direta à action.
+  - Resultado: **Decisão do usuário: Stripe Billing** (mesma conta global do checkout da vitrine,
+    outro produto dentro dela). `@repo/db/plans` centraliza `PLAN_LIMITS` (produtos/usuários/domínio
+    próprio/taxa) — usado tanto no admin (`/billing`, `createProduct`, `inviteTeamMember`,
+    `updateStoreSettings`) quanto na página de planos da vitrine (F6.4), uma fonte só de verdade.
+    `/billing` abre Stripe Checkout em modo assinatura (14 dias de teste) e o Portal hospedado do
+    Stripe pra trocar cartão/cancelar — sem reconstruir essa UI. Webhook próprio
+    (`/api/webhooks/stripe-billing`, segredo separado do checkout da vitrine) sincroniza
+    `plan`/`planStatus` a partir do status da assinatura. "Bloqueio suave" em atraso
+    (`PAST_DUE`) hoje é só impedir criar produto novo — ver Decisões.
 
-- [ ] **F6.4 Página da plataforma**
+- [x] **F6.4 Página da plataforma**
   - Trocar a lista pública de lojas em `/` da vitrine por uma página de venda: benefícios, planos,
     perguntas frequentes e botão de cadastro (para `/register` do admin).
   - Termos de uso e política de privacidade da plataforma.
   - Aceite: nenhuma lista de lojas fica pública.
+  - Resultado: `/` da vitrine agora é `PlatformHome` (benefícios, planos vindos de
+    `@repo/db/plans`, FAQ, CTA pra `${ADMIN_URL}/register`) — a query que listava todas as lojas foi
+    removida, não só escondida. `/termos` e `/privacidade` são páginas estáticas da plataforma
+    (conteúdo fixo, não por loja — diferente das páginas institucionais por loja da F4.3).
 
-- [ ] **F6.5 Domínio próprio de verdade** · **Decisão**
+- [x] **F6.5 Domínio próprio de verdade** · **Decisão**
   - Verificação por registro TXT (`_multistore.<domínio>`) consultado com `node:dns`; status
     pendente/verificado; instruções de CNAME na tela.
   - SSL automático: **Decisão** entre Caddy com on-demand TLS (endpoint que só autoriza domínios
     verificados) ou a API de domínios da hospedagem (ex.: Vercel).
   - A vitrine só responde a domínios verificados.
   - Aceite: domínio de terceiro não pode ser "tomado" por outro lojista.
+  - Resultado: **Decisão do usuário: API de domínios da hospedagem (Vercel)**. Salvar um
+    `customDomain` novo gera `domainStatus: PENDING` + `domainVerificationToken` aleatório; "Verificar
+    agora" em Configurações confere o TXT (`lib/dns.ts`, `node:dns/promises`) e, se achar, marca
+    `VERIFIED` e chama `lib/hosting.ts` (API da Vercel — sem as variáveis configuradas, é um no-op
+    documentado, pra não forçar todo ambiente de dev/self-host a ter um projeto Vercel). A vitrine
+    (`/api/domains/resolve`) só resolve domínios `VERIFIED`. Anti-sequestro: uma reivindicação
+    `PENDING` nunca verificada expira em 48h e só então libera pra outro lojista reivindicar o mesmo
+    domínio — uma já `VERIFIED` nunca é liberada por essa via.
 
-- [ ] **F6.6 Relatórios**
+- [x] **F6.6 Relatórios**
   - Período selecionável; faturamento, pedidos, ticket médio, vendas por dia (gráfico), produtos
     mais vendidos, vendas por meio de pagamento, cupons mais usados.
   - Exportar pedidos em CSV com os filtros aplicados.
   - Aceite: números batem com uma consulta SQL de conferência num banco de seed.
+  - Resultado: `/reports` agrega em JS (sem SQL bruto) sobre os pedidos pagos do período — volume de
+    uma loja não justifica `$queryRaw`. Gráfico de vendas por dia é barras CSS puras (sem lib de
+    gráfico). Export CSV reaproveita `buildCsv`/`csvEscape` de `@repo/db/utils`, mesmo padrão do
+    export de clientes/produtos já existente.
 
-- [ ] **F6.7 Primeiros passos do lojista**
+- [x] **F6.7 Primeiros passos do lojista**
   - Checklist depois do cadastro: adicionar produto, conectar pagamento, configurar frete,
     personalizar aparência, conectar domínio. Cada item marca sozinho quando concluído.
   - Aceite: lojista novo vê o checklist até completar ou dispensar.
+  - Resultado: checklist com 3 itens reais (produto cadastrado, logo configurado, domínio
+    verificado) no topo da Visão Geral, dispensável (`Store.onboardingDismissedAt`) e que some sozinho
+    quando os 3 estão completos. "Conectar pagamento" e "configurar frete" ficaram de fora — ver
+    Decisões.
 
 - [ ] **F6.8 API pública e webhooks** **(grande)**
   - Chaves de API por loja (guardadas com hash), REST `/api/v1` para produtos, estoque e pedidos,
@@ -718,3 +763,16 @@ Registre aqui cada escolha feita numa tarefa com **Decisão** (data, opção esc
 | 2026-11-13 | F5.4 | Sem integração de reembolso de verdade com o Stripe — "marcar como reembolsado" no admin só registra o status e avisa o cliente; o lojista reembolsa no Dashboard do Stripe por fora | Reembolsar via API do Stripe exigiria decidir reembolso total vs. parcial, estorno de taxa, etc. — escopo de uma tarefa de pagamentos própria, não de "e-mails transacionais"; o aceite da F5.4 é sobre o e-mail existir e chegar, não sobre automatizar o reembolso |
 | 2026-11-13 | F5.4 | "Pedido recebido com instruções de Pix/boleto" dispara no `checkout.session.completed` com `payment_status` diferente de "paid" (pagamento assíncrono), não imediatamente ao criar o pedido | O cliente é redirecionado pro Stripe Checkout no mesmo instante que o pedido é criado — mandar um e-mail "aguardando pagamento" antes mesmo de ele escolher a forma de pagamento seria prematuro; o instante certo é quando o Stripe confirma que o checkout foi concluído mas o Pix/boleto ainda não caiu |
 | 2026-11-13 | F5.4 | E-mail de entrega confirma a entrega mas não repete o convite de avaliação | O convite com link assinado já existe desde a F3.6 (cron 7 dias após a entrega); meter outro convite aqui duplicaria o mesmo pedido em dois e-mails diferentes, além de o link assinado (`review-token.ts`) viver só no app storefront, não no pacote `@repo/mail` compartilhado |
+| 2026-11-14 | F6.1-F6.7 | Toda a Fase 6 (até a F6.7) feita numa sessão só, em vez de uma etapa por sessão — inclusive a "(grande)" F6.2/F6.3 | Pedido explícito do usuário ("vamos finalizar com fase 6 completa"), mesmo padrão já autorizado nas Fases 3, 4 e 5 |
+| 2026-11-14 | F6.1 | Verificação de e-mail não bloqueia login nem nenhuma ação do painel — só fica um aviso em "Minha conta" | O roadmap pede "verificação de e-mail no cadastro" (o fluxo existir), não "bloquear até verificar"; bloquear login travaria o próprio fluxo de demonstração/seed e não foi pedido explicitamente |
+| 2026-11-14 | F6.1 | `LoginAttempt` guarda uma linha por tentativa falha e nunca é limpa automaticamente (só filtra por `createdAt` recente nas consultas) | Mais simples que um job de limpeza; o volume por loja de demonstração é irrelevante, e linhas antigas nunca entram em nenhuma consulta (sempre filtradas por janela de 15 min) |
+| 2026-11-14 | F6.2 | OWNER e ADMIN têm exatamente as mesmas permissões hoje (`hasPermission` só distingue OPERADOR dos outros dois) | O aceite da F6.2 só exige restringir o OPERADOR ("não acessa pagamentos, equipe nem configurações"); diferenciar OWNER de ADMIN exigiria inventar uma regra que o roadmap não especifica — fica pronto pra refinar quando houver uma necessidade concreta |
+| 2026-11-14 | F6.2 | "Pagamentos" (que o roadmap diz que o OPERADOR não acessa) foi mapeado pra permissão `billing` (a nova página `/billing` de plano/assinatura) | Não existe nenhuma tela de "configuração de pagamentos" no admin (o Stripe do checkout é um env var global, F1.4) — a única coisa remotamente "financeira" nova que faz sentido restringir é a cobrança da própria assinatura da loja |
+| 2026-11-14 | F6.2 | Convite só oferece os papéis ADMIN/OPERADOR (nunca OWNER) — promover alguém a OWNER só é possível depois, trocando o papel na lista da equipe | Convidar alguém direto como "proprietário" não faz sentido (quem convida já é responsável pela loja); transferir propriedade é uma ação deliberada separada, não o primeiro convite |
+| 2026-11-14 | F6.3 | "Taxa por venda" por plano existe só como número exibido (`PLAN_LIMITS.feePercent`) — não é cobrada de verdade | Descontar uma taxa por venda de cada pedido pago exigiria Stripe Connect (split de pagamento entre a plataforma e o lojista); o checkout da vitrine usa uma conta Stripe global única (Decisão da F1.4), então não há hoje "a conta de outra pessoa" de onde tirar essa taxa — fica documentado como próximo passo caso a F1.4 seja revisitada |
+| 2026-11-14 | F6.3 | "Bloqueio suave" em atraso de pagamento (`PAST_DUE`) hoje só impede criar produto novo — não bloqueia categoria, cupom, promoção, página nem pedidos | O aceite da F6.3 fala especificamente do limite de produtos; estender o mesmo guard pra toda ação de criação do admin é mecânico (mesma função, outro call site) mas ficou fora do escopo desta sessão pra não inflar ainda mais uma fase já enorme |
+| 2026-11-14 | F6.3 | Preço dos planos (`PLAN_LIMITS.priceInCents`) é uma constante no código (`@repo/db/plans`), não configurável pelo lojista nem por um admin da plataforma | Não existe um "admin da plataforma" (painel de dono do SaaS) no projeto ainda — mudar preço de plano hoje é uma alteração de código, consistente com o resto do catálogo de planos ser fixo |
+| 2026-11-14 | F6.5 | Reivindicação de domínio (`customDomain`) expira em 48h sem verificação, liberando pra outro lojista tentar — em vez de nunca expirar ou de verificar automaticamente em background | Sem expiração, um lojista poderia "sequestrar" o domínio de outro (configurando sem nunca verificar) e bloquear pra sempre o dono real; com expiração mas sem job de fundo, a checagem é "de passagem" (só roda de novo quando outra loja tenta reivindicar o mesmo domínio), evitando um cron novo só pra isso |
+| 2026-11-14 | F6.5 | `lib/hosting.ts` (API da Vercel) é um no-op documentado quando `VERCEL_API_TOKEN`/`VERCEL_PROJECT_ID` não estão configurados, nunca lança erro | O docker-compose de desenvolvimento deste projeto não roda na Vercel; exigir essas variáveis pra sempre tornaria o fluxo de domínio inutilizável em dev/self-host — verificar o TXT e marcar `VERIFIED` já cumpre o aceite ("a vitrine só responde a domínios verificados"), a chamada à hospedagem é um passo extra de automação |
+| 2026-11-14 | F6.6 | "Vendas por meio de pagamento" mostra só "Cartão · 100%" fixo | Mesma limitação já registrada na Decisão da F2.5 — hoje existe um único meio de pagamento (Stripe/cartão, com Pix/boleto possível mas não um campo distinto no pedido); um relatório por meio de pagamento com uma opção só não ajuda ninguém |
+| 2026-11-14 | F6.7 | "Conectar pagamento" não entra no checklist (fica implicitamente "já feito") e "configurar frete" foi removido por completo | Pagamento é uma conta Stripe global da plataforma (F1.4), não algo que o lojista "conecta" por loja — não há ação real pra marcar; frete (F1.6) ainda não existe no catálogo, então o item apontaria pra uma tela inexistente |

@@ -97,6 +97,68 @@ ${itemsTable(o.items, o.items.reduce((s, i) => s + i.unitPriceInCents * i.quanti
   return { subject: `Você esqueceu algo no carrinho — ${o.store.name}`, html: shell(o.store, "Seu carrinho ainda está aqui", body), text };
 }
 
+// F6.1: e-mails de conta do lojista (reset de senha, verificação) não têm uma loja específica —
+// um mesmo usuário pode ter várias (F6.2) — então usam um "shell" neutro da plataforma, não o da loja.
+function platformShell(preheader: string, body: string): string {
+  return `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f7f5f0;font-family:Helvetica,Arial,sans-serif;color:#16140f">
+<span style="display:none;max-height:0;overflow:hidden">${esc(preheader)}</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f5f0;padding:32px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden">
+<tr><td style="background:#16140f;color:#ffffff;padding:24px 28px;font-size:18px;font-weight:700">MultiStore</td></tr>
+<tr><td style="height:4px;background:#e8b04b"></td></tr>
+<tr><td style="padding:32px 28px">${body}</td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+function platformButton(href: string, label: string): string {
+  return `<a href="${esc(href)}" style="display:inline-block;background:#16140f;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:14px 28px;border-radius:999px">${esc(label)}</a>`;
+}
+
+export function passwordResetEmail(o: { name: string | null; resetUrl: string }) {
+  const hello = o.name ? `Olá, ${esc(o.name.split(" ")[0])}!` : "Olá!";
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Redefinir senha</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">${hello} Clique no botão abaixo pra escolher uma nova senha. O link expira em 1 hora e só pode ser usado uma vez.</p>
+<p style="margin:32px 0 0">${platformButton(o.resetUrl, "Redefinir senha")}</p>
+<p style="margin:24px 0 0;font-size:12px;color:#8a857b">Se você não pediu isso, pode ignorar este e-mail — sua senha continua a mesma.</p>`;
+  const text = `Redefinir senha\n\n${o.resetUrl}\n\nO link expira em 1 hora e só pode ser usado uma vez. Se você não pediu, ignore este e-mail.`;
+  return { subject: "Redefinir sua senha — MultiStore", html: platformShell("Redefina sua senha", body), text };
+}
+
+export function emailVerificationEmail(o: { name: string | null; verifyUrl: string }) {
+  const hello = o.name ? `Olá, ${esc(o.name.split(" ")[0])}!` : "Olá!";
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Confirme seu e-mail</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">${hello} Confirme seu e-mail pra concluir o cadastro.</p>
+<p style="margin:32px 0 0">${platformButton(o.verifyUrl, "Confirmar e-mail")}</p>`;
+  const text = `Confirme seu e-mail\n\n${o.verifyUrl}`;
+  return { subject: "Confirme seu e-mail — MultiStore", html: platformShell("Confirme seu e-mail", body), text };
+}
+
+// F6.2: convite de equipe já é por loja (quem convida é o OWNER/ADMIN de uma loja específica)
+export function teamInviteEmail(o: { store: StoreTheme; roleLabel: string; acceptUrl: string }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Você foi convidado</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">Você foi convidado a entrar na equipe de <strong>${esc(o.store.name)}</strong> como <strong>${esc(o.roleLabel)}</strong>. Crie sua senha para aceitar.</p>
+<p style="margin:32px 0 0">${button(o.store, o.acceptUrl, "Aceitar convite")}</p>`;
+  const text = `Você foi convidado para a equipe de ${o.store.name} como ${o.roleLabel}.\n\nAceitar: ${o.acceptUrl}`;
+  return { subject: `Convite para ${o.store.name}`, html: shell(o.store, `Convite para ${o.store.name}`, body), text };
+}
+
+export function teamAddedEmail(o: { store: StoreTheme; roleLabel: string; loginUrl: string }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Você entrou na equipe</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">Você foi adicionado à equipe de <strong>${esc(o.store.name)}</strong> como <strong>${esc(o.roleLabel)}</strong>. Use seu login de sempre pra acessar.</p>
+<p style="margin:32px 0 0">${button(o.store, o.loginUrl, "Acessar painel")}</p>`;
+  const text = `Você foi adicionado à equipe de ${o.store.name} como ${o.roleLabel}.\n\nAcessar: ${o.loginUrl}`;
+  return { subject: `Você entrou na equipe de ${o.store.name}`, html: shell(o.store, `Nova loja na sua conta`, body), text };
+}
+
+// F6.3: aviso de pagamento da assinatura atrasado (webhook do Stripe Billing)
+export function planPastDueEmail(o: { store: StoreTheme; planLabel: string; billingUrl: string }) {
+  const body = `<h1 style="margin:0 0 8px;font-size:26px">Pagamento da assinatura não foi aprovado</h1>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#4a463e">Não conseguimos cobrar a assinatura do plano <strong>${esc(o.planLabel)}</strong> de <strong>${esc(o.store.name)}</strong>. Atualize a forma de pagamento pra continuar com os recursos do plano.</p>
+<p style="margin:32px 0 0">${button(o.store, o.billingUrl, "Atualizar pagamento")}</p>`;
+  const text = `Pagamento da assinatura (${o.planLabel}) de ${o.store.name} não foi aprovado.\n\nAtualizar: ${o.billingUrl}`;
+  return { subject: `Pagamento não aprovado — ${o.store.name}`, html: shell(o.store, "Atualize sua forma de pagamento", body), text };
+}
+
 // F5.4: pedido criado, aguardando confirmação do pagamento (ex.: Pix/boleto assíncrono no Stripe —
 // cartão confirma rápido e vai direto para orderConfirmationEmail, sem passar por aqui)
 export function orderReceivedEmail(o: OrderMail) {

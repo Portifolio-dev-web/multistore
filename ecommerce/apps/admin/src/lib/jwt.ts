@@ -4,7 +4,9 @@ import { SignJWT, jwtVerify } from "jose";
 export const SESSION_COOKIE = "admin_session";
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
-export type SessionPayload = { userId: string; storeId: string; email: string };
+// F6.1: sessionVersion viaja no próprio token — se a senha mudar, User.sessionVersion sobe e todo
+// token assinado com a versão antiga passa a ser rejeitado em requireSession(), mesmo antes de expirar
+export type SessionPayload = { userId: string; storeId: string; email: string; sessionVersion: number };
 
 function secretKey(): Uint8Array {
   const secret = process.env.AUTH_SECRET;
@@ -24,8 +26,8 @@ export async function verifySession(token?: string): Promise<SessionPayload | nu
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"] });
-    if (typeof payload.userId !== "string" || typeof payload.storeId !== "string") return null;
-    return { userId: payload.userId, storeId: payload.storeId, email: String(payload.email) };
+    if (typeof payload.userId !== "string" || typeof payload.storeId !== "string" || typeof payload.sessionVersion !== "number") return null;
+    return { userId: payload.userId, storeId: payload.storeId, email: String(payload.email), sessionVersion: payload.sessionVersion };
   } catch {
     return null;
   }

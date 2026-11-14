@@ -104,10 +104,15 @@ async function main() {
   const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.SEED_ADMIN_PASSWORD;
   if (email && password) {
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { email },
       update: {},
-      create: { email, name: "Lojista Demo", storeId: store.id, passwordHash: await bcrypt.hash(password, 12) },
+      create: { email, name: "Lojista Demo", passwordHash: await bcrypt.hash(password, 12), emailVerifiedAt: new Date() },
+    });
+    await prisma.membership.upsert({
+      where: { userId_storeId: { userId: user.id, storeId: store.id } },
+      update: {},
+      create: { userId: user.id, storeId: store.id, role: "OWNER" },
     });
     console.log(`Lojista de exemplo: ${email}`);
   }

@@ -4,11 +4,12 @@ import { formatBRL } from "@repo/db/utils";
 import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 
 export default async function OverviewPage() {
   const { storeId } = await requireSession();
 
-  const [revenue, paidCount, pendingCount, productCount, lowStock, recent] = await Promise.all([
+  const [revenue, paidCount, pendingCount, productCount, lowStock, recent, store] = await Promise.all([
     prisma.order.aggregate({ where: { storeId, status: "PAID" }, _sum: { totalInCents: true } }),
     prisma.order.count({ where: { storeId, status: "PAID" } }),
     prisma.order.count({ where: { storeId, status: "PENDING" } }),
@@ -20,6 +21,7 @@ export default async function OverviewPage() {
       include: { product: { select: { id: true, name: true } } },
     }),
     prisma.order.findMany({ where: { storeId }, orderBy: { createdAt: "desc" }, take: 6 }),
+    prisma.store.findUnique({ where: { id: storeId }, select: { logoUrl: true, domainStatus: true, onboardingDismissedAt: true } }),
   ]);
 
   const stats = [
@@ -32,6 +34,9 @@ export default async function OverviewPage() {
   return (
     <>
       <PageHeader title="Visão geral" subtitle="Resumo da sua loja em tempo real." />
+      {!store?.onboardingDismissedAt && (
+        <OnboardingChecklist hasProduct={productCount > 0} hasLogo={!!store?.logoUrl} domainVerified={store?.domainStatus === "VERIFIED"} />
+      )}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {stats.map((s, i) => (
           <div key={s.id} className={`card p-5 animate-rise ${s.highlight ? "border-ink bg-ink text-bone" : ""}`} style={{ animationDelay: `${i * 60}ms` }}>

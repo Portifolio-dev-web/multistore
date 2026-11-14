@@ -9,7 +9,8 @@ export async function GET(req: Request) {
   if (!host) return NextResponse.json({ error: "host obrigatório" }, { status: 400 });
 
   const candidates = host.startsWith("www.") ? [host, host.slice(4)] : [host, `www.${host}`];
-  const store = await prisma.store.findFirst({ where: { customDomain: { in: candidates } }, select: { slug: true } });
+  // F6.5: a vitrine só responde por domínios com a posse comprovada (TXT verificado)
+  const store = await prisma.store.findFirst({ where: { customDomain: { in: candidates }, domainStatus: "VERIFIED" }, select: { slug: true } });
   if (!store) return NextResponse.json({ error: "não encontrado" }, { status: 404 });
   return NextResponse.json({ slug: store.slug });
 }

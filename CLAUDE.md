@@ -227,13 +227,51 @@ variações do mesmo produto.
 **E-mails transacionais (F5.4).** Além da confirmação de pagamento e do aviso de envio (F1.x/F3.x),
 `@repo/mail` manda: "pedido recebido" (dispara no `checkout.session.completed` quando
 `payment_status` ainda não é "paid" — caso do Pix/boleto assíncrono no Stripe; cartão vai direto pra
-confirmação), aviso de nova venda pro lojista (primeiro `User` da loja — ainda não existe
-`Membership`/equipe, isso é F6.2), cancelamento e reembolso (ação do lojista no admin — pedido do
+confirmação), aviso de nova venda pro lojista (OWNER mais antigo da loja via `Membership` — ver F6.2
+mais abaixo), cancelamento e reembolso (ação do lojista no admin — pedido do
 pedido, `cancelOrder`/`refundOrder` em `apps/admin/src/actions/orders.ts`, devolvem o estoque via
 `releaseStock` e avisam o cliente) e confirmação de entrega (mesmo checkbox "avisar cliente" do
 envio). `OrderStatus.REFUNDED` é novo; `CANCELED` ganhou o primeiro gatilho real (antes só existia no
 tipo). Não há reembolso de verdade via API do Stripe — "marcar como reembolsado" só registra e avisa;
 o lojista reembolsa no Dashboard por fora.
+
+**Segurança da conta do lojista (F6.1).** `User.sessionVersion` viaja dentro do próprio JWT
+(`admin/src/lib/jwt.ts`) — `requireSession()` (`lib/session.ts`) rejeita qualquer token cuja versão
+não bata com a do banco, mesmo antes de expirar; `changePassword`/`resetPassword` incrementam a
+versão, derrubando as outras sessões abertas na hora (só a do navegador atual é reemitida).
+`UserToken` (campo `purpose`: `PASSWORD_RESET`/`EMAIL_VERIFY`/`TEAM_INVITE`) é um único model
+reaproveitado nos três fluxos — mesmo padrão de hash de uso único de `CustomerLoginToken`
+(`lib/user-token.ts`). `LoginAttempt` substitui o `Map` em memória de tentativas de login (sobrevive
+a reinício/múltiplas instâncias). Verificação de e-mail não bloqueia nada — só mostra aviso em
+"Minha conta" com reenvio.
+
+**Equipe e permissões (F6.2).** `Membership` (`userId`+`storeId`+`role`: OWNER/ADMIN/OPERADOR) ficou
+no lugar de `User.storeId` — um usuário pode ter N lojas. `requireSession(permission?)` manteve o
+retorno `{ userId, storeId, email, ... }`, então os ~40 call sites que só liam `{ storeId }`
+continuaram iguais; a validação virou "existe `Membership` pra esse (userId, storeId)?" e, se
+`permission` for passado, `hasPermission(role, permission)` (`@repo/db/permissions`) decide se
+segue ou redireciona pra `/`. Hoje só distingue OPERADOR dos outros dois (ver Decisões — OWNER e
+ADMIN têm as mesmas permissões). Seletor de loja na sidebar (só aparece com >1 `Membership`) chama
+`switchStore()`, que reemite a sessão com outro `storeId` já validado. Convite
+(`actions/team.ts`): e-mail que já tem conta ganha `Membership` na hora; e-mail novo cria `User` com
+`passwordHash` inutilizável + `UserToken` de convite, aceito em `/accept-invite/[token]`.
+
+**Planos e cobrança (F6.3).** `@repo/db/plans` (`PLAN_LIMITS`, `PLAN_LABEL`) é a fonte única de
+limites por plano — usada no admin (`/billing`, `createProduct`, `inviteTeamMember`,
+`updateStoreSettings`) e na página de planos da vitrine (F6.4). Stripe Billing é outro produto
+dentro da mesma conta Stripe global do checkout (F1.4) — `/billing` abre Checkout em modo assinatura
+(14 dias de teste) e o Portal hospedado do Stripe pra trocar cartão/cancelar. Webhook próprio
+(`/api/webhooks/stripe-billing`, segredo separado do checkout da vitrine) sincroniza
+`Store.plan`/`planStatus` a partir do status da assinatura. "Bloqueio suave" por cobrança atrasada
+hoje só impede criar produto novo (ver Decisões).
+
+**Domínio próprio (F6.5).** Salvar um `customDomain` novo gera `domainStatus: PENDING` +
+`domainVerificationToken` aleatório; "Verificar agora" em Configurações confere o TXT
+(`lib/dns.ts`, `node:dns/promises`, registro em `_multistore.<domínio>`) e, se achar, marca
+`VERIFIED` e chama `lib/hosting.ts` (API de domínios da hospedagem — Vercel; sem as variáveis
+configuradas, é um no-op documentado). A vitrine (`/api/domains/resolve`) só resolve domínios
+`VERIFIED`. Reivindicação `PENDING` nunca verificada expira em 48h antes de liberar pra outro
+lojista tentar o mesmo domínio.
 
 **Pacotes compartilhados.**
 - `@repo/db`: `prisma` e tipos. Só servidor.
@@ -242,6 +280,8 @@ o lojista reembolsa no Dashboard por fora.
 - `@repo/db/pricing`: cálculo de preço/desconto, puro. Pode ir para Client Components.
 - `@repo/db/content`: schemas Zod + parsers defensivos de seções/menu/redes sociais/páginas padrão. Pode ir para Client Components.
 - `@repo/db/markdown`: `renderSafeMarkdown`, puro. Pode ir para Client Components.
+- `@repo/db/plans`: limites e preço por plano, puro. Pode ir para Client Components.
+- `@repo/db/permissions`: `hasPermission(role, permission)`, puro. Pode ir para Client Components.
 - `@repo/mail`: envios únicos protegidos por um campo `*SentAt` gravado com `updateMany` atômico.
 
 **Upload.** `admin/src/actions/uploads.ts` valida a assinatura binária da imagem e grava em storage

@@ -23,6 +23,9 @@ export function LoginForm({ next }: { next?: string }) {
       </div>
       <SubmitButton className="btn w-full" pendingLabel="Entrando…" testId="login-submit-button">Entrar</SubmitButton>
       <p className="text-center text-sm text-ink/60">
+        <Link href="/forgot-password" className="underline underline-offset-4" data-testid="go-to-forgot-password-link">Esqueci minha senha</Link>
+      </p>
+      <p className="text-center text-sm text-ink/60">
         Ainda não tem loja? <Link href="/register" className="font-semibold text-ink underline underline-offset-4" data-testid="go-to-register-link">Criar conta</Link>
       </p>
     </form>

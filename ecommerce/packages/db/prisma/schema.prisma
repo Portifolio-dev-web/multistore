@@ -23,7 +23,7 @@ model Store {
   updatedAt    DateTime  @updatedAt
   products     Product[]
   orders       Order[]
-  users        User[]
+  memberships  Membership[]
   slugRedirects SlugRedirect[]
   categories   Category[]
   aiGenerations AiGeneration[]
@@ -63,6 +63,40 @@ model Store {
   gtmId        String?
   metaPixelId  String?
   tiktokPixelId String?
+
+  // F6.3: plano e cobrança (Stripe Billing) do lojista — nada a ver com o Stripe do checkout da
+  // vitrine (F1.4 já decidiu por uma conta global; esta é a assinatura que o LOJISTA paga à plataforma)
+  plan                 Plan       @default(FREE)
+  planStatus           PlanStatus @default(ACTIVE)
+  trialEndsAt          DateTime?
+  stripeCustomerId     String?    @unique
+  stripeSubscriptionId String?    @unique
+
+  // F6.5: verificação de domínio próprio por TXT (_multistore.<domínio>) antes da vitrine responder
+  domainStatus            DomainStatus?
+  domainVerificationToken String?
+  domainClaimedAt         DateTime?
+
+  // F6.7: dispensa o checklist de primeiros passos no painel
+  onboardingDismissedAt DateTime?
+}
+
+enum Plan {
+  FREE
+  ESSENCIAL
+  PRO
+}
+
+enum PlanStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+}
+
+enum DomainStatus {
+  PENDING
+  VERIFIED
 }
 
 enum Theme {
@@ -163,11 +197,67 @@ model User {
   email        String   @unique
   passwordHash String
   name         String?
-  storeId      String
-  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
 
+  // F6.1: sobe a cada troca de senha — invalida toda sessão (JWT) assinada com a versão antiga,
+  // mesmo que o token ainda não tenha expirado ("sair de todos os dispositivos")
+  sessionVersion  Int       @default(1)
+  emailVerifiedAt DateTime?
+
+  // F6.2: um usuário pode ter várias lojas (no lugar de User.storeId único)
+  memberships Membership[]
+  tokens      UserToken[]
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  OPERADOR
+}
+
+// F6.2: liga usuário a loja com um papel. Um usuário pode ter N memberships (N lojas); uma loja
+// pode ter N memberships (N usuários na equipe).
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  role      Role
+  createdAt DateTime @default(now())
+
+  @@unique([userId, storeId])
   @@index([storeId])
+}
+
+enum UserTokenPurpose {
+  PASSWORD_RESET
+  EMAIL_VERIFY
+  TEAM_INVITE
+}
+
+// F6.1/F6.2: token de uso único por hash (mesmo padrão de CustomerLoginToken) — serve redefinição
+// de senha, verificação de e-mail e convite de equipe (purpose distingue o fluxo)
+model UserToken {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   UserTokenPurpose
+  tokenHash String           @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+}
+
+// F6.1: substitui o Map em memória de tentativas de login — sobrevive a reinício/múltiplas instâncias
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
 }
 
 model Product {

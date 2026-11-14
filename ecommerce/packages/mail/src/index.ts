@@ -5,13 +5,18 @@ import {
   abandonedCartEmail,
   customerLoginLinkEmail,
   deliveryConfirmationEmail,
+  emailVerificationEmail,
   newSaleNoticeEmail,
   orderCanceledEmail,
   orderConfirmationEmail,
   orderReceivedEmail,
   orderRefundedEmail,
+  passwordResetEmail,
+  planPastDueEmail,
   reviewRequestEmail,
   shippingUpdateEmail,
+  teamAddedEmail,
+  teamInviteEmail,
 } from "./templates";
 
 type StoreTheme = { name: string; primaryColor: string; accentColor: string; logoUrl: string | null };
@@ -84,7 +89,7 @@ export async function sendOrderReceivedNotice(orderId: string): Promise<void> {
   }
 }
 
-/** F5.4: avisa o lojista (primeiro usuário da loja — ainda não existe Membership/equipe) de uma venda nova */
+/** F5.4/F6.2: avisa o OWNER mais antigo da loja (equipe pode ter várias pessoas desde a F6.2) */
 export async function sendNewSaleNotice(orderId: string): Promise<void> {
   const { count } = await prisma.order.updateMany({
     where: { id: orderId, status: "PAID", merchantNotifiedAt: null },
@@ -94,7 +99,12 @@ export async function sendNewSaleNotice(orderId: string): Promise<void> {
 
   const order = await loadOrder(orderId);
   if (!order) return;
-  const merchant = await prisma.user.findFirst({ where: { storeId: order.storeId }, orderBy: { createdAt: "asc" } });
+  const membership = await prisma.membership.findFirst({
+    where: { storeId: order.storeId, role: "OWNER" },
+    include: { user: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const merchant = membership?.user;
   if (!merchant) return;
 
   try {
@@ -156,6 +166,59 @@ export async function sendDeliveryConfirmation(orderId: string): Promise<boolean
   } catch (err) {
     console.error("[mail] falha na confirmação de entrega", orderId, err);
     await prisma.order.update({ where: { id: orderId }, data: { deliveryEmailSentAt: null } });
+    return false;
+  }
+}
+
+/** F6.1: e-mails de conta (não há `to` implícito aqui — quem chama já resolveu o e-mail do User) */
+export async function sendPasswordReset(to: string, name: string | null, resetUrl: string): Promise<boolean> {
+  try {
+    const mail = passwordResetEmail({ name, resetUrl });
+    return await sendMail({ ...mail, to, fromName: "MultiStore" });
+  } catch (err) {
+    console.error("[mail] falha no e-mail de redefinição de senha", to, err);
+    return false;
+  }
+}
+
+export async function sendEmailVerification(to: string, name: string | null, verifyUrl: string): Promise<boolean> {
+  try {
+    const mail = emailVerificationEmail({ name, verifyUrl });
+    return await sendMail({ ...mail, to, fromName: "MultiStore" });
+  } catch (err) {
+    console.error("[mail] falha no e-mail de verificação", to, err);
+    return false;
+  }
+}
+
+/** F6.2: convite (usuário novo, ainda sem senha) vs. aviso (usuário existente, só ganhou acesso a mais uma loja) */
+export async function sendTeamInvite(store: StoreTheme, to: string, roleLabel: string, acceptUrl: string): Promise<boolean> {
+  try {
+    const mail = teamInviteEmail({ store, roleLabel, acceptUrl });
+    return await sendMail({ ...mail, to, fromName: store.name });
+  } catch (err) {
+    console.error("[mail] falha no convite de equipe", to, err);
+    return false;
+  }
+}
+
+export async function sendTeamAdded(store: StoreTheme, to: string, roleLabel: string, loginUrl: string): Promise<boolean> {
+  try {
+    const mail = teamAddedEmail({ store, roleLabel, loginUrl });
+    return await sendMail({ ...mail, to, fromName: store.name });
+  } catch (err) {
+    console.error("[mail] falha no aviso de equipe", to, err);
+    return false;
+  }
+}
+
+/** F6.3: aviso de cobrança recusada (webhook do Stripe Billing) */
+export async function sendPlanPastDue(store: StoreTheme, to: string, planLabel: string, billingUrl: string): Promise<boolean> {
+  try {
+    const mail = planPastDueEmail({ store, planLabel, billingUrl });
+    return await sendMail({ ...mail, to, fromName: store.name });
+  } catch (err) {
+    console.error("[mail] falha no aviso de cobrança atrasada", to, err);
     return false;
   }
 }
