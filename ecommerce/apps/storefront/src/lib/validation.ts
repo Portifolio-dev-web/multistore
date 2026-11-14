@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CEP, isValidCpfOrCnpj, onlyDigits, PHONE_BR } from "@repo/db/utils";
+import { CEP, isValidCpfOrCnpj, onlyDigits } from "@repo/db/utils";
 
 // Etapa 1 do checkout próprio: e-mail, nome, telefone, CPF/CNPJ
 export const identificationSchema = z.object({
@@ -8,8 +8,8 @@ export const identificationSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(PHONE_BR, "Telefone inválido (ex.: (11) 91234-5678)")
-    .transform(onlyDigits),
+    .transform(onlyDigits)
+    .refine((v) => v.length === 10 || v.length === 11, "Telefone inválido (DDD + número)"),
   document: z
     .string()
     .trim()
