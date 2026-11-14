@@ -87,11 +87,11 @@ function CartLine({ storeSlug, item }: { storeSlug: string; item: CartItem }) {
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center rounded-full border border-ink/15 text-sm">
-            <button type="button" className="px-3 py-1.5" onClick={() => updateQuantity(storeSlug, item.variantId, item.quantity - 1)} data-testid={`cart-item-decrease-${item.variantId}`}>−</button>
+            <button type="button" className="grid h-11 w-11 place-items-center text-base" onClick={() => updateQuantity(storeSlug, item.variantId, item.quantity - 1)} data-testid={`cart-item-decrease-${item.variantId}`}>−</button>
             <span className="w-6 text-center" data-testid={`cart-item-qty-${item.variantId}`}>{item.quantity}</span>
-            <button type="button" className="px-3 py-1.5" onClick={() => updateQuantity(storeSlug, item.variantId, item.quantity + 1)} data-testid={`cart-item-increase-${item.variantId}`}>+</button>
+            <button type="button" className="grid h-11 w-11 place-items-center text-base" onClick={() => updateQuantity(storeSlug, item.variantId, item.quantity + 1)} data-testid={`cart-item-increase-${item.variantId}`}>+</button>
           </div>
-          <button type="button" onClick={() => removeItem(storeSlug, item.variantId)} className="text-sm text-ink/50 hover:text-red-600" data-testid={`cart-item-remove-${item.variantId}`}>
+          <button type="button" onClick={() => removeItem(storeSlug, item.variantId)} className="px-3 py-2.5 text-sm text-ink/50 hover:text-red-600" data-testid={`cart-item-remove-${item.variantId}`}>
             Remover
           </button>
         </div>

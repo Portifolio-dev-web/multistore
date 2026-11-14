@@ -67,11 +67,11 @@ export function ImageUploader({ initialImages = [], initialAlts = [] }: { initia
               {i === 0 && <span className="absolute left-1.5 top-1.5 rounded bg-lime px-1.5 py-0.5 font-mono text-[10px] font-medium">CAPA</span>}
               <div className="absolute inset-x-0 bottom-0 flex justify-between bg-ink/80 p-1 opacity-0 transition-opacity group-hover:opacity-100">
                 <div className="flex gap-1">
-                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="px-1 font-mono text-[10px] text-bone hover:text-lime disabled:opacity-30" data-testid={`image-move-left-${i}`}>←</button>
-                  <button type="button" onClick={() => move(i, 1)} disabled={i === images.length - 1} className="px-1 font-mono text-[10px] text-bone hover:text-lime disabled:opacity-30" data-testid={`image-move-right-${i}`}>→</button>
-                  {i > 0 && <button type="button" onClick={() => makeCover(i)} className="px-1 font-mono text-[10px] text-bone hover:text-lime" data-testid={`image-make-cover-${i}`}>capa</button>}
+                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="px-2 py-1.5 font-mono text-xs text-bone hover:text-lime disabled:opacity-30" data-testid={`image-move-left-${i}`}>←</button>
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === images.length - 1} className="px-2 py-1.5 font-mono text-xs text-bone hover:text-lime disabled:opacity-30" data-testid={`image-move-right-${i}`}>→</button>
+                  {i > 0 && <button type="button" onClick={() => makeCover(i)} className="px-2 py-1.5 font-mono text-xs text-bone hover:text-lime" data-testid={`image-make-cover-${i}`}>capa</button>}
                 </div>
-                <button type="button" onClick={() => remove(i)} className="px-1.5 font-mono text-[10px] text-bone hover:text-red-300" data-testid={`image-remove-${i}`}>remover</button>
+                <button type="button" onClick={() => remove(i)} className="px-2 py-1.5 font-mono text-xs text-bone hover:text-red-300" data-testid={`image-remove-${i}`}>remover</button>
               </div>
             </div>
             <input

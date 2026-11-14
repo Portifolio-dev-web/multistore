@@ -1,12 +1,13 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Role } from "@repo/db";
 import { hasPermission } from "@repo/db/permissions";
 import { logout, switchStore } from "@/actions/auth";
 
-type NavItem = { href: string; label: string; id: string; permission?: "settings" | "team" | "billing" };
+type NavItem = { href: string; label: string; id: string; permission?: "settings" | "team" | "billing"; separatorBefore?: boolean };
 
 const NAV: NavItem[] = [
   { href: "/", label: "Visão geral", id: "overview" },
@@ -23,7 +24,7 @@ const NAV: NavItem[] = [
   { href: "/menu", label: "Menu", id: "menu" },
   { href: "/pages", label: "Páginas", id: "pages" },
   { href: "/settings", label: "Aparência", id: "settings", permission: "settings" },
-  { href: "/team", label: "Equipe", id: "team", permission: "team" },
+  { href: "/team", label: "Equipe", id: "team", permission: "team", separatorBefore: true },
   { href: "/billing", label: "Cobrança", id: "billing", permission: "billing" },
   { href: "/developers", label: "Desenvolvedores", id: "developers", permission: "settings" },
 ];
@@ -67,14 +68,16 @@ export function Sidebar({ storeName, storeUrl, email, brandColor, role, stores, 
       </div>
       <nav className="flex gap-1 overflow-x-auto px-3 lg:flex-col">
         {nav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            data-testid={`nav-${item.id}-link`}
-            className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${isActive(item.href) ? "bg-lime font-semibold text-ink" : "text-bone/70 hover:bg-white/5 hover:text-bone"}`}
-          >
-            {item.label}
-          </Link>
+          <Fragment key={item.href}>
+            {item.separatorBefore && <div className="my-2 border-t border-bone/10 lg:mx-3" />}
+            <Link
+              href={item.href}
+              data-testid={`nav-${item.id}-link`}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${isActive(item.href) ? "bg-lime font-semibold text-ink" : "text-bone/70 hover:bg-white/5 hover:text-bone"}`}
+            >
+              {item.label}
+            </Link>
+          </Fragment>
         ))}
       </nav>
       <div className="mt-auto hidden space-y-2 p-5 lg:block">
