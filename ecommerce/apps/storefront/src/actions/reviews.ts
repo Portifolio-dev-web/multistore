@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
-import { prisma } from "@repo/db";
+import { clientIp, prisma, rateLimit, RATE_LIMIT_MESSAGE } from "@repo/db";
 import { getStoreBySlug } from "@/lib/store";
 import { getCustomerForStore } from "@/lib/customer-session";
 import { verifyReviewToken } from "@/lib/review-token";
@@ -27,6 +28,7 @@ export async function createReview(storeSlug: string, productId: string, _prev: 
 
   const product = await prisma.product.findFirst({ where: { id: productId, storeId: store.id }, select: { id: true } });
   if (!product) return { error: "Produto não encontrado." };
+  if (!(await rateLimit(`review:${clientIp(await headers())}`, 5, 60 * 60 * 1000))) return { error: RATE_LIMIT_MESSAGE };
 
   let verifiedPurchase = false;
   let verifiedOrderId: string | null = null;

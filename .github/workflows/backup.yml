@@ -1,0 +1,32 @@
+name: Backup do banco
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # 03:00 em Brasília
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: pg_dump -> R2
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+    steps:
+      - name: Dump e upload
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$BUCKET" ]; then
+            echo "::warning::Secrets de backup não configurados (BACKUP_DATABASE_URL, R2_*) — nada a fazer."
+            exit 0
+          fi
+          set -o pipefail
+          file="vitrine-$(date -u +%Y%m%d-%H%M%S).sql.gz"
+          # pg_dump mais novo que o servidor sempre funciona; imagem evita depender do apt do runner
+          docker run --rm postgres:17-alpine pg_dump --no-owner --no-privileges "$DATABASE_URL" | gzip > "$file"
+          test -s "$file"
+          aws s3 cp "$file" "s3://$BUCKET/backups/$file" --endpoint-url "$R2_ENDPOINT"
+          echo "Backup enviado: backups/$file ($(du -h "$file" | cut -f1))"

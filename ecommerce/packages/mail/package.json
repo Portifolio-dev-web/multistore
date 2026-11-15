@@ -9,11 +9,10 @@
   },
   "dependencies": {
     "@repo/db": "*",
-    "nodemailer": "^6.9.14"
+    "nodemailer": "^10.5.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
-    "@types/nodemailer": "^6.4.15",
     "typescript": "^5.5.3"
   }
 }

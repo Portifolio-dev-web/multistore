@@ -1,7 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { dispatchWebhook, nextOrderNumber, OutOfStockError, prisma, releaseStock, reserveStock, type Prisma } from "@repo/db";
+import { headers } from "next/headers";
+import { clientIp, dispatchWebhook, nextOrderNumber, OutOfStockError, prisma, rateLimit, RATE_LIMIT_MESSAGE, releaseStock, reserveStock, type Prisma } from "@repo/db";
 import {
   applyDiscounts,
   calculateOrderPricing,
@@ -116,6 +117,8 @@ export async function previewDiscounts(
 export async function createCheckoutSession(input: CheckoutInput): Promise<CheckoutResult> {
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) return { error: "Dados inválidos. Confira as informações e tente de novo." };
+  // Cada chamada cria um pedido PENDING e reserva estoque por 30 min — sem limite, dá pra esgotar a loja.
+  if (!(await rateLimit(`checkout:${clientIp(await headers())}`, 10, 15 * 60 * 1000))) return { error: RATE_LIMIT_MESSAGE };
   const {
     storeSlug,
     items,

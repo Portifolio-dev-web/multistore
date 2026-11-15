@@ -18,9 +18,17 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const now = Date.now();
+  // Só a janela onde ainda cabe lembrete (1h..3 dias) e em lotes — o resto da tabela nunca é lido.
   const carts = await prisma.abandonedCart.findMany({
-    where: { recoveredOrderId: null, unsubscribedAt: null },
+    where: {
+      recoveredOrderId: null,
+      unsubscribedAt: null,
+      remindedAt24h: null,
+      createdAt: { lte: new Date(now - ONE_HOUR_MS), gte: new Date(now - 3 * ONE_DAY_MS) },
+    },
     include: { store: true },
+    orderBy: { createdAt: "asc" },
+    take: 200,
   });
 
   let sent1h = 0;

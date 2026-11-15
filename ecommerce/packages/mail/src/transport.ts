@@ -10,6 +10,12 @@ export function getTransport(): Transporter | null {
     port: Number(process.env.SMTP_PORT),
     secure: process.env.SMTP_SECURE === "true",
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } : undefined,
+    // SMTP lento não pode segurar o webhook do Stripe nem o checkout além de ~10 s
+    pool: true,
+    maxConnections: 2,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
   });
   return transporter;
 }

@@ -1,7 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
-import { prisma } from "@repo/db";
+import { clientIp, prisma, rateLimit, RATE_LIMIT_MESSAGE } from "@repo/db";
 import { getStoreBySlug } from "@/lib/store";
 
 const emailSchema = z.string().trim().toLowerCase().email("E-mail inválido.");
@@ -15,6 +16,7 @@ export async function subscribeNewsletter(storeSlug: string, _prev: NewsletterSt
 
   const store = await getStoreBySlug(storeSlug);
   if (!store) return { error: "Loja não encontrada." };
+  if (!(await rateLimit(`newsletter:${clientIp(await headers())}`, 10, 60 * 60 * 1000))) return { error: RATE_LIMIT_MESSAGE };
 
   // F6.11: marca quando o consentimento de marketing foi dado, não só o booleano
   await prisma.customer.upsert({

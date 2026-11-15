@@ -132,6 +132,7 @@ model WebhookDelivery {
   createdAt         DateTime              @default(now())
 
   @@index([webhookEndpointId, createdAt])
+  @@index([createdAt])
 }
 
 enum CookieConsentDecision {
@@ -336,6 +337,18 @@ model LoginAttempt {
   createdAt DateTime @default(now())
 
   @@index([email, createdAt])
+  @@index([createdAt])
+}
+
+// Rate limit genérico (rateLimit() em @repo/db): uma linha por tentativa, key = "acao:ip" ou "acao:email".
+// Sem storeId: protege a plataforma, não é dado de loja. Limpo pelo /api/cron/cleanup.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+  @@index([createdAt])
 }
 
 model Product {
@@ -452,6 +465,7 @@ model AbandonedCart {
   updatedAt      DateTime  @updatedAt
 
   @@index([storeId, createdAt])
+  @@index([createdAt])
 }
 
 // F3.6: avaliação de produto, moderada no admin antes de aparecer na vitrine.
@@ -623,6 +637,7 @@ model Order {
   @@index([storeId, status])
   @@index([storeId, createdAt])
   @@index([customerId])
+  @@index([fulfillmentStatus, deliveredAt])
 }
 
 model OrderItem {

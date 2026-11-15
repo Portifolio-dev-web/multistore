@@ -1,9 +1,10 @@
 "use server";
 
 import crypto from "node:crypto";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { prisma } from "@repo/db";
+import { clientIp, prisma, rateLimit, RATE_LIMIT_MESSAGE } from "@repo/db";
 import { sendCustomerLoginLink } from "@repo/mail";
 import { storeUrl } from "@repo/db/urls";
 import { getStoreBase, storeHref } from "@/lib/paths";
@@ -22,6 +23,11 @@ export async function requestMagicLink(storeSlug: string, _prev: MagicLinkState,
 
   const store = await prisma.store.findUnique({ where: { slug: storeSlug } });
   if (!store) return { error: "Loja não encontrada." };
+
+  const allowed =
+    (await rateLimit(`magic:${clientIp(await headers())}`, 10, 60 * 60 * 1000)) &&
+    (await rateLimit(`magic:${store.id}:${email}`, 3, 15 * 60 * 1000));
+  if (!allowed) return { error: RATE_LIMIT_MESSAGE };
 
   const customer = await prisma.customer.upsert({
     where: { storeId_email: { storeId: store.id, email } },

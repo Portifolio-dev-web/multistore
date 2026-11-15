@@ -17,15 +17,16 @@ export async function GET(req: Request) {
   const threshold = new Date(Date.now() - DAYS_AFTER_DELIVERY * 24 * 60 * 60 * 1000);
   const orders = await prisma.order.findMany({
     where: { status: "PAID", fulfillmentStatus: "DELIVERED", deliveredAt: { lte: threshold }, reviewRequestSentAt: null, customerEmail: { not: null } },
-    include: { store: true, items: true },
+    include: { store: true, items: { include: { product: { select: { slug: true } } } } },
+    orderBy: { deliveredAt: "asc" },
+    take: 200,
   });
 
   let sent = 0;
   for (const order of orders) {
-    const firstItem = order.items.find((i) => i.productId);
-    if (!firstItem?.productId) continue; // sem produto de catálogo associado, não tem onde linkar a avaliação
-    const product = await prisma.product.findUnique({ where: { id: firstItem.productId }, select: { slug: true } });
-    if (!product) continue;
+    const firstItem = order.items.find((i) => i.productId && i.product);
+    if (!firstItem?.productId || !firstItem.product) continue; // sem produto de catálogo associado, não tem onde linkar a avaliação
+    const product = firstItem.product;
 
     const token = signReviewToken(order.id, firstItem.productId);
     const reviewUrl = `${storeUrl(order.store)}/produtos/${product.slug}?order=${order.id}&token=${token}`;

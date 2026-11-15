@@ -95,7 +95,7 @@ Em dev: `stripe listen --forward-to localhost:3001/api/webhooks/stripe-billing`.
 | `RUN_SEED`              | docker-compose | `true` faz o serviço `migrate` rodar o seed (só desenvolvimento) |
 | `ANTHROPIC_API_KEY`     | admin       | Chave da API da Anthropic; sem ela, o botão "Gerar com IA" fica escondido |
 | `ANTHROPIC_MODEL`       | admin       | Modelo usado para gerar descrição de produto (padrão: `claude-haiku-5-5`) |
-| `CRON_SECRET`           | storefront  | Protege `/api/cron/*` (carrinho abandonado, pedido de avaliação); sem ela, os dois recusam a chamada |
+| `CRON_SECRET`           | storefront  | Protege `/api/cron/*` (carrinho abandonado, pedido de avaliação, limpeza); sem ela, todos recusam a chamada |
 | `REVIEW_REQUEST_DAYS_AFTER_DELIVERY` | storefront | Dias após a entrega pra mandar o e-mail pedindo avaliação (padrão: 7) |
 | `ADMIN_URL`              | storefront/admin | URL do painel do lojista — link do e-mail de aviso de nova venda (storefront) e links dos próprios e-mails do admin: redefinir senha, verificar e-mail, convite de equipe (padrão: `http://localhost:3001`) |
 | `STRIPE_PRICE_ESSENCIAL` / `STRIPE_PRICE_PRO` | admin | IDs de preço recorrente do Stripe Billing para os planos pagos (F6.3); sem eles, o upgrade mostra um aviso |
@@ -164,9 +164,17 @@ DATABASE_URL=... STRIPE_WEBHOOK_SECRET=whsec_... WEBHOOK_URL=http://localhost:30
   GlitchTip) via POST direto no envelope HTTP — sem o SDK `@sentry/nextjs` nem passo de build.
 - **Health check**: `GET /api/health` em cada app confere a conexão com o Postgres (`SELECT 1`) e
   responde `503` se o banco estiver fora.
-- **Backup**: `./scripts/backup-db.sh` gera um dump comprimido (`pg_dump` via `docker compose exec`)
-  e mantém os 7 mais recentes; agende por fora (cron do host, GitHub Actions agendado), mesmo padrão
-  dos jobs de F3.4/F3.6. Restaurar: `./scripts/restore-db.sh backups/vitrine-XXXX.sql.gz`.
+- **Backup (produção)**: `.github/workflows/backup.yml` roda todo dia às 03:00 (Brasília), faz
+  `pg_dump` do `BACKUP_DATABASE_URL` e envia para um bucket R2 **privado** (`backups/`). Secrets no
+  GitHub: `BACKUP_DATABASE_URL`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+  `R2_BACKUP_BUCKET`. Retenção: regra de lifecycle no bucket (ex. apagar após 14 dias). Rodar à mão:
+  aba Actions → "Backup do banco" → Run workflow.
+- **Restaurar** (num banco vazio — teste isso pelo menos uma vez):
+  `gunzip -c vitrine-XXXX.sql.gz | docker run -i --rm postgres:17-alpine psql "$URL_DO_BANCO_NOVO"`.
+- **Backup local (dev)**: `./scripts/backup-db.sh` / `./scripts/restore-db.sh` (via `docker compose exec`).
+- **Crons** (agendador externo, ex. cron-job.org, com `Authorization: Bearer $CRON_SECRET`):
+  `/api/cron/abandoned-carts` e `/api/cron/review-requests` de hora em hora; `/api/cron/cleanup` 1×/dia
+  (apaga tentativas de login/rate limit, tokens vencidos, carrinhos com mais de 90 dias e logs antigos).
 
 ## Produção
 

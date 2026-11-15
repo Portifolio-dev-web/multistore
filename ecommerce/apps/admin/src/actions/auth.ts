@@ -1,8 +1,9 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma, type Prisma } from "@repo/db";
+import { clientIp, prisma, rateLimit, RATE_LIMIT_MESSAGE, type Prisma } from "@repo/db";
 import { defaultHomeSections, defaultPages } from "@repo/db/content";
 import { sendEmailVerification, sendPasswordReset } from "@repo/mail";
 import { createSession, deleteSession, getSession } from "@/lib/session";
@@ -77,6 +78,7 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
   const parsed = registerSchema.safeParse(formToObject(formData));
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
   const { name, email, password, storeName, storeSlug } = parsed.data;
+  if (!(await rateLimit(`register:${clientIp(await headers())}`, 5, 60 * 60 * 1000))) return { error: RATE_LIMIT_MESSAGE };
 
   const [emailTaken, slugTaken] = await Promise.all([
     prisma.user.findUnique({ where: { email }, select: { id: true } }),
@@ -131,6 +133,10 @@ export async function switchStore(storeId: string): Promise<void> {
 export async function requestPasswordReset(_prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = forgotPasswordSchema.safeParse(formToObject(formData));
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+  const allowed =
+    (await rateLimit(`reset:${clientIp(await headers())}`, 10, 60 * 60 * 1000)) &&
+    (await rateLimit(`reset:${parsed.data.email}`, 3, 15 * 60 * 1000));
+  if (!allowed) return { error: RATE_LIMIT_MESSAGE };
 
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
   if (user) {

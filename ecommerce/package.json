@@ -22,5 +22,8 @@
     "turbo": "^2.0.9",
     "typescript": "^5.5.3"
   },
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "yarn@1.22.22",
+  "resolutions": {
+    "**/next/postcss": "^8.5.18"
+  }
 }
