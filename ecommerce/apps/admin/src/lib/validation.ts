@@ -19,7 +19,7 @@ export const loginSchema = z.object({
 export const registerSchema = z.object({
   name: z.string().trim().min(2, "Informe seu nome").max(80),
   email: z.string().trim().toLowerCase().email("E-mail inválido"),
-  password: z.string().min(8, "Mínimo de 8 caracteres").max(128),
+  password: z.string().min(10, "Mínimo de 10 caracteres").max(128),
   storeName: z.string().trim().min(2, "Informe o nome da loja").max(80),
   storeSlug: z.string().trim().toLowerCase().regex(SLUG, "Use apenas letras minúsculas, números e hífens").max(48),
 });
@@ -30,12 +30,12 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-  password: z.string().min(8, "Mínimo de 8 caracteres").max(128),
+  password: z.string().min(10, "Mínimo de 10 caracteres").max(128),
 });
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Informe a senha atual"),
-  newPassword: z.string().min(8, "Mínimo de 8 caracteres").max(128),
+  newPassword: z.string().min(10, "Mínimo de 10 caracteres").max(128),
 });
 
 // F6.2: equipe
@@ -45,7 +45,7 @@ export const inviteSchema = z.object({
 });
 
 export const acceptInviteSchema = z.object({
-  password: z.string().min(8, "Mínimo de 8 caracteres").max(128),
+  password: z.string().min(10, "Mínimo de 10 caracteres").max(128),
 });
 
 export const productSchema = z.object({

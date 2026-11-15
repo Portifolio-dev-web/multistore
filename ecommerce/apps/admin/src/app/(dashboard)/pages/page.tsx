@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@repo/db";
+import { PAGE_PLACEHOLDER } from "@repo/db/content";
 import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/page-header";
 
@@ -34,6 +35,11 @@ export default async function PagesListPage() {
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${p.published ? "bg-lime/30 text-ink" : "bg-ink/10 text-ink/50"}`}>
                     {p.published ? "Publicada" : "Rascunho"}
                   </span>
+                  {p.content.includes(PAGE_PLACEHOLDER) && (
+                    <span className="ml-2 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700" data-testid={`page-needs-review-${p.id}`}>
+                      Revisar modelo
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}

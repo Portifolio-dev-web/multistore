@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@repo/db";
 import { sendAbandonedCartReminder } from "@repo/mail";
 import { storeUrl } from "@repo/db/urls";
+import { isCronAuthorized } from "@/lib/cron-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,15 +11,11 @@ const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 
 type Item = { productName: string; variantLabel: string | null; unitPriceInCents: number; quantity: number };
 
-function authorized(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  return !!secret && req.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 // F3.4: chamado periodicamente por um agendador externo (cron do host, GitHub Actions
 // scheduled, etc. — ver Decisões). Lembra 1h e 24h depois do carrinho abandonado.
 export async function GET(req: Request) {
-  if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const now = Date.now();
   const carts = await prisma.abandonedCart.findMany({

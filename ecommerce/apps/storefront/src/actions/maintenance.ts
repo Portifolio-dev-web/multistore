@@ -19,6 +19,7 @@ export async function enterMaintenancePassword(storeSlug: string, _prev: Mainten
 
   (await cookies()).set(MAINTENANCE_COOKIE, signMaintenanceAccess(store.id), {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production" && process.env.COOKIE_SECURE !== "false",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,

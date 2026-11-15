@@ -27,7 +27,7 @@ export function RegisterForm() {
       </div>
       <div>
         <label className="label" htmlFor="password">Senha</label>
-        <input id="password" name="password" type="password" minLength={8} required className="field" data-testid="register-password-input" />
+        <input id="password" name="password" type="password" minLength={10} required className="field" data-testid="register-password-input" />
         <FieldError errors={e?.password} />
       </div>
       <div>

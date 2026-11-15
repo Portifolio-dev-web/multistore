@@ -3,19 +3,16 @@ import { prisma } from "@repo/db";
 import { sendReviewRequest } from "@repo/mail";
 import { storeUrl } from "@repo/db/urls";
 import { signReviewToken } from "@/lib/review-token";
+import { isCronAuthorized } from "@/lib/cron-auth";
 
 export const dynamic = "force-dynamic";
 
 const DAYS_AFTER_DELIVERY = Number(process.env.REVIEW_REQUEST_DAYS_AFTER_DELIVERY || "7");
 
-function authorized(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  return !!secret && req.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 // F3.6: mesmo mecanismo de agendamento externo do /api/cron/abandoned-carts (ver Decisões)
 export async function GET(req: Request) {
-  if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const threshold = new Date(Date.now() - DAYS_AFTER_DELIVERY * 24 * 60 * 60 * 1000);
   const orders = await prisma.order.findMany({

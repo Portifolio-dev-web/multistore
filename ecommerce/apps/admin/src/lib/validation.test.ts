@@ -28,7 +28,7 @@ describe("registerSchema", () => {
   const base = {
     name: "Maria Lojista",
     email: "maria@loja.com",
-    password: "senha1234",
+    password: "senha12345",
     storeName: "Loja da Maria",
     storeSlug: "loja-da-maria",
   };
@@ -42,7 +42,7 @@ describe("registerSchema", () => {
   });
 
   it("recusa senha curta", () => {
-    expect(registerSchema.safeParse({ ...base, password: "1234567" }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...base, password: "123456789" }).success).toBe(false);
   });
 });
 

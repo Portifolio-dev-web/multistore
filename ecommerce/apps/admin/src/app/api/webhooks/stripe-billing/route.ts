@@ -46,7 +46,8 @@ async function syncSubscription(subscription: Stripe.Subscription) {
     data: { plan, planStatus, stripeSubscriptionId: subscription.status === "canceled" ? null : subscription.id },
   });
 
-  if (planStatus === "PAST_DUE" && store.stripeCustomerId) {
+  // Só na transição pra PAST_DUE — cada subscription.updated seguinte não reenvia o aviso.
+  if (planStatus === "PAST_DUE" && store.planStatus !== "PAST_DUE" && store.stripeCustomerId) {
     const billingUrl = `${process.env.ADMIN_URL ?? "http://localhost:3001"}/billing`;
     const owner = await prisma.membership.findFirst({ where: { storeId: store.id, role: "OWNER" }, include: { user: true }, orderBy: { createdAt: "asc" } });
     if (owner) await sendPlanPastDue(store, owner.user.email, PLAN_LABEL[plan], billingUrl);

@@ -109,12 +109,60 @@ export function defaultHomeSections(): HomeSection[] {
   ];
 }
 
+// Campo do modelo que o lojista ainda precisa preencher; o admin avisa enquanto ele existir no texto.
+export const PAGE_PLACEHOLDER = "[PREENCHER";
+
+const PRIVACY_POLICY_TEMPLATE = `# Política de privacidade
+
+Esta política explica como **[PREENCHER: razão social]**, inscrita no CNPJ/CPF **[PREENCHER: CNPJ ou CPF]** ("nós"), trata os dados pessoais de quem compra ou navega nesta loja, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018).
+
+## Quais dados coletamos
+
+- **Identificação e contato:** nome, e-mail, telefone e CPF/CNPJ, informados no checkout.
+- **Entrega:** endereço completo.
+- **Pedidos:** produtos comprados, valores, status do pagamento e da entrega.
+- **Carrinho:** itens e e-mail de quem iniciou uma compra sem concluir.
+- **Navegação:** cookies de análise e publicidade, **somente** se você aceitar no aviso de cookies.
+
+Não coletamos nem guardamos dados de cartão: o pagamento é processado diretamente pela Stripe.
+
+## Para que usamos e com qual base legal
+
+- **Processar o pedido, entregar e prestar atendimento:** execução de contrato (LGPD, art. 7º, V).
+- **Emitir nota fiscal e guardar registros fiscais:** obrigação legal (art. 7º, II).
+- **Lembrar de um carrinho não finalizado e pedir avaliação da compra:** legítimo interesse (art. 7º, IX) — você pode cancelar pelo link no e-mail.
+- **Enviar novidades e promoções:** consentimento (art. 7º, I) — só se você marcar a opção.
+- **Medir audiência e anúncios (cookies):** consentimento (art. 7º, I).
+
+## Com quem compartilhamos
+
+Apenas com quem é necessário para a compra acontecer: processador de pagamento (Stripe), transportadora, provedor de e-mail transacional e provedor de hospedagem da plataforma. Não vendemos dados pessoais.
+
+## Por quanto tempo guardamos
+
+Dados de pedidos são mantidos pelo prazo exigido pela legislação fiscal (5 anos). Carrinhos não finalizados e tokens de acesso são apagados periodicamente. Os demais dados ficam enquanto você tiver cadastro ou até pedir a exclusão.
+
+## Seus direitos
+
+Você pode, a qualquer momento: confirmar se tratamos seus dados, acessá-los, corrigi-los, pedir a portabilidade, revogar consentimentos e pedir a exclusão ou anonimização (art. 18). Na área **Minha conta** você baixa uma cópia dos seus dados e pode pedir a exclusão. Também pode escrever para **[PREENCHER: e-mail do encarregado de dados]** — respondemos em até 15 dias.
+
+Dados de pedidos que a lei obriga a guardar são anonimizados, não apagados.
+
+## Segurança
+
+Usamos conexão criptografada (HTTPS), acesso restrito aos dados e senhas armazenadas com hash.
+
+## Alterações
+
+Esta política pode ser atualizada; a versão vigente fica sempre nesta página. Última atualização: **[PREENCHER: data]**.
+`;
+
 // F4.3: toda loja nova já nasce com estas 4 páginas (texto placeholder pro lojista editar)
 export function defaultPages(): { slug: string; title: string; content: string }[] {
   return [
     { slug: "sobre-nos", title: "Sobre nós", content: "# Sobre nós\n\nConte aqui a história da sua loja." },
     { slug: "trocas-e-devolucoes", title: "Trocas e devoluções", content: "# Trocas e devoluções\n\nDescreva aqui como funcionam trocas e devoluções." },
-    { slug: "politica-de-privacidade", title: "Política de privacidade", content: "# Política de privacidade\n\nDescreva aqui como os dados dos clientes são tratados." },
+    { slug: "politica-de-privacidade", title: "Política de privacidade", content: PRIVACY_POLICY_TEMPLATE },
     { slug: "frete-e-entrega", title: "Frete e entrega", content: "# Frete e entrega\n\nDescreva aqui os prazos e formas de entrega." },
   ];
 }

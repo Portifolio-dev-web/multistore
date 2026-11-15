@@ -10,11 +10,16 @@ const RETRY_DELAYS_MS = [5_000, 15_000];
 function isPrivateOrReservedIp(ip: string): boolean {
   if (isIP(ip) === 4) {
     const [a, b] = ip.split(".").map(Number);
-    return a === 127 || a === 10 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+    return (
+      a === 127 || a === 10 || a === 0 || a >= 224 ||
+      (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) ||
+      (a === 100 && b >= 64 && b <= 127) // CGNAT 100.64.0.0/10
+    );
   }
   if (isIP(ip) === 6) {
     const norm = ip.toLowerCase();
-    return norm === "::1" || norm === "::" || norm.startsWith("fe80:") || norm.startsWith("fc") || norm.startsWith("fd") || norm.startsWith("::ffff:127.");
+    if (norm.startsWith("::ffff:")) return isPrivateOrReservedIp(norm.slice(7)); // IPv4 mapeado
+    return norm === "::1" || norm === "::" || norm.startsWith("fe80:") || norm.startsWith("fc") || norm.startsWith("fd") || norm.startsWith("ff");
   }
   return true; // não reconhecido como IP válido — trata como inseguro
 }
@@ -73,6 +78,7 @@ async function deliver(
       headers: { "Content-Type": "application/json", "X-Webhook-Event": event, "X-Webhook-Signature": signature },
       body,
       redirect: "manual", // nunca segue redirect — evita contornar a checagem de SSRF via 302 pra host interno
+      signal: AbortSignal.timeout(10_000),
     });
     responseStatus = res.status;
     if (res.ok) status = "SUCCESS";

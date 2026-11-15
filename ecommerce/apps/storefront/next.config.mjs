@@ -12,9 +12,24 @@ function storageHostname() {
   }
 }
 
+// Sem includeSubDomains no HSTS: a vitrine também responde no domínio próprio do lojista.
+// CSP só com frame-ancestors (clickjacking); política de scripts exigiria nonce por causa dos pixels.
+const securityHeaders = [
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
   transpilePackages: ["@repo/db", "@repo/mail", "@repo/ui"],
   // Raiz do monorepo: necessário pro rastreio de arquivos do output standalone encontrar
   // as dependências hoisted pelo Yarn workspaces (packages/*).

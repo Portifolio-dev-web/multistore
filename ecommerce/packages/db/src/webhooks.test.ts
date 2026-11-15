@@ -22,6 +22,12 @@ describe("isSafeWebhookUrl", () => {
     expect(await isSafeWebhookUrl("http://[fe80::1]/hook")).toBe(false);
   });
 
+  it("recusa CGNAT (100.64/10) e IPv4 privado mapeado em IPv6", async () => {
+    expect(await isSafeWebhookUrl("http://100.64.0.1/hook")).toBe(false);
+    expect(await isSafeWebhookUrl("http://[::ffff:10.0.0.1]/hook")).toBe(false);
+    expect(await isSafeWebhookUrl("http://[::ffff:192.168.0.1]/hook")).toBe(false);
+  });
+
   it("recusa esquema diferente de http(s)", async () => {
     expect(await isSafeWebhookUrl("ftp://93.184.216.34/hook")).toBe(false);
     expect(await isSafeWebhookUrl("file:///etc/passwd")).toBe(false);
