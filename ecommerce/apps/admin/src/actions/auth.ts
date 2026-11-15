@@ -72,7 +72,7 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
 }
 
 export async function register(_prev: FormState, formData: FormData): Promise<FormState> {
-  if (process.env.ALLOW_REGISTRATION === "false") return { error: "Cadastro de novos lojistas desativado." };
+  if (process.env.ALLOW_REGISTRATION !== "true") return { error: "Cadastro de novos lojistas desativado." };
 
   const parsed = registerSchema.safeParse(formToObject(formData));
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };

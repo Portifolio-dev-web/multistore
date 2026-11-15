@@ -50,11 +50,11 @@ Monorepo **Turborepo** com duas aplicações Next.js 14 (App Router) isoladas e 
 ## Subindo com Docker
 
 ```bash
-cp .env.example .env        # preencha STRIPE_SECRET_KEY e AUTH_SECRET (openssl rand -base64 32)
+cp .env.example .env        # preencha STRIPE_SECRET_KEY, AUTH_SECRET (openssl rand -base64 32) e SEED_ADMIN_PASSWORD
 docker compose up --build
 ```
 
-O serviço `migrate` aplica as migrations (`prisma migrate deploy`) e roda o seed (loja `loja-demo` + lojista definido em `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Depois sobem:
+O serviço `migrate` aplica as migrations (`prisma migrate deploy`) e, só com `RUN_SEED=true`, roda o seed (loja `loja-demo` + lojista definido em `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). As portas de Postgres, storage e Mailpit são só pra desenvolvimento — numa VPS, remova os `ports:` desses serviços. Depois sobem:
 
 | Serviço    | URL                              |
 |------------|----------------------------------|
@@ -90,7 +90,9 @@ Em dev: `stripe listen --forward-to localhost:3001/api/webhooks/stripe-billing`.
 | `STOREFRONT_URL`        | storefront/admin | URL pública da vitrine (URLs de retorno do Stripe e link "Ver vitrine") |
 | `AUTH_SECRET`           | admin/storefront | Segredo do JWT da sessão do lojista e do cliente (mín. 32 caracteres) |
 | `COOKIE_SECURE`         | admin/storefront | `false` para http://localhost; `true` em produção (https) |
-| `ALLOW_REGISTRATION`    | admin       | `false` desativa o cadastro de novos lojistas |
+| `STOREFRONT_INTERNAL_URL` | storefront | URL que o middleware usa pra chamar `/api/domains/resolve` (domínio próprio); em produção, a URL pública da vitrine |
+| `ALLOW_REGISTRATION`    | admin       | Só `true` abre o cadastro de novos lojistas (fechado por padrão) |
+| `RUN_SEED`              | docker-compose | `true` faz o serviço `migrate` rodar o seed (só desenvolvimento) |
 | `ANTHROPIC_API_KEY`     | admin       | Chave da API da Anthropic; sem ela, o botão "Gerar com IA" fica escondido |
 | `ANTHROPIC_MODEL`       | admin       | Modelo usado para gerar descrição de produto (padrão: `claude-haiku-5-5`) |
 | `CRON_SECRET`           | storefront  | Protege `/api/cron/*` (carrinho abandonado, pedido de avaliação); sem ela, os dois recusam a chamada |
@@ -184,8 +186,10 @@ Cada app Next.js usa `output: "standalone"`: o build gera um `server.js` autocon
 
 O `Dockerfile` é único e parametrizado por `--build-arg APP=storefront|admin`; o `docker-compose.yml` já builda as duas imagens. Para gerar e publicar uma imagem isolada (ex. registry):
 
+O storefront precisa de `--build-arg S3_PUBLIC_URL=...` (o `next.config.mjs` libera o host do storage no `next/image` em tempo de build). A imagem traz o Prisma CLI e as migrations: use como *release command* da hospedagem `node node_modules/prisma/build/index.js migrate deploy --schema packages/db/prisma/schema.prisma`.
+
 ```bash
-docker build --build-arg APP=storefront -t registry.exemplo.com/vitrine-storefront:latest .
+docker build --build-arg APP=storefront --build-arg S3_PUBLIC_URL=https://media.exemplo.com -t registry.exemplo.com/vitrine-storefront:latest .
 docker build --build-arg APP=admin      -t registry.exemplo.com/vitrine-admin:latest .
 docker push registry.exemplo.com/vitrine-storefront:latest
 docker push registry.exemplo.com/vitrine-admin:latest

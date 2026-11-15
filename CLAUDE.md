@@ -40,7 +40,9 @@ yarn e2e                          # sobe storefront :3100 e admin :3101 num sche
 
 - `DATABASE_URL` usa o host `postgres` dentro do Docker e `localhost` fora dele.
 - E-mails de desenvolvimento aparecem no Mailpit: http://localhost:8025
-- Lojista de teste: `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env`. Loja de teste: `loja-demo`.
+- Lojista de teste: `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env` (a senha vem vazia no `.env.example`;
+  defina uma local). Loja de teste: `loja-demo`. No `docker compose up`, o seed só roda com `RUN_SEED=true`.
+- Cadastro de lojista (`/register`) só abre com `ALLOW_REGISTRATION=true` — fechado por padrão.
 - O desenvolvedor usa **Windows**: scripts do `package.json` precisam ser multiplataforma
   (nada de `cp`, `rm -rf` ou `export VAR=`; use scripts Node ou pacotes como `rimraf` e `cross-env`).
 

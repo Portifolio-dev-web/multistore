@@ -5,11 +5,14 @@ WORKDIR /repo
 
 FROM base AS builder
 ARG APP=storefront
-COPY package.json turbo.json tsconfig.base.json yarn.lock* ./
+# next.config.mjs lê na hora do build pra liberar o host do storage no next/image
+ARG S3_PUBLIC_URL
+ENV S3_PUBLIC_URL=${S3_PUBLIC_URL}
+COPY package.json turbo.json tsconfig.base.json yarn.lock ./
 COPY packages ./packages
 COPY apps ./apps
 COPY scripts ./scripts
-RUN yarn install --network-timeout 600000
+RUN yarn install --frozen-lockfile --network-timeout 600000
 RUN yarn workspace @repo/db db:generate
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN yarn workspace ${APP} build
@@ -29,6 +32,12 @@ RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/${APP}/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/${APP}/.next/static ./apps/${APP}/.next/static
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/${APP}/public ./apps/${APP}/public
+
+# Prisma CLI + migrations pro release command da hospedagem (a imagem standalone não traz o CLI):
+# node node_modules/prisma/build/index.js migrate deploy --schema packages/db/prisma/schema.prisma
+COPY --from=builder --chown=nextjs:nodejs /repo/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /repo/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /repo/packages/db/prisma ./packages/db/prisma
 
 USER nextjs
 EXPOSE 3000 3001

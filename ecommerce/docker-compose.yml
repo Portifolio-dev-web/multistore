@@ -23,6 +23,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Portas publicadas em todas as interfaces só pro desenvolvimento local (bind em 127.0.0.1 quebra
+    # `localhost` -> ::1 no Windows). Numa VPS, remova os `ports:` de postgres/storage/mailpit.
     ports:
       - "5432:5432"
     volumes:
@@ -41,9 +43,11 @@ services:
       target: builder
       args:
         APP: storefront
-    command: sh -c "yarn workspace @repo/db db:deploy && yarn workspace @repo/db db:seed && node scripts/storage-init.mjs"
+    # Seed (loja-demo + lojista de teste) só com RUN_SEED=true — nunca em produção
+    command: sh -c 'yarn workspace @repo/db db:deploy && if [ "$$RUN_SEED" = "true" ]; then yarn workspace @repo/db db:seed; fi && node scripts/storage-init.mjs'
     environment:
       <<: *db-env
+      RUN_SEED: ${RUN_SEED:-false}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       S3_INIT_BUCKET: ${S3_INIT_BUCKET:-false}
@@ -66,6 +70,7 @@ services:
       dockerfile: Dockerfile
       args:
         APP: storefront
+        S3_PUBLIC_URL: ${S3_PUBLIC_URL}
     restart: unless-stopped
     environment:
       <<: *app-env
@@ -95,7 +100,7 @@ services:
       PORT: 3001
       AUTH_SECRET: ${AUTH_SECRET}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
-      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-5-5}
       S3_REGION: ${S3_REGION}
