@@ -9,7 +9,7 @@ export function Hero({ section }: Props) {
       <picture>
         {section.mobileImageUrl && <source media="(max-width: 640px)" srcSet={section.mobileImageUrl} />}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={section.desktopImageUrl} alt="" className="h-[420px] w-full object-cover sm:h-[480px]" />
+        <img src={section.desktopImageUrl} alt="" fetchPriority="high" className="h-[420px] w-full object-cover sm:h-[480px]" />
       </picture>
       <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 via-black/10 to-transparent p-8 text-white sm:p-12">
         <h2 className="font-display text-3xl font-bold tracking-tight sm:text-5xl">{section.title}</h2>

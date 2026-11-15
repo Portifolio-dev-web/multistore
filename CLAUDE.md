@@ -292,8 +292,10 @@ estruturado no console e, com `SENTRY_DSN`, envia um POST direto no formato de e
 como tag quando disponível. `GET /api/health` confere a conexão com o Postgres. Backup/restore:
 `scripts/backup-db.sh`/`restore-db.sh` (agendado por fora, mesmo padrão dos cron jobs de F3.4/F3.6).
 
-**LGPD (F6.11).** "Exportar dados" na página do cliente baixa um JSON com tudo que a loja guarda
-sobre ele. "Anonimizar" (`actions/customers.ts`) nunca apaga a linha do `Customer` nem dos `Order`
+**LGPD (F6.11).** "Exportar dados" na página do cliente (admin) e "Baixar meus dados" em
+`/{slug}/conta` (o próprio titular) baixam um JSON com tudo que a loja guarda sobre ele; "Excluir minha
+conta" na vitrine anonimiza. A regra mora em `@repo/db` (`exportCustomerData`/`anonymizeCustomerData`),
+usada pelos dois lados. "Anonimizar" (`actions/customers.ts`) nunca apaga a linha do `Customer` nem dos `Order`
 (obrigação fiscal) — troca nome/e-mail/telefone/documento por placeholders (e-mail vira
 `anon-<id>@anonimizado.local`), apaga endereços/tokens de login, e troca os mesmos campos nos
 `Order` do cliente (mantendo total/itens/datas). `Customer.marketingConsentAt` grava quando o

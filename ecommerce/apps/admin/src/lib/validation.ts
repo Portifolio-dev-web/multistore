@@ -56,13 +56,13 @@ export const productSchema = z.object({
   priceInCents: z
     .string()
     .transform(parseBRLToCents)
-    .pipe(z.number({ invalid_type_error: "Preço inválido" }).int().min(50, "Preço mínimo: R$ 0,50").max(99_999_999)),
+    .pipe(z.number({ error: "Preço inválido" }).int().min(50, "Preço mínimo: R$ 0,50").max(99_999_999)),
   compareAtPriceInCents: z
     .string()
     .trim()
     .optional()
     .transform((v) => (v ? parseBRLToCents(v) : null))
-    .pipe(z.number({ invalid_type_error: "Preço \"de\" inválido" }).int().min(50).max(99_999_999).nullable()),
+    .pipe(z.number({ error: "Preço \"de\" inválido" }).int().min(50).max(99_999_999).nullable()),
   promoStartsAt: z
     .string()
     .trim()
@@ -75,7 +75,7 @@ export const productSchema = z.object({
     .transform((v) => (v ? new Date(v) : null)),
   // Opcional: só vem no formulário quando o produto tem uma variante só (sem opções) — com
   // várias variantes, o estoque é editado na grade em /products/[id]/variants.
-  stock: z.coerce.number({ invalid_type_error: "Estoque inválido" }).int().min(0, "Estoque não pode ser negativo").max(1_000_000).optional(),
+  stock: z.coerce.number({ error: "Estoque inválido" }).int().min(0, "Estoque não pode ser negativo").max(1_000_000).optional(),
   images: z
     .string()
     .transform((v) => v.split(/\s*[\n,]\s*/).map((s) => s.trim()).filter(Boolean))
@@ -105,7 +105,7 @@ export const categorySchema = z.object({
     .optional()
     .transform((v) => v || null)
     .pipe(z.string().url("URL inválida").nullable()),
-  position: z.coerce.number({ invalid_type_error: "Posição inválida" }).int().min(0).max(100_000).default(0),
+  position: z.coerce.number({ error: "Posição inválida" }).int().min(0).max(100_000).default(0),
   parentId: optionalText(40),
   seoTitle: optionalText(70),
   seoDescription: optionalText(160),

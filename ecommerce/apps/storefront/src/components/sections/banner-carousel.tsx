@@ -10,7 +10,7 @@ export function BannerCarousel({ section }: Props) {
       {section.banners.map((b, i) => {
         const img = (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={b.imageUrl} alt="" className="h-48 w-full shrink-0 snap-start rounded-2xl object-cover sm:h-64 sm:w-[640px]" />
+          <img src={b.imageUrl} alt="" loading={i === 0 ? undefined : "lazy"} className="h-48 w-full shrink-0 snap-start rounded-2xl object-cover sm:h-64 sm:w-[640px]" />
         );
         return (
           <div key={i} className="shrink-0 snap-start">

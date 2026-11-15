@@ -401,3 +401,32 @@ Seguir o passo a passo da seção 7 com Stripe em **modo teste**; checklist pós
 | 6.5 | **M1** — cache por loja na vitrine | M | > 500 users/dia ou Neon perto de 70 CU-h |
 | 6.6 | **I4** — fila durável para webhooks de saída | M | Primeiro cliente usando a API/webhooks |
 | 6.7 | **M6 (zod 4)** | M | Janela sem urgência; migração de API |
+
+---
+
+## 11. Status das correções (atualizado em 2026-11-15)
+
+Branch `fix/deploy-lote-1`. Cada lote passou por typecheck, lint, testes unitários, build e E2E antes do commit.
+
+| Lote | Commit | Itens |
+|---|---|---|
+| 1 | `d72238e` | B1 (Next 14.2.35), B2, B3, C5 (seed opcional), B4 (cadastro fechado), I6, I7, I10 |
+| 1b | `3598ac3` | **Next 15.5.29 + React 19** — a linha 14.2 não corrige 2 RCEs críticos (fecha o B1) |
+| 2 | `0bd6418` | C2, C4, C6, M7, I11 |
+| 3 | `5870573` | C3 (rate limit), I2, I3 (`/api/cron/cleanup`), I1 + nodemailer 10, C1 (workflow de backup), postcss |
+| 4 | `b458051` | `fly.storefront.toml` / `fly.admin.toml`, I8 (tag pelo commit + rollback) |
+| 5 | `76b7634` | M3, M4, M5 (audit + Docker no CI), I9 |
+| 6 | (este) | I5 (LGPD pelo titular), M2, M8, M6 (zod 4) |
+
+`yarn audit`: **88 → 0** vulnerabilidades.
+
+**Mudanças em relação ao plano**
+- C5: o bind das portas em `127.0.0.1` foi revertido — quebrava `localhost` → `::1` no Windows (e2e com timeout). Ficou um aviso no compose/README; produção (Fly) não usa o compose.
+- M2: as imagens das seções são URLs livres (qualquer domínio) e o hero usa `<picture>` com imagem mobile; `next/image` quebraria imagens externas. Feito com `fetchPriority="high"` no hero e `loading="lazy"` no resto.
+
+**Pendente — decisão sua ou ação fora do código**
+- **B4 / F1.4 — recebimento por loja (pré-requisito do lançamento com lojista externo).** O ROADMAP marca como **Decisão** (Stripe Connect × Mercado Pago). Existe a branch `origin/feat/f1-4-recebimento-por-loja` com Stripe Connect (onboarding + checkout), feita sobre um ponto anterior às Fases 2–6 (29 commits atrás); portar exige refazer a integração no checkout atual.
+- **Deploy (Lote 4):** contas, secrets, DNS e o primeiro `fly deploy` são seus; depois, testar a restauração do backup (5.2) e só então Stripe em modo live (5.7).
+- **Não feitos de propósito (gatilho ainda não atingido):**
+  - M1 (cache da vitrine): admin e vitrine são processos separados, então invalidar cache ao salvar no admin exige um endpoint de revalidação na vitrine; cache por tempo (TTL) mostraria mudanças com atraso (inclusive "loja em construção"). Gatilho: > 500 usuários/dia ou Neon perto de 70 CU-h.
+  - I4 (fila durável de webhooks de saída): no Fly a máquina é persistente, então as 3 tentativas em processo funcionam; só se perdem num restart no meio. Decisão já registrada no ROADMAP (F6.8). Gatilho: primeiro cliente integrando via API/webhooks.

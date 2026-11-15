@@ -16,8 +16,9 @@ const emptyAddress = { zip: "", street: "", number: "", complement: "", district
 
 function firstErrors(error: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const [key, messages] of Object.entries(error.flatten().fieldErrors)) {
-    if (messages?.[0]) out[key] = messages[0];
+  for (const issue of error.issues) {
+    const key = String(issue.path[0] ?? "");
+    out[key] ??= issue.message;
   }
   return out;
 }

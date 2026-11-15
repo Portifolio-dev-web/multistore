@@ -26,7 +26,7 @@ export async function importProductsCsv(_prev: ImportState, formData: FormData):
       if (count > 0) updated++;
       else errorLines.push(`linha ${row.line}: SKU "${row.sku}" não encontrado nesta loja.`);
     }
-  });
+  }, { timeout: 60_000 }); // um UPDATE por linha: o padrão de 5 s estoura com algumas centenas de linhas num banco remoto
 
   revalidatePath("/products");
   const summary = `${updated} variação(ões) atualizada(s)${errorLines.length ? `, ${errorLines.length} ignorada(s)` : ""}.`;

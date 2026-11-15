@@ -5,3 +5,4 @@ export * from "./orders";
 export * from "./stock";
 export * from "./webhooks";
 export * from "./rate-limit";
+export * from "./customers";
