@@ -13,6 +13,16 @@ export function captureError(error: unknown, context: Record<string, unknown> = 
   void sendToSentry(dsn, error, context).catch((err) => console.error("[error-reporting] falha ao enviar pro Sentry", err));
 }
 
+/** Linhas "at fn (arquivo:linha:coluna)" do V8 -> frames do Sentry (que espera o mais antigo primeiro). */
+export function stackFrames(stack: string | undefined): { function?: string; filename: string; lineno: number; colno: number }[] {
+  const frames = [];
+  for (const line of stack?.split("\n") ?? []) {
+    const m = line.match(/^\s*at (?:(.+?) \()?(.+?):(\d+):(\d+)\)?$/);
+    if (m) frames.push({ function: m[1], filename: m[2], lineno: Number(m[3]), colno: Number(m[4]) });
+  }
+  return frames.reverse();
+}
+
 async function sendToSentry(dsn: string, error: unknown, context: Record<string, unknown>): Promise<void> {
   const match = dsn.match(/^https:\/\/(\w+)@([^/]+)\/(\d+)$/);
   if (!match) return;
@@ -25,7 +35,10 @@ async function sendToSentry(dsn: string, error: unknown, context: Record<string,
     platform: "node",
     level: "error",
     message: error instanceof Error ? error.message : String(error),
-    exception: error instanceof Error ? { values: [{ type: error.name, value: error.message }] } : undefined,
+    exception:
+      error instanceof Error
+        ? { values: [{ type: error.name, value: error.message, stacktrace: { frames: stackFrames(error.stack) } }] }
+        : undefined,
     tags: context,
   };
   const body = [JSON.stringify({ event_id: eventId, sent_at: new Date().toISOString() }), JSON.stringify({ type: "event" }), JSON.stringify(event)].join(

@@ -356,7 +356,10 @@ S3-compatível (`lib/storage.ts`; RustFS em dev, S3/R2 em produção).
 ## Cuidados conhecidos
 
 - O webhook precisa do corpo cru (`req.text()`) para validar a assinatura. Não faça parse antes.
-- O limite de tentativas de login é em memória (some ao reiniciar e não funciona com várias instâncias).
+- Rate limit: `rateLimit(key, limit, janelaMs)` de `@repo/db` (tabela `RateLimitHit`, limpa por `/api/cron/cleanup`)
+  com `clientIp(await headers())`. Endpoint público novo que manda e-mail, cria registro ou reserva estoque usa ele.
+  Só o limite da API pública (`lib/api-auth.ts`) continua em memória, por instância.
+- Erro por área: `[store]/error.tsx` (vitrine) e `(dashboard)/error.tsx` (admin) mantêm o layout; `global-error.tsx` é o último recurso.
 - Schema só muda por migrations (`yarn db:migrate` em dev, `yarn db:deploy` em produção); nunca
   `prisma db push`. Banco criado antes da F0.2: alinhar uma vez com
   `yarn workspace @repo/db prisma migrate resolve --applied 20261104111225_init`.

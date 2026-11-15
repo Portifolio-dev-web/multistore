@@ -32,6 +32,21 @@ jobs:
       - run: yarn lint
       - run: yarn test
       - run: yarn build
+      - name: Auditoria de dependências (falha só em high/critical)
+        # exit code do yarn audit é bitmask: 8 = high, 16 = critical
+        run: |
+          yarn audit --groups dependencies || code=$?
+          exit $(( ${code:-0} & 24 ))
+
+  docker:
+    name: Build das imagens Docker
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [storefront, admin]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --build-arg APP=${{ matrix.app }} --build-arg S3_PUBLIC_URL=https://media.exemplo.com .
 
   e2e:
     name: Testes E2E (Playwright)

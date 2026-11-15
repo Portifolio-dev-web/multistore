@@ -138,14 +138,14 @@ yarn e2e
 ### CI
 
 `.github/workflows/ci.yml` (na raiz do repositório) roda em PRs e na `main`: um job com
-`typecheck` + `lint` + `test` + `build`, e outro job separado de E2E com um serviço Postgres.
+`typecheck` + `lint` + `test` + `build` + `yarn audit` (falha em high/critical), um job de E2E com um serviço Postgres e um que builda as duas imagens Docker.
 
 ## Arquitetura
 
-- **Multi-loja**: cada loja tem um `slug`; a vitrine fica em `/{slug}` e o carrinho (Zustand + localStorage) fica separado por loja. Cada lojista (`User`) pertence a uma `Store`, e todas as queries e Server Actions do admin são filtradas pelo `storeId` da sessão.
+- **Multi-loja**: cada loja tem um `slug`; a vitrine fica em `/{slug}` e o carrinho (Zustand + localStorage) fica separado por loja. Um lojista (`User`) pode ter várias lojas via `Membership` (papel OWNER/ADMIN/OPERADOR), e todas as queries e Server Actions do admin são filtradas pelo `storeId` da sessão.
 - **Checkout** (`apps/storefront/src/actions/checkout.ts`): uma Server Action valida o carrinho com Zod, **recalcula preço e estoque a partir do banco**, cria o `Order` (PENDING) com os `OrderItem` e abre uma Stripe Checkout Session em BRL com `metadata.orderId`.
-- **Webhook** (`apps/storefront/src/app/api/webhooks/stripe/route.ts`): valida a assinatura usando o corpo cru. Em `checkout.session.completed` (com `payment_status = paid`) marca o pedido como **PAID** e baixa o estoque numa transação **idempotente**, então reenvios do Stripe não duplicam a baixa. Pagamentos assíncronos (boleto) são confirmados em `async_payment_succeeded`. A página de sucesso consulta a sessão como fallback, caso o webhook atrase.
-- **Auth do admin**: senha com bcrypt (custo 12), sessão em JWT HS256 (`jose`) num cookie httpOnly com SameSite=Lax e validade de 7 dias. O `middleware.ts` protege todas as rotas, e cada página ou Server Action revalida a sessão no banco (`requireSession`). O login tem tempo de resposta constante e bloqueio após 5 tentativas (em memória, por instância).
+- **Webhook** (`apps/storefront/src/app/api/webhooks/stripe/route.ts`): valida a assinatura usando o corpo cru. Em `checkout.session.completed` (com `payment_status = paid`) marca o pedido como **PAID** de forma **idempotente** (o estoque já foi reservado na criação do pedido e é devolvido se a sessão expirar ou falhar), então reenvios do Stripe não duplicam efeito. Pagamentos assíncronos (boleto) são confirmados em `async_payment_succeeded`. A página de sucesso consulta a sessão como fallback, caso o webhook atrase.
+- **Auth do admin**: senha com bcrypt (custo 12), sessão em JWT HS256 (`jose`) num cookie httpOnly com SameSite=Lax e validade de 7 dias. O `middleware.ts` protege todas as rotas, e cada página ou Server Action revalida a sessão no banco (`requireSession`). O login tem tempo de resposta constante e bloqueio após 5 tentativas em 15 min, persistido em `LoginAttempt` (vale com várias instâncias). Cadastro, reset de senha, link mágico, newsletter, avaliação e checkout têm rate limit por IP/e-mail (`rateLimit()` de `@repo/db`, tabela `RateLimitHit`).
 - **Preços** em centavos (`Int`), formatados com `Intl.NumberFormat('pt-BR', { currency: 'BRL' })`.
 - **Tema da loja**: `primaryColor` e `accentColor` viram CSS variables (`--brand`, `--accent`) no layout `/[store]`, e a cor do texto sobre a cor principal é calculada automaticamente para manter o contraste.
 
@@ -228,7 +228,7 @@ remover em um deploy seguinte).
 
 ### Escalabilidade
 
-- **Apps stateless**: sessão é um JWT em cookie (`jose`), não há estado em memória entre requisições (exceto o rate-limit de login, por instância) — storefront e admin podem rodar com múltiplas réplicas atrás de um load balancer sem sticky session.
+- **Apps stateless**: sessão é um JWT em cookie (`jose`), não há estado em memória entre requisições (exceto o limite de 60 req/min da API pública e um cache de 60 s de domínio próprio no middleware, ambos por instância) — storefront e admin podem rodar com múltiplas réplicas atrás de um load balancer sem sticky session.
 - **Estáticos e CDN**: sirva `.next/static` e `public/` por CDN (ou deixe a plataforma de deploy fazer isso); reduz carga nas réplicas da aplicação e latência para o cliente final.
 - **Banco de dados**: Postgres com réplica de leitura para consultas pesadas (relatórios, listagens do admin) conforme o tráfego crescer; o pool de conexões do Prisma deve ser dimensionado por réplica (ou usar um pooler como PgBouncer) para não esgotar `max_connections`.
 - **E-mails**: `packages/mail` hoje envia direto via SMTP na mesma request/cron; em alto volume, isole esse envio num worker/fila (ex. BullMQ + Redis, ou um serviço de fila gerenciado) para não bloquear requests do storefront/admin.
@@ -241,13 +241,16 @@ remover em um deploy seguinte).
 
 1. **build**: `yarn install --frozen-lockfile` → `db:generate` → `typecheck` → `lint` → `test` → `build`. Garante que o monorepo inteiro compila e builda antes de mergear.
 2. **e2e**: sobe um serviço Postgres, instala o Chromium do Playwright e roda `yarn e2e` contra as apps reais.
+3. **docker**: `docker build` das imagens do storefront e do admin (sem push) — pega quebra no Dockerfile antes do deploy.
+
+`.github/workflows/backup.yml` (agendado, diário) faz o backup do banco de produção — ver "Operação".
 
 Um deploy automatizado (CD) entraria como um step adicional após o job `build` passar na `main`: build das imagens Docker (`--build-arg APP=...`), push para o registry e rollout (ex. `docker compose pull && up -d`, ou o deploy nativo da plataforma de hospedagem).
 
 ### Webhooks (Stripe)
 
 - **Assinatura verificada com o corpo cru**: `apps/storefront/src/app/api/webhooks/stripe/route.ts` valida `Stripe-Signature` com `STRIPE_WEBHOOK_SECRET` antes de processar qualquer evento — payloads sem assinatura válida são rejeitados.
-- **Idempotência**: a baixa de estoque e a marcação do pedido como `PAID` rodam numa transação idempotente, então reenvios do Stripe (retries automáticos em caso de timeout/erro 5xx) não duplicam efeito.
+- **Idempotência**: a marcação do pedido como `PAID` rodam numa transação idempotente, então reenvios do Stripe (retries automáticos em caso de timeout/erro 5xx) não duplicam efeito.
 - **Fallback sem depender do webhook**: a página de sucesso do checkout também consulta a Stripe Checkout Session diretamente, cobrindo o caso de o webhook atrasar ou falhar temporariamente.
 - **Dois endpoints separados**: `/api/webhooks/stripe` (pagamento da vitrine) e `/api/webhooks/stripe-billing` (assinatura do lojista, F6.3) usam segredos distintos — um incidente num não expõe o outro.
 - **Em produção**: cadastre os endpoints com HTTPS no Dashboard do Stripe, monitore a aba de webhooks por falhas de entrega, e trate HTTP 5xx do endpoint como o único caso em que o Stripe deve reentregar (sempre responda 2xx depois de processar, mesmo para eventos já conhecidos/duplicados).
