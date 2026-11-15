@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { getStoreBySlug } from "@/lib/store";
 
-type Props = { children: React.ReactNode; params: { store: string } };
+type Props = { children: React.ReactNode; params: Promise<{ store: string }> };
 
 // Layout enxuto do checkout: sem menu nem rodapé, só o nome da loja. Mobile primeiro.
-export default async function CheckoutLayout({ children, params }: Props) {
+export default async function CheckoutLayout({ children, params: paramsPromise }: Props) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 

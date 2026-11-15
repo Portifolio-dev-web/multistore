@@ -7,7 +7,8 @@ import { PageHeader } from "@/components/page-header";
 import { PageForm } from "@/components/page-form";
 import { DeleteButton } from "@/components/delete-button";
 
-export default async function EditPagePage({ params }: { params: { id: string } }) {
+export default async function EditPagePage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const { storeId } = await requireSession();
   const page = await prisma.page.findFirst({ where: { id: params.id, storeId } });
   if (!page) notFound();

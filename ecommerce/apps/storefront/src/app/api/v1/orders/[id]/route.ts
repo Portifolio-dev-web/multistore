@@ -4,7 +4,8 @@ import { authenticateApiKey, isApiAuth } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const auth = await authenticateApiKey(req);
   if (!isApiAuth(auth)) return auth;
 

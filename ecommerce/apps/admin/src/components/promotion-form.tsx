@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useState, useActionState } from "react";
 import type { Promotion } from "@repo/db";
 import type { FormState } from "@/lib/form";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
@@ -14,7 +13,7 @@ type Props = {
 };
 
 export function PromotionForm({ action, promotion, products, submitLabel }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   const [type, setType] = useState(promotion?.type ?? "QUANTITY_DISCOUNT");
   const e = state.fieldErrors;
 

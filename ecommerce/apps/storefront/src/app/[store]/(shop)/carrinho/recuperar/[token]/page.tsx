@@ -8,7 +8,8 @@ import type { CartItem } from "@/lib/cart-store";
 type SavedItem = { variantId: string; variantLabel: string | null; quantity: number };
 
 // F3.4: revalida tudo contra o banco de novo (estoque pode ter mudado desde o abandono) — nunca confia no snapshot salvo pro preço/estoque.
-export default async function CartRecoveryPage({ params }: { params: { store: string; token: string } }) {
+export default async function CartRecoveryPage({ params: paramsPromise }: { params: Promise<{ store: string; token: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import type { Page } from "@repo/db";
 import type { FormState } from "@/lib/form";
 import { AiPageContentButton } from "./ai-page-content-button";
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export function PageForm({ action, page, aiEnabled, submitLabel }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   const e = state.fieldErrors;
 
   return (

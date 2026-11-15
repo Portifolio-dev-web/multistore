@@ -3,7 +3,8 @@ import { prisma } from "@repo/db";
 import { requireSession } from "@/lib/session";
 
 /** F6.11: exportação de dados a pedido do cliente (LGPD) — tudo que a loja guarda sobre ele */
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const { storeId } = await requireSession();
   const customer = await prisma.customer.findFirst({
     where: { id: params.id, storeId },

@@ -7,7 +7,8 @@ import { PageHeader } from "@/components/page-header";
 import { PromotionForm } from "@/components/promotion-form";
 import { DeleteButton } from "@/components/delete-button";
 
-export default async function EditPromotionPage({ params }: { params: { id: string } }) {
+export default async function EditPromotionPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const { storeId } = await requireSession();
   const [promotion, products] = await Promise.all([
     prisma.promotion.findFirst({ where: { id: params.id, storeId } }),

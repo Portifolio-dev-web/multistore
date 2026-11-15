@@ -13,7 +13,8 @@ import { DeleteButton } from "@/components/delete-button";
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short" });
 
-export default async function OrderDetailPage({ params }: { params: { id: string } }) {
+export default async function OrderDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const { storeId } = await requireSession();
   const order = await prisma.order.findFirst({
     where: { id: params.id, storeId },

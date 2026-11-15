@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useState, useActionState } from "react";
 import type { Coupon } from "@repo/db";
 import { centsToInput } from "@repo/db/utils";
 import type { FormState } from "@/lib/form";
@@ -16,7 +15,7 @@ type Props = {
 };
 
 export function CouponForm({ action, coupon, submitLabel }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   const [type, setType] = useState(coupon?.type ?? "PERCENT");
   const e = state.fieldErrors;
 

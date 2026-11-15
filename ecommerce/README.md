@@ -1,10 +1,10 @@
 # Vitrine Commerce — e-commerce white-label (multi-loja)
 
-Monorepo **Turborepo** com duas aplicações Next.js 14 (App Router) isoladas e pacotes compartilhados (Prisma, e-mail). Cada loja (`Store`) tem seu próprio slug, tema e dados, servida a partir do mesmo deploy.
+Monorepo **Turborepo** com duas aplicações Next.js 15 (App Router) isoladas e pacotes compartilhados (Prisma, e-mail). Cada loja (`Store`) tem seu próprio slug, tema e dados, servida a partir do mesmo deploy.
 
 ## Stack
 
-- **Next.js 14** (App Router, Server Actions) + **React 18** + **TypeScript** — `apps/storefront` e `apps/admin`.
+- **Next.js 15** (App Router, Server Actions) + **React 19** + **TypeScript** — `apps/storefront` e `apps/admin`.
 - **Tailwind CSS 3** para estilo; tema por loja via CSS variables (`--brand`, `--accent`).
 - **Prisma 5** + **PostgreSQL 16** — `packages/db`, schema único compartilhado pelas duas apps.
 - **Stripe** (`stripe` SDK) — checkout da vitrine e webhooks (pagamento + Stripe Billing para assinatura dos lojistas).

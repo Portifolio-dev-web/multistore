@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@repo/db";
 import { getStoreBySlug } from "@/lib/store";
 
-export default async function CartUnsubscribePage({ params }: { params: { store: string; token: string } }) {
+export default async function CartUnsubscribePage({ params: paramsPromise }: { params: Promise<{ store: string; token: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 

@@ -8,7 +8,8 @@ import { PageHeader } from "@/components/page-header";
 import { ProductForm } from "@/components/product-form";
 import { DeleteButton } from "@/components/delete-button";
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
+export default async function EditProductPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const { storeId } = await requireSession();
   const product = await prisma.product.findFirst({
     where: { id: params.id, storeId },

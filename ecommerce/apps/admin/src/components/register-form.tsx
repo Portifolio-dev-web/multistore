@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useActionState } from "react";
 import Link from "next/link";
-import { useFormState } from "react-dom";
 import { slugify } from "@repo/db/utils";
 import { register } from "@/actions/auth";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
 export function RegisterForm() {
-  const [state, action] = useFormState(register, {});
+  const [state, action] = useActionState(register, {});
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const e = state.fieldErrors;

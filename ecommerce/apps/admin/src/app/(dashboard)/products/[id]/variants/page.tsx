@@ -9,7 +9,8 @@ import { OptionsEditor } from "@/components/options-editor";
 import { VariantsGrid } from "@/components/variants-grid";
 import { toVariantRow } from "@/lib/variant-row";
 
-export default async function ProductVariantsPage({ params }: { params: { id: string } }) {
+export default async function ProductVariantsPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const { storeId } = await requireSession();
   const product = await prisma.product.findFirst({
     where: { id: params.id, storeId },

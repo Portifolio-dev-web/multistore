@@ -8,8 +8,8 @@ O plano de evolução está em `ROADMAP.md`. Antes de qualquer tarefa do roadmap
 
 Todo o código ativo está em `ecommerce/` (monorepo Turborepo + Yarn 1 workspaces):
 
-- `apps/storefront`: vitrine do cliente final, Next.js 14 App Router, porta 3000
-- `apps/admin`: painel do lojista, Next.js 14 App Router, porta 3001
+- `apps/storefront`: vitrine do cliente final, Next.js 15 App Router, porta 3000
+- `apps/admin`: painel do lojista, Next.js 15 App Router, porta 3001
 - `packages/db`: schema Prisma (PostgreSQL), client e utilitários compartilhados
 - `packages/mail`: envio de e-mail (nodemailer/SMTP) e templates
 - `scripts/`: `test-webhook.mjs` (simula webhook do Stripe) e `storage-init.mjs` (cria o bucket)
@@ -338,7 +338,7 @@ S3-compatível (`lib/storage.ts`; RustFS em dev, S3/R2 em produção).
 
 - TypeScript strict. Server Components por padrão; `"use client"` só onde há estado ou efeito.
 - Mutações via Server Actions em `src/actions/*.ts`, com `revalidatePath` depois de gravar.
-- Formulários do admin: `useFormState` + `SubmitButton`, `FieldError` e `FormMessage` de `components/form-ui.tsx`.
+- Formulários do admin: `useActionState` (React 19) + `SubmitButton`, `FieldError` e `FormMessage` de `components/form-ui.tsx`.
 - Alias `@/` aponta para `src/` em cada app.
 - Filtros e paginação da vitrine ficam na URL (`searchParams`, formulários GET).
 - Interface 100% em pt-BR; nomes de código (variáveis, models, campos) em inglês camelCase;

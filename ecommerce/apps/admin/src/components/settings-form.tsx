@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useState, useActionState } from "react";
 import type { Store } from "@repo/db";
 import { contrastText } from "@repo/db/utils";
 import { updateStoreSettings } from "@/actions/settings";
@@ -30,7 +29,7 @@ type Props = {
 };
 
 export function SettingsForm({ store }: Props) {
-  const [state, action] = useFormState(updateStoreSettings, {});
+  const [state, action] = useActionState(updateStoreSettings, {});
   const [name, setName] = useState(store.name);
   const [primary, setPrimary] = useState(store.primaryColor);
   const [accent, setAccent] = useState(store.accentColor);

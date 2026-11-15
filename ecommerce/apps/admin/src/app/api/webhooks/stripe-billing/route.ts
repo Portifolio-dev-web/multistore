@@ -54,7 +54,7 @@ async function syncSubscription(subscription: Stripe.Subscription) {
 }
 
 export async function POST(req: Request) {
-  const signature = headers().get("stripe-signature");
+  const signature = (await headers()).get("stripe-signature");
   if (!signature) return NextResponse.json({ error: "Assinatura ausente" }, { status: 400 });
 
   const payload = await req.text();

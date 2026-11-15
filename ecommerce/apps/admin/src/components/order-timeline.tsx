@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import type { OrderEvent } from "@repo/db";
 import type { FormState } from "@/lib/form";
 import { FormMessage, SubmitButton } from "./form-ui";
@@ -15,7 +15,7 @@ type Props = {
 };
 
 export function OrderTimeline({ events, addNoteAction }: Props) {
-  const [state, formAction] = useFormState(addNoteAction, {});
+  const [state, formAction] = useActionState(addNoteAction, {});
 
   return (
     <section className="card space-y-4 p-5" data-testid="order-timeline">

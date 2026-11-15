@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useState, useActionState } from "react";
 import type { NavItem } from "@repo/db/content";
 import type { FormState } from "@/lib/form";
 import { FormMessage, SubmitButton } from "./form-ui";
@@ -17,7 +16,7 @@ type Props = {
 };
 
 export function NavigationEditor({ action, initial, categories, pages }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   const [items, setItems] = useState<NavItem[]>(initial);
 
   const update = (i: number, patch: Partial<NavItem>) => setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));

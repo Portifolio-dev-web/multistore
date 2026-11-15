@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useState, useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { createReview, type ReviewFormState } from "@/actions/reviews";
 
 function SubmitButton() {
@@ -17,7 +17,7 @@ type Props = { storeSlug: string; productId: string; verified?: { orderId: strin
 
 export function ReviewForm({ storeSlug, productId, verified }: Props) {
   const action = createReview.bind(null, storeSlug, productId);
-  const [state, formAction] = useFormState<ReviewFormState, FormData>(action, {});
+  const [state, formAction] = useActionState<ReviewFormState, FormData>(action, {});
   const [rating, setRating] = useState(5);
 
   if (state.success) {

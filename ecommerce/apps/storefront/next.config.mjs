@@ -16,12 +16,10 @@ function storageHostname() {
 const nextConfig = {
   output: "standalone",
   transpilePackages: ["@repo/db", "@repo/mail", "@repo/ui"],
-  experimental: {
-    // Raiz do monorepo: necessário pro rastreio de arquivos do output standalone encontrar
-    // as dependências hoisted pelo Yarn workspaces (packages/*).
-    outputFileTracingRoot: path.join(__dirname, "../.."),
-    serverComponentsExternalPackages: ["@prisma/client", "nodemailer"],
-  },
+  // Raiz do monorepo: necessário pro rastreio de arquivos do output standalone encontrar
+  // as dependências hoisted pelo Yarn workspaces (packages/*).
+  outputFileTracingRoot: path.join(__dirname, "../.."),
+  serverExternalPackages: ["@prisma/client", "nodemailer"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" }, // produtos do seed de demonstração

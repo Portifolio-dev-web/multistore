@@ -7,10 +7,11 @@ import { getStoreBase, storeHref } from "@/lib/paths";
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 
-export default async function AccountOrdersPage({ params }: { params: { store: string } }) {
+export default async function AccountOrdersPage({ params: paramsPromise }: { params: Promise<{ store: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   const session = await getCustomerForStore(store!.id);
-  const base = getStoreBase(params.store);
+  const base = await getStoreBase(params.store);
 
   const orders = await prisma.order.findMany({
     where: { customerId: session!.customerId, storeId: store!.id },

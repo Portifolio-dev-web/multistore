@@ -7,7 +7,8 @@ import { PageHeader } from "@/components/page-header";
 import { CouponForm } from "@/components/coupon-form";
 import { DeleteButton } from "@/components/delete-button";
 
-export default async function EditCouponPage({ params }: { params: { id: string } }) {
+export default async function EditCouponPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const { storeId } = await requireSession();
   const coupon = await prisma.coupon.findFirst({ where: { id: params.id, storeId } });
   if (!coupon) notFound();

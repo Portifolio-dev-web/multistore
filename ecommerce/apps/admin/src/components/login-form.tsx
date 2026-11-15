@@ -1,12 +1,12 @@
 "use client";
 
+import { useActionState } from "react";
 import Link from "next/link";
-import { useFormState } from "react-dom";
 import { login } from "@/actions/auth";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
 export function LoginForm({ next }: { next?: string }) {
-  const [state, action] = useFormState(login, {});
+  const [state, action] = useActionState(login, {});
   return (
     <form action={action} className="space-y-4" data-testid="login-form">
       <input type="hidden" name="next" value={next ?? ""} />

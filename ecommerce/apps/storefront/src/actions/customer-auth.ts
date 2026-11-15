@@ -42,6 +42,6 @@ export async function requestMagicLink(storeSlug: string, _prev: MagicLinkState,
 }
 
 export async function logoutCustomer(storeSlug: string): Promise<void> {
-  deleteCustomerSession();
-  redirect(storeHref(getStoreBase(storeSlug), "/conta/entrar"));
+  await deleteCustomerSession();
+  redirect(storeHref(await getStoreBase(storeSlug), "/conta/entrar"));
 }

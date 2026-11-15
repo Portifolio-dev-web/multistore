@@ -11,7 +11,8 @@ function urlEntry(loc: string, lastmod?: Date): string {
 
 // F5.1: um sitemap por loja — rota literal (não o arquivo especial sitemap.ts) pra funcionar
 // igual em domínio próprio, subdomínio e caminho /{slug} (o middleware já reescreve pra cá).
-export async function GET(_req: Request, { params }: { params: { store: string } }) {
+export async function GET(_req: Request, { params: paramsPromise }: { params: Promise<{ store: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store || store.maintenanceMode) return new NextResponse("Not found", { status: 404 });
 

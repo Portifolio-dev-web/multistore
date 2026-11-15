@@ -9,7 +9,8 @@ async function loadProduct(storeId: string, id: string) {
   return prisma.product.findFirst({ where: { id, storeId }, include: { variants: true } });
 }
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const auth = await authenticateApiKey(req);
   if (!isApiAuth(auth)) return auth;
 
@@ -31,7 +32,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 const updateStockSchema = z.object({ variantId: z.string().min(1), stock: z.number().int().min(0) });
 
 /** F6.8: só atualiza estoque por aqui — preço/catálogo continuam só pelo painel */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const auth = await authenticateApiKey(req);
   if (!isApiAuth(auth)) return auth;
 

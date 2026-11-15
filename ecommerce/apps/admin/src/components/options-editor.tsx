@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useFormState } from "react-dom";
+import { useEffect, useState, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import type { FormState } from "@/lib/form";
 import { FormMessage, SubmitButton } from "./form-ui";
@@ -22,7 +21,7 @@ type Props = {
 };
 
 export function OptionsEditor({ action, initial }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   const [rows, setRows] = useState<OptionRow[]>(initial.length > 0 ? initial : [{ name: "", valuesText: "" }]);
   const router = useRouter();
   // Salvar aqui recalcula a grade de variações abaixo, que é renderizada pelo Server Component

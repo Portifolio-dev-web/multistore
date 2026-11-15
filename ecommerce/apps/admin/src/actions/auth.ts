@@ -111,7 +111,7 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
 }
 
 export async function logout(): Promise<void> {
-  deleteSession();
+  await deleteSession();
   redirect("/login");
 }
 

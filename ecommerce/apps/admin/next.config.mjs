@@ -7,11 +7,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   output: "standalone",
   transpilePackages: ["@repo/db", "@repo/mail", "@repo/ui"],
+  // Raiz do monorepo: necessário pro rastreio de arquivos do output standalone encontrar
+  // as dependências hoisted pelo Yarn workspaces (packages/*).
+  outputFileTracingRoot: path.join(__dirname, "../.."),
+  serverExternalPackages: ["@prisma/client", "bcryptjs", "nodemailer", "@aws-sdk/client-s3"],
   experimental: {
-    // Raiz do monorepo: necessário pro rastreio de arquivos do output standalone encontrar
-    // as dependências hoisted pelo Yarn workspaces (packages/*).
-    outputFileTracingRoot: path.join(__dirname, "../.."),
-    serverComponentsExternalPackages: ["@prisma/client", "bcryptjs", "nodemailer", "@aws-sdk/client-s3"],
     // Upload de imagens via Server Action (limite por arquivo validado na action: 5 MB)
     serverActions: { bodySizeLimit: "6mb" },
   },

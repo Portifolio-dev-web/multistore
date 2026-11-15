@@ -4,7 +4,8 @@ import { getCustomerForStore } from "@/lib/customer-session";
 import { AddressForm } from "@/components/address-form";
 import { deleteCustomerAddress } from "@/actions/customer-addresses";
 
-export default async function AccountAddressesPage({ params }: { params: { store: string } }) {
+export default async function AccountAddressesPage({ params: paramsPromise }: { params: Promise<{ store: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   const session = await getCustomerForStore(store!.id);
 

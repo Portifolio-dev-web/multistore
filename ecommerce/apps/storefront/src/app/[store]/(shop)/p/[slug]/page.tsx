@@ -5,9 +5,10 @@ import { renderSafeMarkdown } from "@repo/db/markdown";
 import { storeUrl } from "@repo/db/urls";
 import { getStoreBySlug } from "@/lib/store";
 
-type Props = { params: { store: string; slug: string } };
+type Props = { params: Promise<{ store: string; slug: string }> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params: paramsPromise }: Props): Promise<Metadata> {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) return {};
   const page = await prisma.page.findFirst({ where: { storeId: store.id, slug: params.slug, published: true } });
@@ -18,7 +19,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title, description, alternates: { canonical: url }, openGraph: { title, description, url, type: "website" } };
 }
 
-export default async function InstitutionalPage({ params }: Props) {
+export default async function InstitutionalPage({ params: paramsPromise }: Props) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 

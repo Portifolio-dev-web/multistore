@@ -8,7 +8,7 @@ import { ProductCard } from "@/components/product-card";
 import { ProductFilters, type FilterValues } from "@/components/product-filters";
 import { Pagination } from "@repo/ui";
 
-type Props = { params: { store: string }; searchParams: Record<string, string | undefined> };
+type Props = { params: Promise<{ store: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
 const SORTS: Record<string, Prisma.ProductOrderByWithRelationInput> = {
   recent: { createdAt: "desc" },
@@ -31,7 +31,9 @@ const PROMO_FILTER_SCAN_LIMIT = 500;
 
 // F4.1: catálogo completo (busca/filtros/paginação) saiu da home — agora é a home que vira
 // seções configuráveis. A busca mora aqui, e o cabeçalho (F4.2) linka pra cá.
-export default async function BuscaPage({ params, searchParams }: Props) {
+export default async function BuscaPage({ params: paramsPromise, searchParams: searchParamsPromise }: Props) {
+  const params = await paramsPromise;
+  const searchParams = await searchParamsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 
@@ -87,7 +89,7 @@ export default async function BuscaPage({ params, searchParams }: Props) {
     slug: c.slug,
     label: "— ".repeat(categoryAncestors(allCategories, c.id).length - 1) + c.name,
   }));
-  const base = getStoreBase(store.slug);
+  const base = await getStoreBase(store.slug);
   const buscaBase = storeHref(base, "/busca");
   const buildPageHref = (p: number) =>
     `${buscaBase}?${new URLSearchParams({

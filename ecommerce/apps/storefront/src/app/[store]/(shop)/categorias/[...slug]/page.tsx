@@ -10,7 +10,7 @@ import { withDefaultVariantPricing } from "@/lib/product-display";
 import { ProductCard } from "@/components/product-card";
 import { breadcrumbJsonLd, jsonLdScriptProps } from "@/lib/seo";
 
-type Props = { params: { store: string; slug: string[] } };
+type Props = { params: Promise<{ store: string; slug: string[] }> };
 
 async function findCategory(storeSlug: string, leafSlug: string | undefined) {
   const store = await getStoreBySlug(storeSlug);
@@ -20,7 +20,8 @@ async function findCategory(storeSlug: string, leafSlug: string | undefined) {
   return category ? { store, category } : null;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params: paramsPromise }: Props): Promise<Metadata> {
+  const params = await paramsPromise;
   const found = await findCategory(params.store, params.slug.at(-1));
   if (!found) return {};
   const { store, category } = found;
@@ -30,7 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title, description, alternates: { canonical: url }, openGraph: { title, description, url, type: "website" } };
 }
 
-export default async function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params: paramsPromise }: Props) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 
@@ -41,7 +43,7 @@ export default async function CategoryPage({ params }: Props) {
   const category = allCategories.find((c) => c.slug === leafSlug);
   if (!category) notFound();
 
-  const base = getStoreBase(store.slug);
+  const base = await getStoreBase(store.slug);
   const breadcrumb = categoryAncestors(allCategories, category.id);
   const children = allCategories
     .filter((c) => c.parentId === category.id)

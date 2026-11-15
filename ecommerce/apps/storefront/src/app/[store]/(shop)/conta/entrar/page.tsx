@@ -1,6 +1,8 @@
 import { MagicLinkForm } from "@/components/magic-link-form";
 
-export default function CustomerLoginPage({ params, searchParams }: { params: { store: string }; searchParams: { erro?: string } }) {
+export default async function CustomerLoginPage({ params: paramsPromise, searchParams: searchParamsPromise }: { params: Promise<{ store: string }>; searchParams: Promise<{ erro?: string }> }) {
+  const params = await paramsPromise;
+  const searchParams = await searchParamsPromise;
   return (
     <div className="mx-auto max-w-sm px-5 py-16 sm:px-8">
       <h1 className="font-display text-3xl font-bold tracking-tight">Entrar na minha conta</h1>

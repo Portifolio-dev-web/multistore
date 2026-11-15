@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 // Monta a URL absoluta sempre a partir de `storeUrl()` (env), nunca de `req.url`: em modo
 // subdomínio/domínio próprio, o host que o Route Handler enxerga nem sempre é o host externo
 // de verdade (depende de como o Next propaga x-forwarded-host internamente).
-export async function GET(req: Request, { params }: { params: { store: string } }) {
+export async function GET(req: Request, { params: paramsPromise }: { params: Promise<{ store: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) return NextResponse.redirect(`${storeUrl({ slug: params.store, customDomain: null })}/conta/entrar?erro=1`);
 

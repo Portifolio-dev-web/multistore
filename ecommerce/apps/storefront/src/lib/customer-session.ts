@@ -34,7 +34,7 @@ export async function verifyCustomerSession(token?: string): Promise<CustomerSes
 }
 
 export async function createCustomerSession(payload: CustomerSessionPayload): Promise<void> {
-  cookies().set(CUSTOMER_SESSION_COOKIE, await signCustomerSession(payload), {
+  (await cookies()).set(CUSTOMER_SESSION_COOKIE, await signCustomerSession(payload), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production" && process.env.COOKIE_SECURE !== "false",
     sameSite: "lax",
@@ -43,12 +43,12 @@ export async function createCustomerSession(payload: CustomerSessionPayload): Pr
   });
 }
 
-export function deleteCustomerSession(): void {
-  cookies().delete(CUSTOMER_SESSION_COOKIE);
+export async function deleteCustomerSession(): Promise<void> {
+  (await cookies()).delete(CUSTOMER_SESSION_COOKIE);
 }
 
 export async function getCustomerSession(): Promise<CustomerSessionPayload | null> {
-  return verifyCustomerSession(cookies().get(CUSTOMER_SESSION_COOKIE)?.value);
+  return verifyCustomerSession((await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value);
 }
 
 /** Confere de novo no banco e que a sessão é da loja atual — impede ver pedido de outra loja com o mesmo cookie. */

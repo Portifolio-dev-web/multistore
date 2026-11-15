@@ -6,7 +6,8 @@ import { BillingPlans } from "@/components/billing-plans";
 
 const STATUS_LABEL = { ACTIVE: "Ativo", TRIALING: "Em teste", PAST_DUE: "Pagamento atrasado", CANCELED: "Cancelado" } as const;
 
-export default async function BillingPage({ searchParams }: { searchParams: { success?: string } }) {
+export default async function BillingPage({ searchParams: searchParamsPromise }: { searchParams: Promise<{ success?: string }> }) {
+  const searchParams = await searchParamsPromise;
   const { storeId } = await requireSession("billing");
   const store = await prisma.store.findUnique({ where: { id: storeId } });
   if (!store) return null;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { addCustomerAddress, type AddressFormState } from "@/actions/customer-addresses";
 
 function SubmitButton() {
@@ -14,7 +15,7 @@ function SubmitButton() {
 
 export function AddressForm({ storeSlug }: { storeSlug: string }) {
   const action = addCustomerAddress.bind(null, storeSlug);
-  const [state, formAction] = useFormState<AddressFormState, FormData>(action, {});
+  const [state, formAction] = useActionState<AddressFormState, FormData>(action, {});
 
   return (
     <form action={formAction} className="mt-6 space-y-3 rounded-3xl border border-ink/10 bg-white p-5" data-testid="address-form">

@@ -1,11 +1,11 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { changePassword } from "@/actions/auth";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
 export function ChangePasswordForm() {
-  const [state, action] = useFormState(changePassword, {});
+  const [state, action] = useActionState(changePassword, {});
   return (
     <form action={action} className="card max-w-md space-y-4 p-6" data-testid="change-password-form">
       <FormMessage error={state.error} success={state.success} />

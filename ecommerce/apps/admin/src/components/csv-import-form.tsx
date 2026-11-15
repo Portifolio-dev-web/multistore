@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useRef, useState, useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { parseImportCsv, type ImportParseResult } from "@/lib/product-csv";
 import { importProductsCsv, type ImportState } from "@/actions/csv-import";
 
@@ -15,7 +15,7 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
 }
 
 export function CsvImportForm() {
-  const [state, formAction] = useFormState<ImportState, FormData>(importProductsCsv, {});
+  const [state, formAction] = useActionState<ImportState, FormData>(importProductsCsv, {});
   const [preview, setPreview] = useState<ImportParseResult | null>(null);
   const [csvText, setCsvText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);

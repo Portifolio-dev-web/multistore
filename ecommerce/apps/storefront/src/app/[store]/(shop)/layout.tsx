@@ -10,15 +10,16 @@ import { WhatsappButton } from "@/components/whatsapp-button";
 import { NavMenu } from "@/components/nav-menu";
 import { jsonLdScriptProps, organizationJsonLd } from "@/lib/seo";
 
-type Props = { children: React.ReactNode; params: { store: string } };
+type Props = { children: React.ReactNode; params: Promise<{ store: string }> };
 
 const SOCIAL_LABEL: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok", youtube: "YouTube" };
 
 // Header e rodapé da vitrine normal. Fica fora do /checkout de propósito (layout enxuto lá).
-export default async function ShopLayout({ children, params }: Props) {
+export default async function ShopLayout({ children, params: paramsPromise }: Props) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
-  const base = getStoreBase(store.slug);
+  const base = await getStoreBase(store.slug);
   const navItems = parseNavigation(store.navigation);
   const social = parseSocialLinks(store.socialLinks);
   const legalAddress = formatAddress(store.legalAddress);

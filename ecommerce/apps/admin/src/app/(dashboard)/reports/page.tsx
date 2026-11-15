@@ -9,7 +9,8 @@ function toInputDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function ReportsPage({ searchParams: searchParamsPromise }: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await searchParamsPromise;
   const { storeId } = await requireSession();
 
   const to = searchParams.to ? new Date(`${searchParams.to}T23:59:59`) : new Date();

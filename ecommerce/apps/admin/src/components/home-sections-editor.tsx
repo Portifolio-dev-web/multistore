@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useState, useActionState } from "react";
 import type { HomeSection, HomeSectionType } from "@repo/db/content";
 import { SECTION_TYPE_LABEL } from "@repo/db/content";
 import type { FormState } from "@/lib/form";
@@ -39,7 +38,7 @@ type Props = {
 };
 
 export function HomeSectionsEditor({ saveAction, publishAction, discardAction, initial, hasDraft, categories, previewUrl }: Props) {
-  const [state, formAction] = useFormState(saveAction, {});
+  const [state, formAction] = useActionState(saveAction, {});
   const [sections, setSections] = useState<HomeSection[]>(initial);
   const [addType, setAddType] = useState<HomeSectionType>("hero");
 

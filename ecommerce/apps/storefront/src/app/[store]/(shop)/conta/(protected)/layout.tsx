@@ -5,10 +5,11 @@ import { getCustomerForStore } from "@/lib/customer-session";
 import { getStoreBase, storeHref } from "@/lib/paths";
 import { logoutCustomer } from "@/actions/customer-auth";
 
-export default async function AccountLayout({ children, params }: { children: React.ReactNode; params: { store: string } }) {
+export default async function AccountLayout({ children, params: paramsPromise }: { children: React.ReactNode; params: Promise<{ store: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
-  const base = getStoreBase(params.store);
+  const base = await getStoreBase(params.store);
 
   const session = await getCustomerForStore(store.id);
   if (!session) redirect(storeHref(base, "/conta/entrar"));

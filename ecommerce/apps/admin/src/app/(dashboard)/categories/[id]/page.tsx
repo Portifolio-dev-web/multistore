@@ -8,7 +8,8 @@ import { PageHeader } from "@/components/page-header";
 import { CategoryForm } from "@/components/category-form";
 import { DeleteButton } from "@/components/delete-button";
 
-export default async function EditCategoryPage({ params }: { params: { id: string } }) {
+export default async function EditCategoryPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const { storeId } = await requireSession();
   const category = await prisma.category.findFirst({ where: { id: params.id, storeId } });
   if (!category) notFound();

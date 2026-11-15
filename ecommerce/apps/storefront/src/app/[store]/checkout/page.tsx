@@ -5,7 +5,8 @@ import { getCustomerForStore } from "@/lib/customer-session";
 import { CheckoutForm } from "@/components/checkout-form";
 
 // F3.1: cliente logado entra no checkout com identificação e endereço já preenchidos
-export default async function CheckoutPage({ params }: { params: { store: string } }) {
+export default async function CheckoutPage({ params: paramsPromise }: { params: Promise<{ store: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 

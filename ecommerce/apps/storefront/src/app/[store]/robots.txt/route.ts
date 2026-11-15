@@ -4,7 +4,8 @@ import { getStoreBySlug } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, { params }: { params: { store: string } }) {
+export async function GET(_req: Request, { params: paramsPromise }: { params: Promise<{ store: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) return new NextResponse("Not found", { status: 404 });
 

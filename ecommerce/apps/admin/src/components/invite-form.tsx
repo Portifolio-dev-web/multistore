@@ -1,11 +1,11 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { inviteTeamMember } from "@/actions/team";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
 export function InviteForm() {
-  const [state, action] = useFormState(inviteTeamMember, {});
+  const [state, action] = useActionState(inviteTeamMember, {});
   return (
     <form action={action} className="card flex flex-wrap items-end gap-4 p-5" data-testid="invite-form">
       <div className="min-w-[220px] flex-1">

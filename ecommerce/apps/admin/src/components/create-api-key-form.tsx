@@ -1,11 +1,11 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { createApiKey, type CreateApiKeyState } from "@/actions/api-keys";
 import { FieldError, SubmitButton } from "./form-ui";
 
 export function CreateApiKeyForm() {
-  const [state, action] = useFormState<CreateApiKeyState, FormData>(createApiKey, {});
+  const [state, action] = useActionState<CreateApiKeyState, FormData>(createApiKey, {});
   return (
     <form action={action} className="card flex flex-wrap items-end gap-4 p-5" data-testid="create-api-key-form">
       <div className="min-w-[220px] flex-1">

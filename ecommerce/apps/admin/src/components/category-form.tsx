@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import type { FormState } from "@/lib/form";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
@@ -26,7 +26,7 @@ type Props = {
 };
 
 export function CategoryForm({ action, category, options, submitLabel }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   const e = state.fieldErrors;
   const parentOptions = options.filter((o) => o.id !== category?.id);
 

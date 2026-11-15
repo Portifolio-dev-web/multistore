@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import type { HomeSection } from "@repo/db/content";
 import { subscribeNewsletter, type NewsletterState } from "@/actions/newsletter";
 
@@ -8,7 +8,7 @@ type Props = { section: Extract<HomeSection, { type: "newsletter" }>; storeSlug:
 
 export function Newsletter({ section, storeSlug }: Props) {
   const action = subscribeNewsletter.bind(null, storeSlug);
-  const [state, formAction] = useFormState<NewsletterState, FormData>(action, {});
+  const [state, formAction] = useActionState<NewsletterState, FormData>(action, {});
 
   return (
     <section className="rounded-3xl bg-brand px-8 py-10 text-center text-brand-contrast" data-testid="section-newsletter">

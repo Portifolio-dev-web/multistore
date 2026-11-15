@@ -10,9 +10,11 @@ import { markOrderPaid } from "@/lib/orders";
 import { ClearCart } from "@/components/clear-cart";
 import { TrackPurchase } from "@/components/track-purchase";
 
-type Props = { params: { store: string }; searchParams: { session_id?: string } };
+type Props = { params: Promise<{ store: string }>; searchParams: Promise<{ session_id?: string }> };
 
-export default async function CheckoutSuccess({ params, searchParams }: Props) {
+export default async function CheckoutSuccess({ params: paramsPromise, searchParams: searchParamsPromise }: Props) {
+  const params = await paramsPromise;
+  const searchParams = await searchParamsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
   if (!searchParams.session_id) redirect(`/${store.slug}`);
@@ -32,7 +34,7 @@ export default async function CheckoutSuccess({ params, searchParams }: Props) {
     include: { items: true },
   });
   if (!order) notFound();
-  const base = getStoreBase(store.slug);
+  const base = await getStoreBase(store.slug);
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-20 text-center sm:px-8">

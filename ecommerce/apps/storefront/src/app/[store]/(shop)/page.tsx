@@ -5,18 +5,20 @@ import { getStoreBase, storeHref } from "@/lib/paths";
 import { parseHomeSections } from "@repo/db/content";
 import { SectionRenderer } from "@/components/sections/section-renderer";
 
-type Props = { params: { store: string }; searchParams: { preview?: string } };
+type Props = { params: Promise<{ store: string }>; searchParams: Promise<{ preview?: string }> };
 
 // F4.1: a home virou seções configuráveis pelo admin (`/home`); o catálogo com busca/filtros
 // mudou para `/busca`. `?preview=1` mostra o rascunho (nunca o publicado) — não precisa de
 // autenticação porque o rascunho não tem nada sensível, só ainda não está no ar de verdade.
-export default async function StorePage({ params, searchParams }: Props) {
+export default async function StorePage({ params: paramsPromise, searchParams: searchParamsPromise }: Props) {
+  const params = await paramsPromise;
+  const searchParams = await searchParamsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 
   const raw = searchParams.preview === "1" ? (store.homeSectionsDraft ?? store.homeSections) : store.homeSections;
   const sections = parseHomeSections(raw);
-  const base = getStoreBase(store.slug);
+  const base = await getStoreBase(store.slug);
 
   return (
     <div className="mx-auto max-w-7xl space-y-16 px-5 py-10 sm:px-8">

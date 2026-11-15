@@ -2,7 +2,8 @@ import { prisma } from "@repo/db";
 import { getStoreBySlug } from "@/lib/store";
 import { getCustomerForStore } from "@/lib/customer-session";
 
-export default async function AccountOverviewPage({ params }: { params: { store: string } }) {
+export default async function AccountOverviewPage({ params: paramsPromise }: { params: Promise<{ store: string }> }) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   const session = await getCustomerForStore(store!.id);
   const customer = await prisma.customer.findUnique({ where: { id: session!.customerId } });

@@ -5,7 +5,8 @@ import { approveReview, rejectReview } from "@/actions/reviews";
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 
-export default async function ReviewsPage({ searchParams }: { searchParams: { status?: string } }) {
+export default async function ReviewsPage({ searchParams: searchParamsPromise }: { searchParams: Promise<{ status?: string }> }) {
+  const searchParams = await searchParamsPromise;
   const { storeId } = await requireSession();
   const status = searchParams.status === "approved" ? "approved" : "pending";
 

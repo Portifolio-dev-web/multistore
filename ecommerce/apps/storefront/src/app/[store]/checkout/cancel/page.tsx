@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { getStoreBase, storeHref } from "@/lib/paths";
 
-export default function CheckoutCancel({ params }: { params: { store: string } }) {
-  const base = getStoreBase(params.store);
+export default async function CheckoutCancel({ params: paramsPromise }: { params: Promise<{ store: string }> }) {
+  const params = await paramsPromise;
+  const base = await getStoreBase(params.store);
   return (
     <div className="mx-auto max-w-xl px-5 py-24 text-center sm:px-8">
       <h1 className="font-display text-4xl font-bold tracking-tight">Pagamento cancelado</h1>

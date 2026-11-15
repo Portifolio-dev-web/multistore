@@ -1,11 +1,11 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { updateMaintenance } from "@/actions/settings";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
 export function MaintenanceForm({ maintenanceMode, hasPassword }: { maintenanceMode: boolean; hasPassword: boolean }) {
-  const [state, action] = useFormState(updateMaintenance, {});
+  const [state, action] = useActionState(updateMaintenance, {});
   const e = state.fieldErrors;
 
   return (

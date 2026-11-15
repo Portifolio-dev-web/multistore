@@ -5,7 +5,7 @@ import { hasPermission, type Permission } from "@repo/db/permissions";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession, verifySession, type SessionPayload } from "./jwt";
 
 export async function createSession(payload: SessionPayload): Promise<void> {
-  cookies().set(SESSION_COOKIE, await signSession(payload), {
+  (await cookies()).set(SESSION_COOKIE, await signSession(payload), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production" && process.env.COOKIE_SECURE !== "false",
     sameSite: "lax",
@@ -14,12 +14,12 @@ export async function createSession(payload: SessionPayload): Promise<void> {
   });
 }
 
-export function deleteSession(): void {
-  cookies().delete(SESSION_COOKIE);
+export async function deleteSession(): Promise<void> {
+  (await cookies()).delete(SESSION_COOKIE);
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  return verifySession(cookies().get(SESSION_COOKIE)?.value);
+  return verifySession((await cookies()).get(SESSION_COOKIE)?.value);
 }
 
 /**

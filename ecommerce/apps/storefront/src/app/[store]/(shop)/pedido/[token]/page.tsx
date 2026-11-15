@@ -5,7 +5,7 @@ import { formatAddress, formatBRL, FULFILLMENT_LABEL, ORDER_STATUS_LABEL } from 
 import { getStoreBySlug } from "@/lib/store";
 import { getStoreBase, storeHref } from "@/lib/paths";
 
-type Props = { params: { store: string; token: string } };
+type Props = { params: Promise<{ store: string; token: string }> };
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" });
@@ -23,7 +23,8 @@ function steps(order: Order) {
   ];
 }
 
-export default async function OrderTrackingPage({ params }: Props) {
+export default async function OrderTrackingPage({ params: paramsPromise }: Props) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store || !UUID.test(params.token)) notFound();
 
@@ -110,7 +111,7 @@ export default async function OrderTrackingPage({ params }: Props) {
         </div>
       )}
 
-      <Link href={storeHref(getStoreBase(store.slug))} className="btn-ghost mt-10" data-testid="tracking-back-to-store">Voltar à loja</Link>
+      <Link href={storeHref(await getStoreBase(store.slug))} className="btn-ghost mt-10" data-testid="tracking-back-to-store">Voltar à loja</Link>
     </div>
   );
 }

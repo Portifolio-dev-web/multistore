@@ -11,7 +11,8 @@ const PAGE_SIZE = 20;
 
 type SearchParams = { status?: string; fulfillment?: string; q?: string; from?: string; to?: string; page?: string };
 
-export default async function OrdersPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function OrdersPage({ searchParams: searchParamsPromise }: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await searchParamsPromise;
   const { storeId } = await requireSession();
   const status = Object.values(OrderStatus).find((s) => s === searchParams.status);
   const fulfillment = Object.values(FulfillmentStatus).find((s) => s === searchParams.fulfillment);

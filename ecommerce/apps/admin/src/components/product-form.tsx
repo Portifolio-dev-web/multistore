@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { centsToInput } from "@repo/db/utils";
 import type { FormState } from "@/lib/form";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
@@ -43,7 +43,7 @@ type Props = {
 };
 
 export function ProductForm({ action, product, categories, variantCount, aiEnabled, submitLabel }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   const e = state.fieldErrors;
 
   return (

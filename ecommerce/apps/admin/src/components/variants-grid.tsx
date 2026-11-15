@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useState, useActionState } from "react";
 import { parseBRLToCents } from "@repo/db/utils";
 import type { FormState } from "@/lib/form";
 import { FormMessage, SubmitButton } from "./form-ui";
@@ -31,7 +30,7 @@ type Props = {
 };
 
 export function VariantsGrid({ action, initial }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   const [rows, setRows] = useState<VariantRow[]>(initial);
   const [bulkStock, setBulkStock] = useState("");
   const [bulkPrice, setBulkPrice] = useState("");

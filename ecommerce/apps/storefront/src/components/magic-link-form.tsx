@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { requestMagicLink, type MagicLinkState } from "@/actions/customer-auth";
 
 function SubmitButton() {
@@ -14,7 +15,7 @@ function SubmitButton() {
 
 export function MagicLinkForm({ storeSlug }: { storeSlug: string }) {
   const action = requestMagicLink.bind(null, storeSlug);
-  const [state, formAction] = useFormState<MagicLinkState, FormData>(action, {});
+  const [state, formAction] = useActionState<MagicLinkState, FormData>(action, {});
 
   if (state.sent) {
     return (

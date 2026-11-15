@@ -1,13 +1,13 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import type { FormState } from "@/lib/form";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
 type Props = { action: (prev: FormState, formData: FormData) => Promise<FormState> };
 
 export function ResetPasswordForm({ action }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   return (
     <form action={formAction} className="space-y-4" data-testid="reset-password-form">
       <FormMessage error={state.error} success={state.success} />

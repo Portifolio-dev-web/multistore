@@ -10,9 +10,10 @@ import { MaintenanceGate } from "@/components/maintenance-gate";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { AnalyticsScripts } from "@/components/analytics-scripts";
 
-type Props = { children: React.ReactNode; params: { store: string } };
+type Props = { children: React.ReactNode; params: Promise<{ store: string }> };
 
-export async function generateMetadata({ params }: Omit<Props, "children">): Promise<Metadata> {
+export async function generateMetadata({ params: paramsPromise }: Omit<Props, "children">): Promise<Metadata> {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   return {
     title: store?.name ?? "Loja",
@@ -24,11 +25,12 @@ export async function generateMetadata({ params }: Omit<Props, "children">): Pro
 // Tema (cores + F4.4 tema/fonte via data-attribute) e contexto do carrinho. Header/rodapé ficam
 // em (shop)/layout.tsx — o /checkout não passa por ali, então fica com um layout enxuto. F4.5:
 // loja em construção bloqueia tudo aqui dentro (menos a própria tela de senha).
-export default async function StoreLayout({ children, params }: Props) {
+export default async function StoreLayout({ children, params: paramsPromise }: Props) {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 
-  if (store.maintenanceMode && !verifyMaintenanceAccess(store.id, cookies().get(MAINTENANCE_COOKIE)?.value)) {
+  if (store.maintenanceMode && !verifyMaintenanceAccess(store.id, (await cookies()).get(MAINTENANCE_COOKIE)?.value)) {
     return <MaintenanceGate storeSlug={store.slug} storeName={store.name} />;
   }
 
@@ -37,7 +39,7 @@ export default async function StoreLayout({ children, params }: Props) {
     "--brand-contrast": contrastText(store.primaryColor),
     "--accent": store.accentColor,
   } as React.CSSProperties;
-  const base = getStoreBase(store.slug);
+  const base = await getStoreBase(store.slug);
 
   return (
     <StoreProvider value={{ slug: store.slug, base }}>

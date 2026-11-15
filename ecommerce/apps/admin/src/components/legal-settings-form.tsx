@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import type { LegalAddress } from "@repo/db/content";
 import { updateLegalSettings } from "@/actions/settings";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
@@ -8,7 +8,7 @@ import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 type Props = { legalName: string | null; taxId: string | null; legalAddress: LegalAddress | null };
 
 export function LegalSettingsForm({ legalName, taxId, legalAddress }: Props) {
-  const [state, action] = useFormState(updateLegalSettings, {});
+  const [state, action] = useActionState(updateLegalSettings, {});
   const e = state.fieldErrors;
 
   return (

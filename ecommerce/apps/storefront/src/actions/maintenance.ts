@@ -17,7 +17,7 @@ export async function enterMaintenancePassword(storeSlug: string, _prev: Mainten
   const valid = storeWithHash?.maintenancePasswordHash && (await bcrypt.compare(password, storeWithHash.maintenancePasswordHash));
   if (!valid) return { error: "Senha incorreta." };
 
-  cookies().set(MAINTENANCE_COOKIE, signMaintenanceAccess(store.id), {
+  (await cookies()).set(MAINTENANCE_COOKIE, signMaintenanceAccess(store.id), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",

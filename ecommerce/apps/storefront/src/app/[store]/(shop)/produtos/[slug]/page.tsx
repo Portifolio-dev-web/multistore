@@ -14,9 +14,10 @@ import { verifyReviewToken } from "@/lib/review-token";
 import { breadcrumbJsonLd, jsonLdScriptProps, productJsonLd } from "@/lib/seo";
 import { TrackViewItem } from "@/components/track-view-item";
 
-type Props = { params: { store: string; slug: string }; searchParams: { order?: string; token?: string } };
+type Props = { params: Promise<{ store: string; slug: string }>; searchParams: Promise<{ order?: string; token?: string }> };
 
-export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
+export async function generateMetadata({ params: paramsPromise }: Pick<Props, "params">): Promise<Metadata> {
+  const params = await paramsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) return {};
   const product = await prisma.product.findFirst({ where: { slug: params.slug, storeId: store.id, active: true } });
@@ -34,7 +35,9 @@ export async function generateMetadata({ params }: Pick<Props, "params">): Promi
   };
 }
 
-export default async function ProductPage({ params, searchParams }: Props) {
+export default async function ProductPage({ params: paramsPromise, searchParams: searchParamsPromise }: Props) {
+  const params = await paramsPromise;
+  const searchParams = await searchParamsPromise;
   const store = await getStoreBySlug(params.store);
   if (!store) notFound();
 
@@ -63,12 +66,12 @@ export default async function ProductPage({ params, searchParams }: Props) {
       include: { product: true },
     });
     if (redirect?.product.active) {
-      permanentRedirect(storeHref(getStoreBase(store.slug), `/produtos/${redirect.product.slug}`));
+      permanentRedirect(storeHref(await getStoreBase(store.slug), `/produtos/${redirect.product.slug}`));
     }
     notFound();
   }
 
-  const base = getStoreBase(store.slug);
+  const base = await getStoreBase(store.slug);
   const avgRating = averageRating(product.reviews.map((r) => r.rating));
 
   const verified =

@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { createWebhookEndpoint } from "@/actions/webhooks";
 import { FieldError, FormMessage, SubmitButton } from "./form-ui";
 
@@ -11,7 +11,7 @@ const EVENTS = [
 ];
 
 export function CreateWebhookForm() {
-  const [state, action] = useFormState(createWebhookEndpoint, {});
+  const [state, action] = useActionState(createWebhookEndpoint, {});
   return (
     <form action={action} className="card space-y-4 p-5" data-testid="create-webhook-form">
       <FormMessage error={state.error} success={state.success} />

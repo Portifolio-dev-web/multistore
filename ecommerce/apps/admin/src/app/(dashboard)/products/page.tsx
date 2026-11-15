@@ -7,7 +7,8 @@ import { Pagination } from "@repo/ui";
 
 const PAGE_SIZE = 20;
 
-export default async function ProductsPage({ searchParams }: { searchParams: { q?: string; page?: string } }) {
+export default async function ProductsPage({ searchParams: searchParamsPromise }: { searchParams: Promise<{ q?: string; page?: string }> }) {
+  const searchParams = await searchParamsPromise;
   const { storeId } = await requireSession();
   const q = searchParams.q?.trim();
   const page = Math.max(1, Number(searchParams.page) || 1);

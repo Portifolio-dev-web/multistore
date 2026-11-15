@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import type { Order } from "@repo/db";
 import { FULFILLMENT_LABEL, type FulfillmentStatusKey } from "@repo/db/utils";
 import type { FormState } from "@/lib/form";
@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function FulfillmentForm({ action, order }: Props) {
-  const [state, formAction] = useFormState(action, {});
+  const [state, formAction] = useActionState(action, {});
   const e = state.fieldErrors;
   const disabled = order.status !== "PAID";
 
