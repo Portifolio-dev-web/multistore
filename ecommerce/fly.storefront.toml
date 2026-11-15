@@ -1,0 +1,38 @@
+# Vitrine no Fly.io — `fly deploy -c fly.storefront.toml` (de dentro de ecommerce/).
+# Nome do app é global no Fly: troque se já existir. Segredos: `fly secrets set -c fly.storefront.toml ...`
+app = "vitrine-storefront"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+
+  [build.args]
+    APP = "storefront"
+    # Domínio público do bucket de imagens (R2) — entra no build do next/image. TROQUE antes do 1º deploy.
+    S3_PUBLIC_URL = "https://media.exemplo.com.br"
+
+[deploy]
+  # Migrations rodam uma vez por deploy, antes de trocar as máquinas (o admin não repete isso).
+  release_command = "node node_modules/prisma/build/index.js migrate deploy --schema packages/db/prisma/schema.prisma"
+
+[env]
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Checkout e webhook do Stripe não podem esperar máquina acordar.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/api/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

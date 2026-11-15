@@ -197,13 +197,34 @@ O `Dockerfile` é único e parametrizado por `--build-arg APP=storefront|admin`;
 O storefront precisa de `--build-arg S3_PUBLIC_URL=...` (o `next.config.mjs` libera o host do storage no `next/image` em tempo de build). A imagem traz o Prisma CLI e as migrations: use como *release command* da hospedagem `node node_modules/prisma/build/index.js migrate deploy --schema packages/db/prisma/schema.prisma`.
 
 ```bash
-docker build --build-arg APP=storefront --build-arg S3_PUBLIC_URL=https://media.exemplo.com -t registry.exemplo.com/vitrine-storefront:latest .
-docker build --build-arg APP=admin      -t registry.exemplo.com/vitrine-admin:latest .
-docker push registry.exemplo.com/vitrine-storefront:latest
-docker push registry.exemplo.com/vitrine-admin:latest
+# Tag imutável pelo commit (nunca :latest) — é o que permite voltar pra versão anterior.
+TAG=$(git rev-parse --short HEAD)
+docker build --build-arg APP=storefront --build-arg S3_PUBLIC_URL=https://media.exemplo.com -t registry.exemplo.com/vitrine-storefront:$TAG .
+docker build --build-arg APP=admin      -t registry.exemplo.com/vitrine-admin:$TAG .
+docker push registry.exemplo.com/vitrine-storefront:$TAG
+docker push registry.exemplo.com/vitrine-admin:$TAG
 ```
 
 O `.dockerignore` mantém o contexto de build pequeno (sem `node_modules`, `.next`, `.turbo`, `.env`), e o healthcheck da imagem usa `GET /api/health` de cada app.
+
+### Deploy no Fly.io (recomendado — ver `DEPLOY_REPORT.md`)
+
+`fly.storefront.toml` e `fly.admin.toml` já trazem região `gru` (São Paulo), health check, máquina de
+512 MB e o *release command* das migrations (só no storefront). Antes do primeiro deploy, troque os nomes
+dos apps (são globais no Fly) e o `S3_PUBLIC_URL` do build no `fly.storefront.toml`.
+
+```bash
+fly apps create vitrine-storefront && fly apps create vitrine-admin
+fly secrets set -c fly.storefront.toml DATABASE_URL=... AUTH_SECRET=... # demais variáveis: tabela acima
+fly secrets set -c fly.admin.toml      DATABASE_URL=... AUTH_SECRET=... ALLOW_REGISTRATION=false
+fly deploy -c fly.storefront.toml   # roda as migrations antes de trocar as máquinas
+fly deploy -c fly.admin.toml
+```
+
+**Rollback:** `fly releases -c fly.storefront.toml --image` lista as versões com a imagem de cada uma;
+`fly deploy -c fly.storefront.toml --image <imagem da versão anterior>` volta. Migrations não voltam —
+escreva sempre migrations compatíveis com a versão anterior do app (só adicionar coluna/tabela/índice;
+remover em um deploy seguinte).
 
 ### Escalabilidade
 

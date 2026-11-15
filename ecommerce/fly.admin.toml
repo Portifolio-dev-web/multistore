@@ -1,0 +1,32 @@
+# Painel do lojista no Fly.io — `fly deploy -c fly.admin.toml` (de dentro de ecommerce/).
+# Deploy o storefront primeiro: é ele que roda as migrations (release_command).
+app = "vitrine-admin"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+
+  [build.args]
+    APP = "admin"
+
+[env]
+  PORT = "3001"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  # Painel pode dormir sem tráfego; acorda em poucos segundos (inclusive pro webhook de cobrança).
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/api/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
